@@ -1,0 +1,53 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of the Go compiler
+*.o
+*.a
+
+# Directories created by the Go tool
+_/
+/tags
+*.cgo
+*.cgo2
+_testmain.go
+
+# Build directories
+_build/
+target/
+
+# Output of the dep tool
+/vendor/
+
+# Goland and VS Code specific
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Testing
+*.test
+
+# Coverage
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# go mod cache
+GOPATH/pkg/mod/cache/
+
+# other Go environment files
+.env.develop
+.env

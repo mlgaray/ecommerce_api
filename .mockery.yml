@@ -1,0 +1,16 @@
+all: true
+dir: "mocks/"
+filename: "{{ .InterfaceName  | camelcase | firstUpper }}.go"
+log-level: info
+structname: "{{ .InterfaceName  | camelcase | firstUpper }}"
+pkgname: "mocks"
+inpackage: false
+template: testify
+recursive: true
+packages:
+  github.com/mlgaray/ecommerce_api/internal:
+
+
+
+
+

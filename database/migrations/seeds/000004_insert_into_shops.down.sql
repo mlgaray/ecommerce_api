@@ -1,0 +1,1 @@
+DELETE FROM shops WHERE email IN ('mcdonalds@mc.com');
