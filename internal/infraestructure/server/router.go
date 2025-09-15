@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
@@ -21,7 +22,7 @@ type router struct {
 func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
-	// r.Use(middlewears.PrometheusMiddleware)
+	r.Use(middleware.PrometheusMiddleware)
 	return &router{
 		router:        r,
 		authHandler:   authHandler,
@@ -32,6 +33,7 @@ func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler)
 func (r *router) RouteApp() *mux.Router {
 	r.healthRoutes()
 	r.authRoutes()
+	r.metricsRoutes()
 	return r.router
 }
 
@@ -43,4 +45,8 @@ func (r *router) authRoutes() {
 	sub := r.router.PathPrefix("/auth").Subrouter()
 	sub.HandleFunc("/signin", r.authHandler.SignIn).Methods(http.MethodPost)
 	sub.HandleFunc("/signup", r.authHandler.SignUp).Methods(http.MethodPost)
+}
+
+func (r *router) metricsRoutes() {
+	r.router.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
 }
