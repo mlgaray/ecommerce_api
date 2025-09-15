@@ -28,6 +28,9 @@ var Module = fx.Options(
 		fx.Annotate(http.NewAuthHandler, fx.As(new(ports.AuthHandler))),
 		fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),
 
+		// HEALTH
+		fx.Annotate(http.NewHealthHandler, fx.As(new(ports.HealthHandler))),
+
 		// USER
 		fx.Annotate(services.NewUserService, fx.As(new(ports.UserService))),
 		fx.Annotate(postgresql.NewUserRepository, fx.As(new(ports.UserRepository))),

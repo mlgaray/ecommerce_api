@@ -13,23 +13,30 @@ type Router interface {
 	RouteApp() *mux.Router
 }
 type router struct {
-	router      *mux.Router
-	authHandler ports.AuthHandler
+	router        *mux.Router
+	authHandler   ports.AuthHandler
+	healthHandler ports.HealthHandler
 }
 
-func NewRouter(authHandler ports.AuthHandler) *router {
+func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 	// r.Use(middlewears.PrometheusMiddleware)
 	return &router{
-		router:      r,
-		authHandler: authHandler,
+		router:        r,
+		authHandler:   authHandler,
+		healthHandler: healthHandler,
 	}
 }
 
 func (r *router) RouteApp() *mux.Router {
+	r.healthRoutes()
 	r.authRoutes()
 	return r.router
+}
+
+func (r *router) healthRoutes() {
+	r.router.HandleFunc("/health", r.healthHandler.Health).Methods(http.MethodGet)
 }
 
 func (r *router) authRoutes() {
