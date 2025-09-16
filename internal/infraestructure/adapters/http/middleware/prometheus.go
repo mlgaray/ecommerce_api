@@ -59,7 +59,7 @@ var (
 			Name: "http_requests_by_status_family_total",
 			Help: "Total HTTP requests by status code family (2xx, 3xx, 4xx, 5xx)",
 		},
-		[]string{"status_family"},
+		[]string{"status_family", "endpoint"},
 	)
 )
 
@@ -142,6 +142,6 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 		httpRequestsTotal.WithLabelValues(method, endpoint, statusCode).Inc()
 		httpRequestDuration.WithLabelValues(method, endpoint, statusCode).Observe(duration)
 		httpResponseSize.WithLabelValues(method, endpoint, statusCode).Observe(float64(prw.size))
-		httpRequestsByStatusFamily.WithLabelValues(statusFamily).Inc()
+		httpRequestsByStatusFamily.WithLabelValues(statusFamily, endpoint).Inc()
 	})
 }
