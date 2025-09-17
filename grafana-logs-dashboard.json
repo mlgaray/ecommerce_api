@@ -107,7 +107,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "rate({job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"}[1m])",
+          "expr": "rate({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\"[1m])",
           "legendFormat": "Log Rate",
           "refId": "A"
         }
@@ -247,7 +247,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "sum by (level) (rate({job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json [1m]))",
+          "expr": "sum by (level) (rate({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt [1m]))",
           "legendFormat": "{{level}}",
           "refId": "A"
         }
@@ -283,7 +283,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "{job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json",
+          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt",
           "refId": "A"
         }
       ],
@@ -318,7 +318,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "{job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json | level=\"error\"",
+          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | level=\"error\"",
           "refId": "A"
         }
       ],
@@ -353,7 +353,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "{job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json | event=~\"request_.*\"",
+          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | event=~\"request_.*\"",
           "refId": "A"
         }
       ],
@@ -420,7 +420,7 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "topk(10, sum by (level) (count_over_time({job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json [24h])))",
+          "expr": "topk(10, sum by (level) (count_over_time({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt [24h])))",
           "format": "table",
           "legendFormat": "",
           "refId": "A"
@@ -504,13 +504,13 @@
             "type": "loki",
             "uid": "bey716z3vqjggd"
           },
-          "expr": "topk(10, sum by (endpoint) (count_over_time({job=\"containerlogs\", stream=\"stderr\", filename=\"/var/lib/docker/containers/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae/846349d59284935426f84b23ad5262ccdb6efed65131e22a58f8e6c681d7f1ae-json.log\"} | json | endpoint!=\"\" [24h])))",
+          "expr": "topk(10, sum by (operation) (count_over_time({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | operation!=\"\" [24h])))",
           "format": "table",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Top Endpoints (24h)",
+      "title": "Top Operations (24h)",
       "transformations": [
         {
           "id": "organize",
@@ -520,7 +520,7 @@
             },
             "indexByName": {},
             "renameByName": {
-              "endpoint": "Endpoint",
+              "operation": "Operation",
               "Value": "Count"
             }
           }

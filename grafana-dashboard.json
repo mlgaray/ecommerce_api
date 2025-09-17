@@ -514,7 +514,7 @@
             "type": "prometheus",
             "uid": "cey73dbkotptsf"
           },
-          "expr": "sum by (status_family) (http_requests_by_status_family_total{endpoint!=\"/metrics\"})",
+          "expr": "sum by (status_family) (rate(http_requests_by_status_family_total{endpoint!=\"/metrics\"}[5m]))",
           "instant": false,
           "legendFormat": "{{status_family}}",
           "range": true,

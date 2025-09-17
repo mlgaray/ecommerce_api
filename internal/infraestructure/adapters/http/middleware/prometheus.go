@@ -107,10 +107,13 @@ func getEndpoint(r *http.Request) string {
 func PrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		endpoint := getEndpoint(r)
 
-		// Increment in-flight requests
-		httpRequestsInFlight.Inc()
-		defer httpRequestsInFlight.Dec()
+		// Skip in-flight counting for metrics endpoint to avoid scraping noise
+		if endpoint != "/metrics" {
+			httpRequestsInFlight.Inc()
+			defer httpRequestsInFlight.Dec()
+		}
 
 		// Wrap response writer to capture status code and response size
 		prw := &prometheusResponseWriter{
@@ -125,7 +128,6 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 			requestSize = 0
 		}
 
-		endpoint := getEndpoint(r)
 		method := r.Method
 
 		httpRequestSize.WithLabelValues(method, endpoint).Observe(requestSize)
