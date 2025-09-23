@@ -11,3 +11,6 @@ create table users (
                               constraint email_format check (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
                               constraint users_email_key unique (email)
 ) TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON public.users (is_active);

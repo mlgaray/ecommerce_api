@@ -9,3 +9,5 @@ create table
                           constraint categories_id_key unique (id),
                           constraint categories_shop_id_fkey foreign key (shop_id) references shops (id) on update cascade on delete cascade
 ) tablespace pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_categories_shop_id ON public.categories (shop_id);

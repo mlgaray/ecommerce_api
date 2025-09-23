@@ -13,3 +13,7 @@ create table
                      constraint shops_email_key unique (email),
                      constraint businesses_user_id_fkey foreign key (user_id) references users (id) on update cascade on delete cascade
 ) tablespace pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_shops_user_id ON public.shops (user_id);
+CREATE INDEX IF NOT EXISTS idx_shops_email ON public.shops (email);
+CREATE INDEX IF NOT EXISTS idx_shops_slug ON public.shops (slug);

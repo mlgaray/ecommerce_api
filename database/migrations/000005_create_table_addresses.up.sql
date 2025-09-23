@@ -11,3 +11,5 @@ create table
                          constraint addresses_id_key unique (id),
                          constraint Addresses_shop_id_fkey foreign key (shop_id) references shops (id) on update cascade on delete cascade
 ) tablespace pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_addresses_shop_id ON public.addresses (shop_id);
