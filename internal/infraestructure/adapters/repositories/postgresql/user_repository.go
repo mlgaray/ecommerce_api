@@ -47,7 +47,7 @@ func (s *UserSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, user *
 		logs.WithFields(map[string]interface{}{
 			"operation": "create_user_tx",
 			"error":     err.Error(),
-		}).Error("Database query failed")
+		}).Error(DatabaseQueryFailedLog)
 		return nil, s.handlePostgreSQLError(err)
 	}
 
@@ -68,7 +68,7 @@ func (s *UserSQLRepository) createWithDB(ctx context.Context, user *models.User)
 		logs.WithFields(map[string]interface{}{
 			"operation": "create_user_db",
 			"error":     err.Error(),
-		}).Error("Database query failed")
+		}).Error(DatabaseQueryFailedLog)
 		return nil, s.handlePostgreSQLError(err)
 	}
 
@@ -131,8 +131,8 @@ func (s *UserSQLRepository) getByEmailWithTx(ctx context.Context, tx *sql.Tx, em
 		logs.WithFields(map[string]interface{}{
 			"operation": "get_user_by_email_tx",
 			"error":     err.Error(),
-		}).Error("Database query failed")
-		return nil, &errors.InternalServiceError{Message: "database_error"}
+		}).Error(DatabaseQueryFailedLog)
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 	}
 	defer rows.Close()
 
@@ -156,8 +156,8 @@ func (s *UserSQLRepository) getByEmailWithDB(ctx context.Context, email string) 
 		logs.WithFields(map[string]interface{}{
 			"operation": "get_user_by_email_db",
 			"error":     err.Error(),
-		}).Error("Database query failed")
-		return nil, &errors.InternalServiceError{Message: "database_error"}
+		}).Error(DatabaseQueryFailedLog)
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 	}
 	defer rows.Close()
 
@@ -169,7 +169,7 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 	if !rows.Next() {
 		// No hay datos, retornar directamente
 		if err := rows.Err(); err != nil {
-			return nil, &errors.InternalServiceError{Message: "database_error"}
+			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 		}
 		return nil, &errors.NotFoundError{Message: errors.UserNotFound}
 	}
@@ -190,8 +190,8 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 		logs.WithFields(map[string]interface{}{
 			"operation": "scan_user_row",
 			"error":     err.Error(),
-		}).Error("Database scan failed")
-		return nil, &errors.InternalServiceError{Message: "database_error"}
+		}).Error(DatabaseScanFailedLog)
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 	}
 
 	// Agregar el primer role si existe
@@ -213,8 +213,8 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 			logs.WithFields(map[string]interface{}{
 				"operation": "scan_user_row_additional",
 				"error":     err.Error(),
-			}).Error("Database scan failed")
-			return nil, &errors.InternalServiceError{Message: "database_error"}
+			}).Error(DatabaseScanFailedLog)
+			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 		}
 
 		// Solo agregar role si existe y no está duplicado
@@ -228,7 +228,7 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, &errors.InternalServiceError{Message: "database_error"}
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 	}
 
 	user.Roles = roles

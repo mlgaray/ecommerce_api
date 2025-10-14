@@ -119,7 +119,7 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 		prw := &prometheusResponseWriter{
 			ResponseWriter: w,
 			statusCode:     200, // default status code
-			size:          0,
+			size:           0,
 		}
 
 		// Record request size

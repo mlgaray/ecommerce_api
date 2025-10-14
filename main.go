@@ -12,6 +12,7 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
@@ -49,16 +50,17 @@ var Module = fx.Options(
 		fx.Annotate(auth.NewSignInUseCase, fx.As(new(ports.SignInUseCase))),
 		fx.Annotate(auth.NewSignUpUseCase, fx.As(new(ports.SignUpUseCase))),
 
+		// PRODUCT
+		fx.Annotate(http.NewProductHandler, fx.As(new(ports.ProductHandler))),
+		fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
+		fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
+		fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+
 		// SERVER
 		server.NewServer,
 		fx.Annotate(server.NewRouter, fx.As(new(server.Router))),
 
 		fx.Annotate(postgresql.NewDataBaseConnection, fx.As(new(postgresql.DataBaseConnection))),
-
-		// fx.Annotate(handlers2.NewProductHandler, fx.As(new(handlers.ProductHandler))),
-		// fx.Annotate(services.NewProductService, fx.As(new(iservices.ProductService))),
-		// fx.Annotate(repositories.NewProductRepository, fx.As(new(persistence.ProductRepository))),
-
 	),
 	fx.Invoke(
 		RegisterHooks,

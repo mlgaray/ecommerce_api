@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/mocks"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRoleSQLRepository_GetByName(t *testing.T) {

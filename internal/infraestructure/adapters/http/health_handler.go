@@ -9,7 +9,7 @@ type HealthHandler struct{}
 
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
-		"status": "healthy",
+		"status":  "healthy",
 		"service": "ecommerce-api",
 	}
 
