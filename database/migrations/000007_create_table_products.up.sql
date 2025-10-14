@@ -9,6 +9,11 @@ create table
                         category_id bigint not null,
                         shop_id bigint not null,
                         is_active boolean null,
+                        is_promotional boolean not null default false,
+                        promotional_price double precision null,
+                        is_highlighted boolean not null default false,
+                        stock integer not null default 0,
+                        minimum_stock integer null,
                         constraint products_pkey primary key (id),
                         constraint products_category_id_fkey foreign key (category_id) references categories (id) on update cascade on delete restrict,
                         constraint products_shop_id_fkey foreign key (shop_id) references shops (id) on update cascade on delete cascade

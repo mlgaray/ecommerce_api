@@ -12,6 +12,8 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
+	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	authhttp "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
@@ -43,6 +45,13 @@ type TestContext struct {
 	successMessage string
 	errorMessage   string
 
+	// Product requests/responses
+	productRequest   models.Product
+	productImages    [][]byte
+	productShopID    int
+	createdProduct   *models.Product
+	invalidImageType bool
+
 	// Test control
 	scenario string
 
@@ -72,6 +81,11 @@ func (ctx *TestContext) Reset() {
 	ctx.signUpRequest = contracts.SignUpRequest{}
 	ctx.successMessage = ""
 	ctx.errorMessage = ""
+	ctx.productRequest = models.Product{}
+	ctx.productImages = nil
+	ctx.productShopID = 0
+	ctx.createdProduct = nil
+	ctx.invalidImageType = false
 	ctx.scenario = ""
 
 	// Close existing resources
@@ -138,6 +152,48 @@ func (ctx *TestContext) SetupTestApp() error {
 			router := mux.NewRouter()
 			router.HandleFunc("/auth/signin", handler.SignIn).Methods("POST")
 			router.HandleFunc("/auth/signup", handler.SignUp).Methods("POST")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupProductTestApp initializes the test application for product tests
+func (ctx *TestContext) SetupProductTestApp() error {
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide product dependencies
+			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
+			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+			fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
+
+			// Provide handler
+			authhttp.NewProductHandler,
+		),
+		fx.Invoke(func(handler *authhttp.ProductHandler) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+			router.HandleFunc("/products", handler.Create).Methods("POST")
 
 			ctx.server = httptest.NewServer(router)
 		}),

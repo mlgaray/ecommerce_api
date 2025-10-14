@@ -45,11 +45,13 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Initialize step definitions
 	authSteps := steps.NewAuthSteps()
 	signUpSteps := steps.NewSignUpSteps()
+	productSteps := steps.NewProductSteps()
 	commonSteps := steps.NewCommonSteps()
 
 	// Register steps
 	authSteps.RegisterSteps(sc)
 	signUpSteps.RegisterSteps(sc)
+	productSteps.RegisterSteps(sc)
 	commonSteps.RegisterSteps(sc)
 
 	// Setup hooks

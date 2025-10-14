@@ -14,25 +14,28 @@ type Router interface {
 	RouteApp() *mux.Router
 }
 type router struct {
-	router        *mux.Router
-	authHandler   ports.AuthHandler
-	healthHandler ports.HealthHandler
+	router         *mux.Router
+	authHandler    ports.AuthHandler
+	healthHandler  ports.HealthHandler
+	productHandler ports.ProductHandler
 }
 
-func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler) *router {
+func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler, productHandler ports.ProductHandler) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 	r.Use(middleware.PrometheusMiddleware)
 	return &router{
-		router:        r,
-		authHandler:   authHandler,
-		healthHandler: healthHandler,
+		router:         r,
+		authHandler:    authHandler,
+		healthHandler:  healthHandler,
+		productHandler: productHandler,
 	}
 }
 
 func (r *router) RouteApp() *mux.Router {
 	r.healthRoutes()
 	r.authRoutes()
+	r.productRoutes()
 	r.metricsRoutes()
 	return r.router
 }
@@ -45,6 +48,11 @@ func (r *router) authRoutes() {
 	sub := r.router.PathPrefix("/auth").Subrouter()
 	sub.HandleFunc("/signin", r.authHandler.SignIn).Methods(http.MethodPost)
 	sub.HandleFunc("/signup", r.authHandler.SignUp).Methods(http.MethodPost)
+}
+
+func (r *router) productRoutes() {
+	sub := r.router.PathPrefix("/products").Subrouter()
+	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
 }
 
 func (r *router) metricsRoutes() {

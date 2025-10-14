@@ -17,6 +17,6 @@ package mock
 //	return sqlDB, mock
 //}
 //
-//func NewDataBaseConnection() *DataBaseConnection {
+// func NewDataBaseConnection() *DataBaseConnection {
 //	return &DataBaseConnection{}
 //}
