@@ -21,4 +21,5 @@ const (
 	Unauthorized        = "unauthorized"
 	Forbidden           = "forbidden"
 	Conflict            = "conflict"
+	DatabaseError       = "database_error"
 )

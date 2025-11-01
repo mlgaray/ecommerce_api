@@ -11,10 +11,12 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
+const unknownRequestID = "unknown"
+
 func generateRequestID() string {
 	bytes := make([]byte, 8)
 	if _, err := rand.Read(bytes); err != nil {
-		return "unknown"
+		return unknownRequestID
 	}
 	return hex.EncodeToString(bytes)
 }

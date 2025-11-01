@@ -12,10 +12,11 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
+	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	authhttp "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
 )
@@ -36,12 +37,19 @@ type TestContext struct {
 	server   *httptest.Server
 	response *http.Response
 
-	// Requests/Responses
-	signInRequest  contracts.SignInRequest
-	signInResponse contracts.SignInResponse
-	signUpRequest  contracts.SignUpRequest
+	// Generic request/response data (reutilizable para cualquier endpoint)
+	requestBody  interface{} // Puede ser cualquier tipo de request
+	responseBody interface{} // Puede ser cualquier tipo de response
+	queryParams  map[string]string
+	pathParams   map[string]string
+
+	// Messages
 	successMessage string
 	errorMessage   string
+
+	// Product-specific fields (para multipart/form-data)
+	productImages    [][]byte
+	invalidImageType bool
 
 	// Test control
 	scenario string
@@ -67,11 +75,14 @@ func (ctx *TestContext) Reset() {
 	ctx.app = nil
 	ctx.server = nil
 	ctx.response = nil
-	ctx.signInRequest = contracts.SignInRequest{}
-	ctx.signInResponse = contracts.SignInResponse{}
-	ctx.signUpRequest = contracts.SignUpRequest{}
+	ctx.requestBody = nil
+	ctx.responseBody = nil
+	ctx.queryParams = nil
+	ctx.pathParams = nil
 	ctx.successMessage = ""
 	ctx.errorMessage = ""
+	ctx.productImages = nil
+	ctx.invalidImageType = false
 	ctx.scenario = ""
 
 	// Close existing resources
@@ -138,6 +149,58 @@ func (ctx *TestContext) SetupTestApp() error {
 			router := mux.NewRouter()
 			router.HandleFunc("/auth/signin", handler.SignIn).Methods("POST")
 			router.HandleFunc("/auth/signup", handler.SignUp).Methods("POST")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupProductTestApp initializes the test application for product tests
+func (ctx *TestContext) SetupProductTestApp() error {
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide product dependencies
+			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
+			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+
+			// Provide pagination service
+			fx.Annotate(
+				services.NewPaginationService[*models.Product],
+				fx.As(new(ports.PaginationService[*models.Product])),
+			),
+
+			// Provide use cases
+			fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
+			fx.Annotate(product.NewGetAllByShopIDUseCase, fx.As(new(ports.GetAllByShopIDUseCase))),
+
+			// Provide handler
+			authhttp.NewProductHandler,
+		),
+		fx.Invoke(func(handler *authhttp.ProductHandler) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+			router.HandleFunc("/products", handler.Create).Methods("POST")
+			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopID).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),

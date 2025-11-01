@@ -5,11 +5,20 @@ create table
                         name text null,
                         description text null,
                         price double precision null,
-                        image text null,
                         category_id bigint not null,
                         shop_id bigint not null,
                         is_active boolean null,
+                        is_promotional boolean not null default false,
+                        promotional_price double precision null,
+                        is_highlighted boolean not null default false,
+                        stock integer not null default 0,
+                        minimum_stock integer null,
                         constraint products_pkey primary key (id),
                         constraint products_category_id_fkey foreign key (category_id) references categories (id) on update cascade on delete restrict,
                         constraint products_shop_id_fkey foreign key (shop_id) references shops (id) on update cascade on delete cascade
 ) tablespace pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_products_category_id ON public.products (category_id);
+CREATE INDEX IF NOT EXISTS idx_products_shop_id ON public.products (shop_id);
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products (is_active);
+CREATE INDEX IF NOT EXISTS idx_products_shop_id_is_active ON public.products (shop_id, is_active);

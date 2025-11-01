@@ -17,6 +17,13 @@ type SignUpRequest struct {
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$`)
 
 func (r *SignUpRequest) Validate() error {
+	if err := r.validateUser(); err != nil {
+		return err
+	}
+	return r.validateShop()
+}
+
+func (r *SignUpRequest) validateUser() error {
 	if strings.TrimSpace(r.User.Name) == "" {
 		return &errors.BadRequestError{Message: "user_name_is_required"}
 	}
@@ -35,6 +42,10 @@ func (r *SignUpRequest) Validate() error {
 	if strings.TrimSpace(r.User.Password) == "" {
 		return &errors.BadRequestError{Message: "user_password_is_required"}
 	}
+	return nil
+}
+
+func (r *SignUpRequest) validateShop() error {
 	if strings.TrimSpace(r.Shop.Name) == "" {
 		return &errors.BadRequestError{Message: "shop_name_is_required"}
 	}
