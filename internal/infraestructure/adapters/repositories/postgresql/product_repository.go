@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
@@ -15,12 +16,17 @@ type ProductRepository struct {
 
 // Product domain-specific log message constants
 const (
+	//create
 	LogFailedInsertProduct       = "Failed to insert product"
 	LogFailedInsertProductImage  = "Failed to insert product image"
 	LogFailedInsertVariant       = "Failed to insert variant"
 	LogFailedInsertVariantOption = "Failed to insert variant option"
 	ProductRepositoryField       = "product_repository"
 	CreateFunctionField          = "create"
+	//getAllByShopIDField
+	getAllByShopIDField      ="get_all_by_shop_id"
+	failedReadProductsByShop ="Failed to read products by shop"
+	
 )
 
 func NewProductRepository(dataBaseConnection DataBaseConnection) *ProductRepository {
@@ -218,4 +224,200 @@ func (r *ProductRepository) insertVariantOptions(ctx context.Context, tx *sql.Tx
 	}
 
 	return nil
+}
+
+func (r *ProductRepository) GetAllByShopID(ctx context.Context, shopID, limit, cursor int) ([]*models.Product, error) {
+	// Default limit if not specified
+	if limit <= 0 {
+		limit = 20
+	}
+	// Max limit to prevent abuse
+	if limit > 100 {
+		limit = 100
+	}
+
+	var query string
+	var args []interface{}
+
+	if cursor > 0 {
+		// Cursor-based pagination
+		query = `
+			SELECT
+				p.id, p.name, p.description, p.price, p.stock, COALESCE(p.minimum_stock, 0),
+				p.is_active, p.is_highlighted, p.is_promotional, COALESCE(p.promotional_price, 0),
+				c.id, c.name, COALESCE(c.description, ''),
+				COALESCE(
+					(SELECT json_agg(pi2.url ORDER BY pi2.id)
+					 FROM product_images pi2
+					 WHERE pi2.product_id = p.id),
+					'[]'
+				) AS images,
+				COALESCE(
+					(SELECT json_agg(
+						jsonb_build_object(
+							'id', pv2.id,
+							'name', pv2.name,
+							'order', pv2."order",
+							'selection_type', pv2.selection_type,
+							'max_selections', pv2.max_selections,
+							'options', (
+								SELECT COALESCE(json_agg(
+									jsonb_build_object(
+										'id', vo.id,
+										'name', vo.name,
+										'price', vo.price,
+										'order', vo."order"
+									) ORDER BY vo."order"
+								), '[]')
+								FROM variant_options vo
+								WHERE vo.variant_id = pv2.id
+							)
+						) ORDER BY pv2."order"
+					)
+					FROM product_variants pv2
+					WHERE pv2.product_id = p.id),
+					'[]'
+				) AS variants
+			FROM products p
+			INNER JOIN categories c ON p.category_id = c.id
+			WHERE p.shop_id = $1 AND p.is_active = true AND p.id < $2
+			ORDER BY p.id DESC
+			LIMIT $3`
+		args = []interface{}{shopID, cursor, limit}
+	} else {
+		// First page
+		query = `
+			SELECT
+				p.id, p.name, p.description, p.price, p.stock, COALESCE(p.minimum_stock, 0),
+				p.is_active, p.is_highlighted, p.is_promotional, COALESCE(p.promotional_price, 0),
+				c.id, c.name, COALESCE(c.description, ''),
+				COALESCE(
+					(SELECT json_agg(pi2.url ORDER BY pi2.id)
+					 FROM product_images pi2
+					 WHERE pi2.product_id = p.id),
+					'[]'
+				) AS images,
+				COALESCE(
+					(SELECT json_agg(
+						jsonb_build_object(
+							'id', pv2.id,
+							'name', pv2.name,
+							'order', pv2."order",
+							'selection_type', pv2.selection_type,
+							'max_selections', pv2.max_selections,
+							'options', (
+								SELECT COALESCE(json_agg(
+									jsonb_build_object(
+										'id', vo.id,
+										'name', vo.name,
+										'price', vo.price,
+										'order', vo."order"
+									) ORDER BY vo."order"
+								), '[]')
+								FROM variant_options vo
+								WHERE vo.variant_id = pv2.id
+							)
+						) ORDER BY pv2."order"
+					)
+					FROM product_variants pv2
+					WHERE pv2.product_id = p.id),
+					'[]'
+				) AS variants
+			FROM products p
+			INNER JOIN categories c ON p.category_id = c.id
+			WHERE p.shop_id = $1 AND p.is_active = true
+			ORDER BY p.id DESC
+			LIMIT $2`
+		args = []interface{}{shopID, limit}
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductRepositoryField,
+			"function": getAllByShopIDField,
+			"sub_func": BeginTransactionField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error(failedReadProductsByShop)
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+	}
+	defer rows.Close()
+
+	products := make([]*models.Product, 0)
+
+	for rows.Next() {
+		product := &models.Product{
+			Category: &models.Category{},
+		}
+
+		var imagesJSON, variantsJSON []byte
+
+		err := rows.Scan(
+			&product.ID,
+			&product.Name,
+			&product.Description,
+			&product.Price,
+			&product.Stock,
+			&product.MinimumStock,
+			&product.IsActive,
+			&product.IsHighlighted,
+			&product.IsPromotional,
+			&product.PromotionalPrice,
+			&product.Category.ID,
+			&product.Category.Name,
+			&product.Category.Description,
+			&imagesJSON,
+			&variantsJSON,
+		)
+		if err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":     ProductRepositoryField,
+				"function": getAllByShopIDField,
+				"sub_func": ScanField,
+				"shop_id":  shopID,
+				"error":    err.Error(),
+			}).Error("Failed to scan product row")
+			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+		}
+
+		// Parse images JSON
+		if err := json.Unmarshal(imagesJSON, &product.Images); err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":       ProductRepositoryField,
+				"function": getAllByShopIDField,
+				"sub_func": UnmarshallField,
+				"product_id": product.ID,
+				"error":      err.Error(),
+			}).Error("Failed to unmarshal product images")
+			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+		}
+
+		// Parse variants JSON
+		if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":       ProductRepositoryField,
+				"function": getAllByShopIDField,
+				"sub_func": UnmarshallField,
+				"product_id": product.ID,
+				"error":      err.Error(),
+			}).Error("Failed to unmarshal product variants")
+			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+		}
+
+		products = append(products, product)
+	}
+
+	if err := rows.Err(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductRepositoryField,
+			"function": getAllByShopIDField,
+			"sub_func": NextField,
+			"shop_id":   shopID,
+			"error":     err.Error(),
+		}).Error("Error iterating product rows")
+		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+	}
+
+	return products, nil
 }

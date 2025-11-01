@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
@@ -15,7 +16,8 @@ import (
 )
 
 type ProductHandler struct {
-	createProduct ports.CreateProductUseCase
+	createProduct  ports.CreateProductUseCase
+	getAllByShopID ports.GetAllByShopIDUseCase
 }
 
 func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -132,8 +134,98 @@ func (p *ProductHandler) buildProductCreateRequest(r *http.Request) (*contracts.
 	}, nil
 }
 
-func NewProductHandler(createProductUseCase ports.CreateProductUseCase) *ProductHandler {
+func NewProductHandler(createProductUseCase ports.CreateProductUseCase, getAllUseCase ports.GetAllByShopIDUseCase) *ProductHandler {
 	return &ProductHandler{
-		createProduct: createProductUseCase,
+		createProduct:  createProductUseCase,
+		getAllByShopID: getAllUseCase,
+	}
+}
+
+func (p *ProductHandler) GetAllByShopID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get shop_id from URL path parameter
+	vars := mux.Vars(r)
+	shopIDStr := vars["shop_id"]
+	if strings.TrimSpace(shopIDStr) == "" {
+		logs.WithFields(map[string]interface{}{
+			"operation": "get_all_products_by_shop",
+			"error":     "shop_id parameter is required",
+		}).Error("Missing shop_id parameter")
+		errors.HandleError(w, &errors.BadRequestError{Message: "shop_id parameter is required"})
+		return
+	}
+
+	shopID, err := strconv.Atoi(shopIDStr)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"operation": "get_all_products_by_shop",
+			"shop_id":   shopIDStr,
+			"error":     err.Error(),
+		}).Error("Invalid shop_id parameter")
+		errors.HandleError(w, &errors.BadRequestError{Message: "invalid shop_id format"})
+		return
+	}
+
+	// Get pagination parameters from query string
+	limitStr := r.URL.Query().Get("limit")
+	cursorStr := r.URL.Query().Get("cursor")
+
+	limit := 20 // default
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil || limit <= 0 {
+			logs.WithFields(map[string]interface{}{
+				"operation": "parse_limit",
+				"limit":     limitStr,
+				"error":     err,
+			}).Error("Invalid limit parameter")
+			errors.HandleError(w, &errors.BadRequestError{Message: "invalid limit format"})
+			return
+		}
+	}
+
+	cursor := 0 // default (first page)
+	if cursorStr != "" {
+		cursor, err = strconv.Atoi(cursorStr)
+		if err != nil || cursor < 0 {
+			logs.WithFields(map[string]interface{}{
+				"operation": "parse_cursor",
+				"cursor":    cursorStr,
+				"error":     err,
+			}).Error("Invalid cursor parameter")
+			errors.HandleError(w, &errors.BadRequestError{Message: "invalid cursor format"})
+			return
+		}
+	}
+
+	// Execute use case
+	products, nextCursor, hasMore, err := p.getAllByShopID.Execute(ctx, shopID, limit, cursor)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"operation": "get_all_products_by_shop",
+			"shop_id":   shopID,
+			"limit":     limit,
+			"cursor":    cursor,
+			"error":     err.Error(),
+		}).Error("Error retrieving products")
+		errors.HandleError(w, err)
+		return
+	}
+
+	// Build HTTP response
+	response := contracts.PaginatedProductsResponse{
+		Products:   products,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"operation": "encode_response",
+			"error":     err.Error(),
+		}).Error("Error encoding response")
 	}
 }

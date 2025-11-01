@@ -8,4 +8,5 @@ import (
 
 type ProductService interface {
 	Create(ctx context.Context, product *models.Product, imageBuffers [][]byte, shopID int) (*models.Product, error)
+	GetAllByShopID(ctx context.Context, shopID, limit, cursor int) ([]*models.Product, int, bool, error)
 }

@@ -58,7 +58,7 @@ func (a *AuthSteps) setupSQLExpectations() {
 func (a *AuthSteps) iHaveValidUserCredentials() error {
 	ctx := GetTestContext()
 	ctx.scenario = "valid-user"
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "user@example.com",
 		Password: "password123",
 	}
@@ -68,7 +68,7 @@ func (a *AuthSteps) iHaveValidUserCredentials() error {
 
 func (a *AuthSteps) iHaveCredentialsWithEmptyEmail() error {
 	ctx := GetTestContext()
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "",
 		Password: "password123",
 	}
@@ -77,7 +77,7 @@ func (a *AuthSteps) iHaveCredentialsWithEmptyEmail() error {
 
 func (a *AuthSteps) iHaveCredentialsWithEmptyPassword() error {
 	ctx := GetTestContext()
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "user@example.com",
 		Password: "",
 	}
@@ -87,7 +87,7 @@ func (a *AuthSteps) iHaveCredentialsWithEmptyPassword() error {
 func (a *AuthSteps) iHaveCredentialsForANonExistentUser() error {
 	ctx := GetTestContext()
 	ctx.scenario = "non-existent-user"
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "nonexistent@example.com",
 		Password: "password123",
 	}
@@ -97,7 +97,7 @@ func (a *AuthSteps) iHaveCredentialsForANonExistentUser() error {
 func (a *AuthSteps) iHaveCredentialsWithWrongPassword() error {
 	ctx := GetTestContext()
 	ctx.scenario = "wrong-password"
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "user@example.com",
 		Password: "wrongpassword",
 	}
@@ -106,7 +106,7 @@ func (a *AuthSteps) iHaveCredentialsWithWrongPassword() error {
 
 func (a *AuthSteps) iHaveCredentialsWithInvalidEmailFormat() error {
 	ctx := GetTestContext()
-	ctx.signInRequest = contracts.SignInRequest{
+	ctx.requestBody = contracts.SignInRequest{
 		Email:    "invalid-email-format",
 		Password: "password123",
 	}
@@ -126,7 +126,7 @@ func (a *AuthSteps) iSendASignInRequest() error {
 	a.setupSQLExpectations()
 
 	// Convert request body to JSON
-	jsonBody, err := json.Marshal(ctx.signInRequest)
+	jsonBody, err := json.Marshal(ctx.requestBody)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (a *AuthSteps) iSendASignInRequest() error {
 			// Parse success response
 			var responseBody contracts.SignInResponse
 			if err := json.NewDecoder(resp.Body).Decode(&responseBody); err == nil {
-				ctx.signInResponse = responseBody
+				ctx.responseBody = responseBody
 			}
 		}
 	}
@@ -163,8 +163,12 @@ func (a *AuthSteps) iSendASignInRequest() error {
 
 func (a *AuthSteps) iShouldReceiveAToken() error {
 	ctx := GetTestContext()
-	if ctx.signInResponse.Token == "" {
-		return fmt.Errorf("expected token in response, got: %v", ctx.signInResponse)
+	signInResponse, ok := ctx.responseBody.(contracts.SignInResponse)
+	if !ok {
+		return fmt.Errorf("expected SignInResponse in responseBody, got: %T", ctx.responseBody)
+	}
+	if signInResponse.Token == "" {
+		return fmt.Errorf("expected token in response, got: %v", signInResponse)
 	}
 	return nil
 }
