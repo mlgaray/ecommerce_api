@@ -37,6 +37,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.authRoutes()
 	r.productRoutes()
 	r.metricsRoutes()
+	r.shopRoutes()
 	return r.router
 }
 
@@ -53,6 +54,11 @@ func (r *router) authRoutes() {
 func (r *router) productRoutes() {
 	sub := r.router.PathPrefix("/products").Subrouter()
 	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
+}
+
+func (r *router) shopRoutes() {
+	sub := r.router.PathPrefix("/shops").Subrouter()
+	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopID).Methods(http.MethodGet)
 }
 
 func (r *router) metricsRoutes() {

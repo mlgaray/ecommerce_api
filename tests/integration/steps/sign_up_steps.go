@@ -78,7 +78,7 @@ func (s *SignUpSteps) setupSQLExpectations() {
 func (s *SignUpSteps) iHaveValidUserRegistrationData() error {
 	ctx := GetTestContext()
 	ctx.scenario = "valid-registration"
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -98,7 +98,7 @@ func (s *SignUpSteps) iHaveValidUserRegistrationData() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyEmail() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -118,7 +118,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyEmail() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyPassword() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -138,7 +138,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyPassword() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyName() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "",
 			LastName: "Doe",
@@ -158,7 +158,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyName() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyShopSlug() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -178,7 +178,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyShopSlug() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithInvalidEmailFormat() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -199,7 +199,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithInvalidEmailFormat() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithExistingEmail() error {
 	ctx := GetTestContext()
 	ctx.scenario = "existing-user"
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -219,7 +219,7 @@ func (s *SignUpSteps) iHaveRegistrationDataWithExistingEmail() error {
 
 func (s *SignUpSteps) iHaveRegistrationDataWithWeakPassword() error {
 	ctx := GetTestContext()
-	ctx.signUpRequest = contracts.SignUpRequest{
+	ctx.requestBody = contracts.SignUpRequest{
 		User: models.User{
 			Name:     "John",
 			LastName: "Doe",
@@ -250,7 +250,7 @@ func (s *SignUpSteps) iSendASignUpRequest() error {
 	s.setupSQLExpectations()
 
 	// Convert request body to JSON
-	jsonBody, err := json.Marshal(ctx.signUpRequest)
+	jsonBody, err := json.Marshal(ctx.requestBody)
 	if err != nil {
 		return err
 	}

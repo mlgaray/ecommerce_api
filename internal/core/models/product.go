@@ -7,7 +7,6 @@ type Product struct {
 	Price            float64    `json:"price,omitempty"`
 	Images           []string   `json:"images,omitempty"`
 	Category         *Category  `json:"category,omitempty"`
-	Options          []*Option  `json:"options"`
 	Variants         []*Variant `json:"variants"`
 	IsActive         bool       `json:"is_active"`
 	IsPromotional    bool       `json:"is_promotional"`
@@ -15,4 +14,9 @@ type Product struct {
 	IsHighlighted    bool       `json:"is_highlighted"`
 	Stock            int        `json:"stock"`
 	MinimumStock     int        `json:"minimum_stock,omitempty"`
+}
+
+// GetID implements Identifiable interface for pagination
+func (p *Product) GetID() int {
+	return p.ID
 }

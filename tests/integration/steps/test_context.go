@@ -17,7 +17,6 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	authhttp "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
 )
@@ -38,18 +37,18 @@ type TestContext struct {
 	server   *httptest.Server
 	response *http.Response
 
-	// Requests/Responses
-	signInRequest  contracts.SignInRequest
-	signInResponse contracts.SignInResponse
-	signUpRequest  contracts.SignUpRequest
+	// Generic request/response data (reutilizable para cualquier endpoint)
+	requestBody  interface{} // Puede ser cualquier tipo de request
+	responseBody interface{} // Puede ser cualquier tipo de response
+	queryParams  map[string]string
+	pathParams   map[string]string
+
+	// Messages
 	successMessage string
 	errorMessage   string
 
-	// Product requests/responses
-	productRequest   models.Product
+	// Product-specific fields (para multipart/form-data)
 	productImages    [][]byte
-	productShopID    int
-	createdProduct   *models.Product
 	invalidImageType bool
 
 	// Test control
@@ -76,15 +75,13 @@ func (ctx *TestContext) Reset() {
 	ctx.app = nil
 	ctx.server = nil
 	ctx.response = nil
-	ctx.signInRequest = contracts.SignInRequest{}
-	ctx.signInResponse = contracts.SignInResponse{}
-	ctx.signUpRequest = contracts.SignUpRequest{}
+	ctx.requestBody = nil
+	ctx.responseBody = nil
+	ctx.queryParams = nil
+	ctx.pathParams = nil
 	ctx.successMessage = ""
 	ctx.errorMessage = ""
-	ctx.productRequest = models.Product{}
 	ctx.productImages = nil
-	ctx.productShopID = 0
-	ctx.createdProduct = nil
 	ctx.invalidImageType = false
 	ctx.scenario = ""
 
@@ -185,7 +182,16 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			// Provide product dependencies
 			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
 			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+
+			// Provide pagination service
+			fx.Annotate(
+				services.NewPaginationService[*models.Product],
+				fx.As(new(ports.PaginationService[*models.Product])),
+			),
+
+			// Provide use cases
 			fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
+			fx.Annotate(product.NewGetAllByShopIDUseCase, fx.As(new(ports.GetAllByShopIDUseCase))),
 
 			// Provide handler
 			authhttp.NewProductHandler,
@@ -194,6 +200,7 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 			router.HandleFunc("/products", handler.Create).Methods("POST")
+			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopID).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),

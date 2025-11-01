@@ -9,13 +9,15 @@ import (
 
 type ProductService struct {
 	productRepository ports.ProductRepository
+	paginationService ports.PaginationService[*models.Product]
 	// TODO: Add AssetService injection when ready
-	// assetService ports.AssetService
+	// assetService 1ports.AssetService
 }
 
-func NewProductService(productRepository ports.ProductRepository) *ProductService {
+func NewProductService(productRepository ports.ProductRepository, paginationService ports.PaginationService[*models.Product]) *ProductService {
 	return &ProductService{
 		productRepository: productRepository,
+		paginationService: paginationService,
 	}
 }
 
@@ -43,4 +45,17 @@ func (s *ProductService) Create(ctx context.Context, product *models.Product, im
 
 	// Create product with shop association
 	return s.productRepository.Create(ctx, product, shopID)
+}
+
+func (s *ProductService) GetAllByShopID(ctx context.Context, shopID, limit, cursor int) ([]*models.Product, int, bool, error) {
+	// Get products from repository
+	products, err := s.productRepository.GetAllByShopID(ctx, shopID, limit, cursor)
+	if err != nil {
+		return nil, 0, false, err
+	}
+
+	// Use generic pagination service - works with any entity implementing Identifiable
+	nextCursor, hasMore := s.paginationService.BuildCursorPagination(products, limit)
+
+	return products, nextCursor, hasMore, nil
 }

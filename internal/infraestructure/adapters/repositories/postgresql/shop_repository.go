@@ -67,16 +67,16 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //	   			`
 //		row := s.DB.QueryRow(query, shopID)
 //		shop := &entities.Shop{Address: &entities.Address{}}
-//		err := row.Scan(
+//		err := row.ScanField(
 //			&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Image,
 //			&shop.Address.ID, &shop.Address.Text, &shop.Address.PlaceID, &shop.Address.Ltd, &shop.Address.Lng,
 //		)
 //		if err != nil {
 //			if err == sql.ErrNoRows {
-//				//slog.Error("File: shop_repository.go | Func: GetByID() | SubFunc: row.Scan() | Msg: Shop with id %d no found | Err: %s", shopID, err.Error())
+//				//slog.Error("File: shop_repository.go | Func: GetByID() | SubFunc: row.ScanField() | Msg: Shop with id %d no found | Err: %s", shopID, err.Error())
 //				return nil, errors.New("Shop not found")
 //			}
-//			//slog.Error("File: shop_repository.go | Func: GetByID() | SubFunc: row.Scan() | Msg: Error scanning row | Err: %s", shopID, err.Error())
+//			//slog.Error("File: shop_repository.go | Func: GetByID() | SubFunc: row.ScanField() | Msg: Error scanning row | Err: %s", shopID, err.Error())
 //			return nil, err
 //		}
 //		return shop, nil
@@ -105,7 +105,7 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //		for rows.Next() {
 //			var category entities.Category
 //
-//			err := rows.Scan(
+//			err := rows.ScanField(
 //				&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Image,
 //				&shop.Address.ID, &shop.Address.Text, &shop.Address.PlaceID, &shop.Address.Ltd, &shop.Address.Lng,
 //				&category.ID, &category.Name, &category.Image,
@@ -189,9 +189,9 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //		categories := make([]*entities.Category, 0)
 //		for rows.Next() {
 //			category := &entities.Category{}
-//			err := rows.Scan(&category.ID, &category.Name, &category.Image)
+//			err := rows.ScanField(&category.ID, &category.Name, &category.Image)
 //			if err != nil {
-//				//slog.Error("File: shop_repository.go | Func: GetCategories() | SubFunc: rows.Scan() | Msg: Error scanning row | Err: %s", err.Error())
+//				//slog.Error("File: shop_repository.go | Func: GetCategories() | SubFunc: rows.ScanField() | Msg: Error scanning row | Err: %s", err.Error())
 //				return nil, err
 //			}
 //			categories = append(categories, category)
@@ -231,7 +231,7 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //			option := &entities.Option{}
 //			variant := &entities.Variant{} // Nueva estructura para las variants
 //
-//			err := rows.Scan(
+//			err := rows.ScanField(
 //				&product.ID, &product.Name, &product.Description, &product.Price, &product.Image, &product.IsActive,
 //				&category.ID, &category.Name, &category.Image,
 //				&option.ID, &option.Name, &option.Price,

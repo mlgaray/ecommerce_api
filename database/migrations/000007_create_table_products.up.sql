@@ -5,7 +5,6 @@ create table
                         name text null,
                         description text null,
                         price double precision null,
-                        image text null,
                         category_id bigint not null,
                         shop_id bigint not null,
                         is_active boolean null,

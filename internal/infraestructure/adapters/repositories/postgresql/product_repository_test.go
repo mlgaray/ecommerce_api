@@ -634,3 +634,383 @@ func TestProductRepository_CreateComplexProduct(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
+
+func TestProductRepository_GetAllByShopID(t *testing.T) {
+	t.Run("when getting products without cursor then returns first page", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		imagesJSON := `["http://example.com/image1.jpg","http://example.com/image2.jpg"]`
+		variantsJSON := `[{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"options":[{"id":1,"name":"Small","price":0,"order":1}]}]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		}).
+			AddRow(
+				1, "Product 1", "Description 1", 99.99, 10, 5,
+				true, false, false, 0.0,
+				1, "Category 1", "Category Description",
+				[]byte(imagesJSON), []byte(variantsJSON),
+			).
+			AddRow(
+				2, "Product 2", "Description 2", 149.99, 20, 10,
+				true, true, true, 129.99,
+				2, "Category 2", "Category Description 2",
+				[]byte("[]"), []byte("[]"),
+			)
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p(.+)WHERE p.shop_id = \$1 AND p.is_active = true(.+)ORDER BY p.id DESC(.+)LIMIT \$2`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, products)
+		assert.Len(t, products, 2)
+		assert.Equal(t, 1, products[0].ID)
+		assert.Equal(t, "Product 1", products[0].Name)
+		assert.Len(t, products[0].Images, 2)
+		assert.Len(t, products[0].Variants, 1)
+		assert.Equal(t, 2, products[1].ID)
+		assert.Equal(t, "Product 2", products[1].Name)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when getting products with cursor then returns paginated results", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 100
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		}).
+			AddRow(
+				99, "Product 99", "Description 99", 79.99, 15, 5,
+				true, false, false, 0.0,
+				1, "Category 1", "",
+				[]byte("[]"), []byte("[]"),
+			)
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p(.+)WHERE p.shop_id = \$1 AND p.is_active = true AND p.id < \$2(.+)ORDER BY p.id DESC(.+)LIMIT \$3`).
+			WithArgs(shopID, cursor, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, products)
+		assert.Len(t, products, 1)
+		assert.Equal(t, 99, products[0].ID)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when limit is zero then uses default limit of 20", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 0
+		cursor := 0
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		// Expect default limit of 20
+		mock.ExpectQuery(`SELECT(.+)FROM products p(.+)WHERE p.shop_id = \$1 AND p.is_active = true(.+)ORDER BY p.id DESC(.+)LIMIT \$2`).
+			WithArgs(shopID, 20).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, products)
+		assert.Len(t, products, 0)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when limit exceeds 100 then uses max limit of 100", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 200
+		cursor := 0
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		// Expect max limit of 100
+		mock.ExpectQuery(`SELECT(.+)FROM products p(.+)WHERE p.shop_id = \$1 AND p.is_active = true(.+)ORDER BY p.id DESC(.+)LIMIT \$2`).
+			WithArgs(shopID, 100).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when no products found then returns empty slice", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 999
+		limit := 20
+		cursor := 0
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p(.+)WHERE p.shop_id = \$1 AND p.is_active = true(.+)ORDER BY p.id DESC(.+)LIMIT \$2`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, products)
+		assert.Len(t, products, 0)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when query fails then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		expectedError := errors.New("database query failed")
+		mock.ExpectQuery(`SELECT(.+)FROM products p`).
+			WithArgs(shopID, limit).
+			WillReturnError(expectedError)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when scan fails then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		// Return wrong number of columns to cause scan error
+		rows := sqlmock.NewRows([]string{"id", "name"}).
+			AddRow(1, "Product 1")
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when images JSON is invalid then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		invalidImagesJSON := `[invalid json`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		}).
+			AddRow(
+				1, "Product 1", "Description 1", 99.99, 10, 5,
+				true, false, false, 0.0,
+				1, "Category 1", "",
+				[]byte(invalidImagesJSON), []byte("[]"),
+			)
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when variants JSON is invalid then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		invalidVariantsJSON := `[invalid json`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		}).
+			AddRow(
+				1, "Product 1", "Description 1", 99.99, 10, 5,
+				true, false, false, 0.0,
+				1, "Category 1", "",
+				[]byte("[]"), []byte(invalidVariantsJSON),
+			)
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when rows iteration error occurs then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		shopID := 1
+		limit := 20
+		cursor := 0
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"category_id", "category_name", "category_description",
+			"images", "variants",
+		}).
+			AddRow(
+				1, "Product 1", "Description 1", 99.99, 10, 5,
+				true, false, false, 0.0,
+				1, "Category 1", "",
+				[]byte("[]"), []byte("[]"),
+			).
+			RowError(0, errors.New("rows iteration error"))
+
+		mock.ExpectQuery(`SELECT(.+)FROM products p`).
+			WithArgs(shopID, limit).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		products, err := repo.GetAllByShopID(ctx, shopID, limit, cursor)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, products)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}

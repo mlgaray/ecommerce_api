@@ -111,7 +111,7 @@ func (p *ProductSteps) iHaveValidProductDataWithImages() error {
 	ctx := GetTestContext()
 	ctx.scenario = validProductScenario
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -122,7 +122,10 @@ func (p *ProductSteps) iHaveValidProductDataWithImages() error {
 
 	// Create one test image (100x100 PNG)
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -130,7 +133,7 @@ func (p *ProductSteps) iHaveValidProductDataWithImages() error {
 func (p *ProductSteps) iHaveProductDataWithoutImages() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -140,7 +143,10 @@ func (p *ProductSteps) iHaveProductDataWithoutImages() error {
 	}
 
 	ctx.productImages = [][]byte{} // No images
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -148,7 +154,7 @@ func (p *ProductSteps) iHaveProductDataWithoutImages() error {
 func (p *ProductSteps) iHaveProductDataWithEmptyName() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -158,7 +164,10 @@ func (p *ProductSteps) iHaveProductDataWithEmptyName() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -166,7 +175,7 @@ func (p *ProductSteps) iHaveProductDataWithEmptyName() error {
 func (p *ProductSteps) iHaveProductDataWithEmptyDescription() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "",
 		Price:        99.99,
@@ -176,7 +185,10 @@ func (p *ProductSteps) iHaveProductDataWithEmptyDescription() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -184,7 +196,7 @@ func (p *ProductSteps) iHaveProductDataWithEmptyDescription() error {
 func (p *ProductSteps) iHaveProductDataWithNegativePrice() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        -10.00,
@@ -194,7 +206,10 @@ func (p *ProductSteps) iHaveProductDataWithNegativePrice() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -202,7 +217,7 @@ func (p *ProductSteps) iHaveProductDataWithNegativePrice() error {
 func (p *ProductSteps) iHaveProductDataWithNegativeStock() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -212,7 +227,10 @@ func (p *ProductSteps) iHaveProductDataWithNegativeStock() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -220,7 +238,7 @@ func (p *ProductSteps) iHaveProductDataWithNegativeStock() error {
 func (p *ProductSteps) iHaveProductDataWithoutCategory() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -230,7 +248,10 @@ func (p *ProductSteps) iHaveProductDataWithoutCategory() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -238,7 +259,7 @@ func (p *ProductSteps) iHaveProductDataWithoutCategory() error {
 func (p *ProductSteps) iHaveProductDataWithInvalidShopID() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -248,7 +269,10 @@ func (p *ProductSteps) iHaveProductDataWithInvalidShopID() error {
 	}
 
 	ctx.productImages = [][]byte{createTestImage()}
-	ctx.productShopID = 0 // Invalid shop ID
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "0" // Invalid shop ID
 
 	return nil
 }
@@ -256,7 +280,7 @@ func (p *ProductSteps) iHaveProductDataWithInvalidShopID() error {
 func (p *ProductSteps) iHaveProductDataWithOversizedImage() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -273,7 +297,10 @@ func (p *ProductSteps) iHaveProductDataWithOversizedImage() error {
 	}
 
 	ctx.productImages = [][]byte{oversizedImage}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 
 	return nil
 }
@@ -281,7 +308,7 @@ func (p *ProductSteps) iHaveProductDataWithOversizedImage() error {
 func (p *ProductSteps) iHaveProductDataWithInvalidImageType() error {
 	ctx := GetTestContext()
 
-	ctx.productRequest = models.Product{
+	ctx.requestBody = models.Product{
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
@@ -292,7 +319,10 @@ func (p *ProductSteps) iHaveProductDataWithInvalidImageType() error {
 
 	// Create a text file instead of image
 	ctx.productImages = [][]byte{[]byte("This is not an image")}
-	ctx.productShopID = 1
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
 	ctx.invalidImageType = true
 
 	return nil
@@ -334,9 +364,21 @@ func (p *ProductSteps) createRequestBody(ctx *TestContext) (*bytes.Buffer, strin
 		imageType = invalidImageType
 	}
 
+	product, ok := ctx.requestBody.(models.Product)
+	if !ok {
+		return nil, "", fmt.Errorf("expected models.Product in requestBody, got: %T", ctx.requestBody)
+	}
+
+	shopID := 0
+	if ctx.pathParams != nil {
+		if shopIDStr, ok := ctx.pathParams["shop_id"]; ok {
+			_, _ = fmt.Sscanf(shopIDStr, "%d", &shopID)
+		}
+	}
+
 	return createMultipartRequest(
-		ctx.productRequest,
-		ctx.productShopID,
+		product,
+		shopID,
 		ctx.productImages,
 		imageType,
 	)
@@ -368,7 +410,7 @@ func (p *ProductSteps) parseResponse(ctx *TestContext, resp *http.Response) erro
 	} else {
 		var product models.Product
 		if err := json.NewDecoder(resp.Body).Decode(&product); err == nil {
-			ctx.createdProduct = &product
+			ctx.responseBody = &product
 		}
 	}
 
@@ -377,10 +419,11 @@ func (p *ProductSteps) parseResponse(ctx *TestContext, resp *http.Response) erro
 
 func (p *ProductSteps) theProductShouldBeCreatedSuccessfully() error {
 	ctx := GetTestContext()
-	if ctx.createdProduct == nil {
-		return fmt.Errorf("expected product to be created, got nil")
+	createdProduct, ok := ctx.responseBody.(*models.Product)
+	if !ok || createdProduct == nil {
+		return fmt.Errorf("expected product to be created, got: %T", ctx.responseBody)
 	}
-	if ctx.createdProduct.Name == "" {
+	if createdProduct.Name == "" {
 		return fmt.Errorf("expected product name to be set")
 	}
 	return nil
