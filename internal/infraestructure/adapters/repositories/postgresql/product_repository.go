@@ -16,17 +16,16 @@ type ProductRepository struct {
 
 // Product domain-specific log message constants
 const (
-	//create
+	// create
 	LogFailedInsertProduct       = "Failed to insert product"
 	LogFailedInsertProductImage  = "Failed to insert product image"
 	LogFailedInsertVariant       = "Failed to insert variant"
 	LogFailedInsertVariantOption = "Failed to insert variant option"
 	ProductRepositoryField       = "product_repository"
 	CreateFunctionField          = "create"
-	//getAllByShopIDField
-	getAllByShopIDField      ="get_all_by_shop_id"
-	failedReadProductsByShop ="Failed to read products by shop"
-	
+	// getAllByShopIDField
+	getAllByShopIDField      = "get_all_by_shop_id"
+	failedReadProductsByShop = "Failed to read products by shop"
 )
 
 func NewProductRepository(dataBaseConnection DataBaseConnection) *ProductRepository {
@@ -385,8 +384,8 @@ func (r *ProductRepository) GetAllByShopID(ctx context.Context, shopID, limit, c
 		if err := json.Unmarshal(imagesJSON, &product.Images); err != nil {
 			logs.WithFields(map[string]interface{}{
 				"file":       ProductRepositoryField,
-				"function": getAllByShopIDField,
-				"sub_func": UnmarshallField,
+				"function":   getAllByShopIDField,
+				"sub_func":   UnmarshallField,
 				"product_id": product.ID,
 				"error":      err.Error(),
 			}).Error("Failed to unmarshal product images")
@@ -397,8 +396,8 @@ func (r *ProductRepository) GetAllByShopID(ctx context.Context, shopID, limit, c
 		if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
 			logs.WithFields(map[string]interface{}{
 				"file":       ProductRepositoryField,
-				"function": getAllByShopIDField,
-				"sub_func": UnmarshallField,
+				"function":   getAllByShopIDField,
+				"sub_func":   UnmarshallField,
 				"product_id": product.ID,
 				"error":      err.Error(),
 			}).Error("Failed to unmarshal product variants")
@@ -413,8 +412,8 @@ func (r *ProductRepository) GetAllByShopID(ctx context.Context, shopID, limit, c
 			"file":     ProductRepositoryField,
 			"function": getAllByShopIDField,
 			"sub_func": NextField,
-			"shop_id":   shopID,
-			"error":     err.Error(),
+			"shop_id":  shopID,
+			"error":    err.Error(),
 		}).Error("Error iterating product rows")
 		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
 	}

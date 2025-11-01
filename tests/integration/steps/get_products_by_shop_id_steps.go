@@ -11,6 +11,12 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 )
 
+const (
+	scenarioShopWithProducts       = "shop-with-products"
+	scenarioShopWithoutProducts    = "shop-without-products"
+	scenarioShopWithProductsCursor = "shop-with-products-cursor"
+)
+
 type GetProductsByShopIDSteps struct{}
 
 func NewGetProductsByShopIDSteps() *GetProductsByShopIDSteps {
@@ -21,7 +27,7 @@ func NewGetProductsByShopIDSteps() *GetProductsByShopIDSteps {
 
 func (g *GetProductsByShopIDSteps) aShopWithIDHasProducts(shopID int) error {
 	ctx := GetTestContext()
-	ctx.scenario = "shop-with-products"
+	ctx.scenario = scenarioShopWithProducts
 	if ctx.queryParams == nil {
 		ctx.queryParams = make(map[string]string)
 	}
@@ -31,7 +37,7 @@ func (g *GetProductsByShopIDSteps) aShopWithIDHasProducts(shopID int) error {
 
 func (g *GetProductsByShopIDSteps) aShopWithIDHasNoProducts(shopID int) error {
 	ctx := GetTestContext()
-	ctx.scenario = "shop-without-products"
+	ctx.scenario = scenarioShopWithoutProducts
 	if ctx.queryParams == nil {
 		ctx.queryParams = make(map[string]string)
 	}
@@ -51,7 +57,7 @@ func (g *GetProductsByShopIDSteps) iSendAGetProductsRequestForShopWithLimit(shop
 
 func (g *GetProductsByShopIDSteps) iSendAGetProductsRequestForShopWithCursor(shopID, cursor int) error {
 	ctx := GetTestContext()
-	ctx.scenario = "shop-with-products-cursor"
+	ctx.scenario = scenarioShopWithProductsCursor
 	return g.sendGetProductsRequest(shopID, 0, cursor)
 }
 
@@ -66,62 +72,68 @@ func (g *GetProductsByShopIDSteps) sendGetProductsRequest(shopID, limit, cursor 
 	}
 
 	// Setup SQL expectations only if we expect the query to execute
-	// (i.e., not for validation error scenarios)
 	if limit >= 0 && cursor >= 0 {
-		g.setupGetProductsSQLExpectations(shopID)
+		g.setupGetProductsSQLExpectations()
 	}
 
-	// Build URL with path parameter and query parameters
-	url := ctx.server.URL + fmt.Sprintf("/shops/%d/products", shopID)
-
-	// Add query parameters (including negative values for validation tests)
-	hasParams := false
-	if limit != 0 {
-		url += fmt.Sprintf("?limit=%d", limit)
-		hasParams = true
-	}
-	if cursor != 0 {
-		if hasParams {
-			url += fmt.Sprintf("&cursor=%d", cursor)
-		} else {
-			url += fmt.Sprintf("?cursor=%d", cursor)
-		}
-	}
-
-	// Make GET request
+	// Build URL and make request
+	url := g.buildRequestURL(ctx.server.URL, shopID, limit, cursor)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 
 	ctx.response = resp
-
-	// Parse response
-	if resp.Body != nil {
-		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var errorResponse map[string]string
-			if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err == nil {
-				ctx.errorMessage = errorResponse["error"]
-			}
-		} else {
-			var paginatedResponse contracts.PaginatedProductsResponse
-			if err := json.NewDecoder(resp.Body).Decode(&paginatedResponse); err == nil {
-				ctx.responseBody = paginatedResponse
-			}
-		}
-	}
+	g.parseResponse(ctx, resp)
 
 	return nil
 }
 
+func (g *GetProductsByShopIDSteps) buildRequestURL(baseURL string, shopID, limit, cursor int) string {
+	url := baseURL + fmt.Sprintf("/shops/%d/products", shopID)
+
+	hasParams := false
+	if limit != 0 {
+		url += fmt.Sprintf("?limit=%d", limit)
+		hasParams = true
+	}
+	if cursor != 0 {
+		separator := "?"
+		if hasParams {
+			separator = "&"
+		}
+		url += fmt.Sprintf("%scursor=%d", separator, cursor)
+	}
+
+	return url
+}
+
+func (g *GetProductsByShopIDSteps) parseResponse(ctx *TestContext, resp *http.Response) {
+	if resp.Body == nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		var errorResponse map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err == nil {
+			ctx.errorMessage = errorResponse["error"]
+		}
+	} else {
+		var paginatedResponse contracts.PaginatedProductsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&paginatedResponse); err == nil {
+			ctx.responseBody = paginatedResponse
+		}
+	}
+}
+
 // ===== SQL Mock Setup =====
 
-func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations(shopID int) {
+func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 	ctx := GetTestContext()
 
 	switch ctx.scenario {
-	case "shop-with-products":
+	case scenarioShopWithProducts:
 		// Mock products query returning sample data (first page)
 		// Columns match the Scan in product_repository.go:356-372
 		rows := sqlmock.NewRows([]string{
@@ -137,7 +149,7 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations(shopID int) {
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
 
-	case "shop-with-products-cursor":
+	case scenarioShopWithProductsCursor:
 		// Mock products query with cursor (returns products with ID < cursor=10)
 		// Ordered DESC, so 9, 8, 7...
 		rows := sqlmock.NewRows([]string{
@@ -153,7 +165,7 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations(shopID int) {
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
 
-	case "shop-without-products":
+	case scenarioShopWithoutProducts:
 		// Mock empty result
 		emptyRows := sqlmock.NewRows([]string{
 			"id", "name", "description", "price", "stock", "minimum_stock",

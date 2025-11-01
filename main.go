@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/fx"
+
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
@@ -18,7 +20,6 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/server"
-	"go.uber.org/fx"
 )
 
 var Module = fx.Options(

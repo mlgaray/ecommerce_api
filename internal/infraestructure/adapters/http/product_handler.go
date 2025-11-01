@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
@@ -144,59 +145,18 @@ func NewProductHandler(createProductUseCase ports.CreateProductUseCase, getAllUs
 func (p *ProductHandler) GetAllByShopID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Get shop_id from URL path parameter
-	vars := mux.Vars(r)
-	shopIDStr := vars["shop_id"]
-	if strings.TrimSpace(shopIDStr) == "" {
-		logs.WithFields(map[string]interface{}{
-			"operation": "get_all_products_by_shop",
-			"error":     "shop_id parameter is required",
-		}).Error("Missing shop_id parameter")
-		errors.HandleError(w, &errors.BadRequestError{Message: "shop_id parameter is required"})
-		return
-	}
-
-	shopID, err := strconv.Atoi(shopIDStr)
+	// Parse and validate shop_id
+	shopID, err := p.parseShopID(r)
 	if err != nil {
-		logs.WithFields(map[string]interface{}{
-			"operation": "get_all_products_by_shop",
-			"shop_id":   shopIDStr,
-			"error":     err.Error(),
-		}).Error("Invalid shop_id parameter")
-		errors.HandleError(w, &errors.BadRequestError{Message: "invalid shop_id format"})
+		errors.HandleError(w, err)
 		return
 	}
 
-	// Get pagination parameters from query string
-	limitStr := r.URL.Query().Get("limit")
-	cursorStr := r.URL.Query().Get("cursor")
-
-	limit := 20 // default
-	if limitStr != "" {
-		limit, err = strconv.Atoi(limitStr)
-		if err != nil || limit <= 0 {
-			logs.WithFields(map[string]interface{}{
-				"operation": "parse_limit",
-				"limit":     limitStr,
-				"error":     err,
-			}).Error("Invalid limit parameter")
-			errors.HandleError(w, &errors.BadRequestError{Message: "invalid limit format"})
-			return
-		}
-	}
-
-	cursor := 0 // default (first page)
-	if cursorStr != "" {
-		cursor, err = strconv.Atoi(cursorStr)
-		if err != nil || cursor < 0 {
-			logs.WithFields(map[string]interface{}{
-				"operation": "parse_cursor",
-				"cursor":    cursorStr,
-				"error":     err,
-			}).Error("Invalid cursor parameter")
-			errors.HandleError(w, &errors.BadRequestError{Message: "invalid cursor format"})
-			return
-		}
+	// Parse and validate pagination parameters
+	limit, cursor, err := p.parsePaginationParams(r)
+	if err != nil {
+		errors.HandleError(w, err)
+		return
 	}
 
 	// Execute use case
@@ -228,4 +188,63 @@ func (p *ProductHandler) GetAllByShopID(w http.ResponseWriter, r *http.Request) 
 			"error":     err.Error(),
 		}).Error("Error encoding response")
 	}
+}
+
+func (p *ProductHandler) parseShopID(r *http.Request) (int, error) {
+	vars := mux.Vars(r)
+	shopIDStr := vars["shop_id"]
+	if strings.TrimSpace(shopIDStr) == "" {
+		logs.WithFields(map[string]interface{}{
+			"operation": "get_all_products_by_shop",
+			"error":     "shop_id parameter is required",
+		}).Error("Missing shop_id parameter")
+		return 0, &errors.BadRequestError{Message: "shop_id parameter is required"}
+	}
+
+	shopID, err := strconv.Atoi(shopIDStr)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"operation": "get_all_products_by_shop",
+			"shop_id":   shopIDStr,
+			"error":     err.Error(),
+		}).Error("Invalid shop_id parameter")
+		return 0, &errors.BadRequestError{Message: "invalid shop_id format"}
+	}
+
+	return shopID, nil
+}
+
+func (p *ProductHandler) parsePaginationParams(r *http.Request) (int, int, error) {
+	limitStr := r.URL.Query().Get("limit")
+	cursorStr := r.URL.Query().Get("cursor")
+
+	limit := 20 // default
+	if limitStr != "" {
+		parsedLimit, err := strconv.Atoi(limitStr)
+		if err != nil || parsedLimit <= 0 {
+			logs.WithFields(map[string]interface{}{
+				"operation": "parse_limit",
+				"limit":     limitStr,
+				"error":     err,
+			}).Error("Invalid limit parameter")
+			return 0, 0, &errors.BadRequestError{Message: "invalid limit format"}
+		}
+		limit = parsedLimit
+	}
+
+	cursor := 0 // default (first page)
+	if cursorStr != "" {
+		parsedCursor, err := strconv.Atoi(cursorStr)
+		if err != nil || parsedCursor < 0 {
+			logs.WithFields(map[string]interface{}{
+				"operation": "parse_cursor",
+				"cursor":    cursorStr,
+				"error":     err,
+			}).Error("Invalid cursor parameter")
+			return 0, 0, &errors.BadRequestError{Message: "invalid cursor format"}
+		}
+		cursor = parsedCursor
+	}
+
+	return limit, cursor, nil
 }

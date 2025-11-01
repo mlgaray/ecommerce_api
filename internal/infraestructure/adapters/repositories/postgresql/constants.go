@@ -12,7 +12,7 @@ const (
 
 	BeginTransactionField  = "begin_transaction"
 	CommitTransactionField = "commit_transaction"
-	ScanField       ="scan"
-	UnmarshallField ="unmarshall"
-	NextField="next"
+	ScanField              = "scan"
+	UnmarshallField        = "unmarshall"
+	NextField              = "next"
 )

@@ -372,7 +372,7 @@ func (p *ProductSteps) createRequestBody(ctx *TestContext) (*bytes.Buffer, strin
 	shopID := 0
 	if ctx.pathParams != nil {
 		if shopIDStr, ok := ctx.pathParams["shop_id"]; ok {
-			fmt.Sscanf(shopIDStr, "%d", &shopID)
+			_, _ = fmt.Sscanf(shopIDStr, "%d", &shopID)
 		}
 	}
 
