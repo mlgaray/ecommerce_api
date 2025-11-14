@@ -9,6 +9,15 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
+// User service log field constants
+const (
+	UserServiceField                 = "user_service"
+	GetByEmailFunctionField          = "get_by_email"
+	ValidateCredentialsFunctionField = "validate_credentials"
+	CreateUserFunctionField          = "create"
+	ComparePasswordSubFuncField      = "compare_password"
+)
+
 type UserService struct {
 	userRepo    ports.UserRepository
 	authService ports.AuthService
@@ -29,10 +38,12 @@ func (s *UserService) ValidateCredentials(ctx context.Context, user *models.User
 	err := s.authService.ComparePassword(ctx, user.Password, password)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
-			"operation": "compare_password",
-			"error":     err.Error(),
-		}).Error("error comparing passwords")
-		return nil, &errors.UnauthorizedError{Message: errors.InvalidUserCredentials}
+			"file":     UserServiceField,
+			"function": ValidateCredentialsFunctionField,
+			"sub_func": ComparePasswordSubFuncField,
+			"error":    err.Error(),
+		}).Error("Error comparing passwords")
+		return nil, &errors.AuthenticationError{Message: errors.InvalidUserCredentials}
 	}
 
 	return user, nil

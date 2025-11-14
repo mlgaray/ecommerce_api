@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
 func TestSignUpRequest_Validate(t *testing.T) {
@@ -58,7 +58,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_name_is_required", badRequestErr.Message)
 	})
@@ -86,7 +86,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_name_is_required", badRequestErr.Message)
 	})
@@ -114,7 +114,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_last_name_is_required", badRequestErr.Message)
 	})
@@ -142,7 +142,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_email_is_required", badRequestErr.Message)
 	})
@@ -170,7 +170,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "invalid_email_format", badRequestErr.Message)
 	})
@@ -198,7 +198,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_phone_is_required", badRequestErr.Message)
 	})
@@ -226,7 +226,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "user_password_is_required", badRequestErr.Message)
 	})
@@ -254,7 +254,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "shop_name_is_required", badRequestErr.Message)
 	})
@@ -282,7 +282,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "shop_slug_is_required", badRequestErr.Message)
 	})
@@ -310,7 +310,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "shop_email_is_required", badRequestErr.Message)
 	})
@@ -338,7 +338,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		badRequestErr, ok := err.(*errors.BadRequestError)
+		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
 		assert.Equal(t, "shop_phone_is_required", badRequestErr.Message)
 	})
@@ -420,13 +420,13 @@ func TestSignUpRequest_Validate(t *testing.T) {
 				if email == "" {
 					// Empty email should trigger user_email_is_required first
 					assert.Error(t, err)
-					badRequestErr, ok := err.(*errors.BadRequestError)
+					badRequestErr, ok := err.(*httpErrors.BadRequestError)
 					assert.True(t, ok)
 					assert.Equal(t, "user_email_is_required", badRequestErr.Message)
 				} else {
 					// Invalid format should trigger invalid_email_format
 					assert.Error(t, err)
-					badRequestErr, ok := err.(*errors.BadRequestError)
+					badRequestErr, ok := err.(*httpErrors.BadRequestError)
 					assert.True(t, ok)
 					assert.Equal(t, "invalid_email_format", badRequestErr.Message)
 				}

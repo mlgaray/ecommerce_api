@@ -19,6 +19,7 @@ import (
 
 const (
 	invalidImageType     = "invalid"
+	validImageType       = "png"
 	validProductScenario = "valid-product"
 	testImageSize        = 100 // Default test image size
 )
@@ -92,18 +93,10 @@ func (p *ProductSteps) setupSQLExpectations() {
 	ctx := GetTestContext()
 
 	if ctx.scenario == validProductScenario {
-		// Mock successful product creation
-		ctx.mockSQLMock.ExpectBegin()
-
-		// Expect INSERT for product
-		ctx.mockSQLMock.ExpectQuery("INSERT INTO products").
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-
-		// Expect INSERT for product images
-		ctx.mockSQLMock.ExpectExec("INSERT INTO product_images").
-			WillReturnResult(sqlmock.NewResult(1, 1))
-
-		ctx.mockSQLMock.ExpectCommit()
+		// Mock successful product creation via stored procedure
+		// The code now calls: SELECT create_product(...)
+		ctx.mockSQLMock.ExpectQuery("SELECT create_product").
+			WillReturnRows(sqlmock.NewRows([]string{"create_product"}).AddRow(1))
 	}
 }
 
@@ -359,7 +352,7 @@ func (p *ProductSteps) setupTestApp(ctx *TestContext) error {
 }
 
 func (p *ProductSteps) createRequestBody(ctx *TestContext) (*bytes.Buffer, string, error) {
-	imageType := "png"
+	imageType := validImageType
 	if ctx.invalidImageType {
 		imageType = invalidImageType
 	}
@@ -417,6 +410,115 @@ func (p *ProductSteps) parseResponse(ctx *TestContext, resp *http.Response) erro
 	return nil
 }
 
+func (p *ProductSteps) iHaveProductDataWithNegativeMinimumStock() error {
+	ctx := GetTestContext()
+
+	ctx.requestBody = models.Product{
+		Name:         "Test Product",
+		Description:  "Test Description",
+		Price:        99.99,
+		Stock:        10,
+		MinimumStock: -5, // Negative minimum stock
+		Category:     &models.Category{ID: 1},
+	}
+
+	ctx.productImages = [][]byte{createTestImage()}
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
+
+	return nil
+}
+
+func (p *ProductSteps) iHaveProductDataWithMinimumStockButNoStock() error {
+	ctx := GetTestContext()
+
+	ctx.requestBody = models.Product{
+		Name:         "Test Product",
+		Description:  "Test Description",
+		Price:        99.99,
+		Stock:        0, // No stock
+		MinimumStock: 5, // But has minimum stock
+		Category:     &models.Category{ID: 1},
+	}
+
+	ctx.productImages = [][]byte{createTestImage()}
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
+
+	return nil
+}
+
+func (p *ProductSteps) iHaveProductDataWithMinimumStockGreaterThanStock() error {
+	ctx := GetTestContext()
+
+	ctx.requestBody = models.Product{
+		Name:         "Test Product",
+		Description:  "Test Description",
+		Price:        99.99,
+		Stock:        10, // Stock is 10
+		MinimumStock: 20, // But minimum stock is 20
+		Category:     &models.Category{ID: 1},
+	}
+
+	ctx.productImages = [][]byte{createTestImage()}
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
+
+	return nil
+}
+
+func (p *ProductSteps) iHaveProductDataAsPromotionalWithoutPromotionalPrice() error {
+	ctx := GetTestContext()
+
+	ctx.requestBody = models.Product{
+		Name:             "Test Product",
+		Description:      "Test Description",
+		Price:            99.99,
+		Stock:            10,
+		MinimumStock:     5,
+		Category:         &models.Category{ID: 1},
+		IsPromotional:    true, // Is promotional
+		PromotionalPrice: 0,    // But no promotional price
+	}
+
+	ctx.productImages = [][]byte{createTestImage()}
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
+
+	return nil
+}
+
+func (p *ProductSteps) iHaveProductDataWithPromotionalPriceNotLowerThanPrice() error {
+	ctx := GetTestContext()
+
+	ctx.requestBody = models.Product{
+		Name:             "Test Product",
+		Description:      "Test Description",
+		Price:            100.00, // Regular price
+		Stock:            10,
+		MinimumStock:     5,
+		Category:         &models.Category{ID: 1},
+		IsPromotional:    true,
+		PromotionalPrice: 120.00, // Promotional price is higher!
+	}
+
+	ctx.productImages = [][]byte{createTestImage()}
+	if ctx.pathParams == nil {
+		ctx.pathParams = make(map[string]string)
+	}
+	ctx.pathParams["shop_id"] = "1"
+
+	return nil
+}
+
 func (p *ProductSteps) theProductShouldBeCreatedSuccessfully() error {
 	ctx := GetTestContext()
 	createdProduct, ok := ctx.responseBody.(*models.Product)
@@ -431,16 +533,30 @@ func (p *ProductSteps) theProductShouldBeCreatedSuccessfully() error {
 
 // RegisterSteps registers all step definitions
 func (p *ProductSteps) RegisterSteps(sc *godog.ScenarioContext) {
+	// Success scenarios
 	sc.Step(`^I have valid product data with images$`, p.iHaveValidProductDataWithImages)
+
+	// HTTP validation scenarios
 	sc.Step(`^I have product data without images$`, p.iHaveProductDataWithoutImages)
 	sc.Step(`^I have product data with empty name$`, p.iHaveProductDataWithEmptyName)
 	sc.Step(`^I have product data with empty description$`, p.iHaveProductDataWithEmptyDescription)
-	sc.Step(`^I have product data with negative price$`, p.iHaveProductDataWithNegativePrice)
-	sc.Step(`^I have product data with negative stock$`, p.iHaveProductDataWithNegativeStock)
 	sc.Step(`^I have product data without category$`, p.iHaveProductDataWithoutCategory)
 	sc.Step(`^I have product data with invalid shop_id$`, p.iHaveProductDataWithInvalidShopID)
 	sc.Step(`^I have product data with oversized image$`, p.iHaveProductDataWithOversizedImage)
 	sc.Step(`^I have product data with invalid image type$`, p.iHaveProductDataWithInvalidImageType)
+
+	// Business validation scenarios
+	sc.Step(`^I have product data with negative price$`, p.iHaveProductDataWithNegativePrice)
+	sc.Step(`^I have product data with negative stock$`, p.iHaveProductDataWithNegativeStock)
+	sc.Step(`^I have product data with negative minimum stock$`, p.iHaveProductDataWithNegativeMinimumStock)
+	sc.Step(`^I have product data with minimum stock but no stock$`, p.iHaveProductDataWithMinimumStockButNoStock)
+	sc.Step(`^I have product data with minimum stock greater than stock$`, p.iHaveProductDataWithMinimumStockGreaterThanStock)
+	sc.Step(`^I have product data as promotional without promotional price$`, p.iHaveProductDataAsPromotionalWithoutPromotionalPrice)
+	sc.Step(`^I have product data with promotional price not lower than price$`, p.iHaveProductDataWithPromotionalPriceNotLowerThanPrice)
+
+	// Action steps
 	sc.Step(`^I send a create product request$`, p.iSendACreateProductRequest)
+
+	// Assertion steps
 	sc.Step(`^the product should be created successfully$`, p.theProductShouldBeCreatedSuccessfully)
 }

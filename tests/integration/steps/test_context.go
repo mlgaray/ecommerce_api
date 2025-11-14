@@ -192,6 +192,8 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			// Provide use cases
 			fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
 			fx.Annotate(product.NewGetAllByShopIDUseCase, fx.As(new(ports.GetAllByShopIDUseCase))),
+			fx.Annotate(product.NewGetByIDUseCase, fx.As(new(ports.GetByIDUseCase))),
+			fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
 
 			// Provide handler
 			authhttp.NewProductHandler,
@@ -201,6 +203,8 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			router := mux.NewRouter()
 			router.HandleFunc("/products", handler.Create).Methods("POST")
 			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopID).Methods("GET")
+			router.HandleFunc("/products/{product_id}", handler.GetByID).Methods("GET")
+			router.HandleFunc("/products/{product_id}", handler.Update).Methods("PUT")
 
 			ctx.server = httptest.NewServer(router)
 		}),

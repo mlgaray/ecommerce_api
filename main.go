@@ -58,6 +58,8 @@ var Module = fx.Options(
 		fx.Annotate(http.NewProductHandler, fx.As(new(ports.ProductHandler))),
 		fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
 		fx.Annotate(product.NewGetAllByShopIDUseCase, fx.As(new(ports.GetAllByShopIDUseCase))),
+		fx.Annotate(product.NewGetByIDUseCase, fx.As(new(ports.GetByIDUseCase))),
+		fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
 		fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
 		fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
 

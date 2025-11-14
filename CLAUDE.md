@@ -2,435 +2,160 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Architecture Overview
+## E-commerce API
 
-This is a Go ecommerce API implementing **Hexagonal Architecture** (Ports and Adapters pattern) with three distinct layers:
+Go-based e-commerce API implementing **Hexagonal Architecture** (Ports and Adapters pattern) with PostgreSQL, JWT authentication, and comprehensive testing.
 
-- **Core Layer** (`internal/core/`): Business entities, models, and port interfaces (no external dependencies)
-  - `ports/`: All port interfaces (repositories, services, use cases, technical utilities)
-  - `models/`: Domain entities and value objects
-- **Application Layer** (`internal/application/`): Services and use cases implementing business logic
-- **Infrastructure Layer** (`internal/infraestructure/`): Adapters for external concerns (HTTP, database, JWT, logging)
+## 📚 Documentation
 
-### Key Architectural Patterns
+The project documentation is organized into specialized guides:
 
-- **Ports and Adapters**: Core defines ports (interfaces), infrastructure provides adapters (implementations)
-- **Dependency Injection**: Uses Uber FX with `fx.Annotate` for interface binding in `main.go`
-- **Repository Pattern**: Interfaces in `core/ports/`, PostgreSQL implementations in `infraestructure/adapters/repositories/`
-- **Transaction Management**: Context-based with `TxContextKey` - repositories support both transactional and direct DB operations
-- **Use Cases**: Specific business operations like `SignInUseCase`, `SignUpUseCase` coordinate multiple services
+### Core Concepts
 
-### Dependency Flow (CRITICAL)
+- **[Architecture](./.claude/ARCHITECTURE.md)** - Hexagonal Architecture, Dependency Flow, Ports and Adapters
+- **[Layer Responsibilities](./.claude/LAYERS.md)** - Use Cases, Services, Repositories, Handlers, Rich Models
+- **[Error Handling](./.claude/ERRORS.md)** - Domain vs HTTP errors, Validation layers, Error flow
 
-**ALWAYS follow the Dependency Rule: dependencies point INWARD toward the core**
+### Development Practices
 
-```
-┌─────────────────────────────────────────┐
-│   Infrastructure Layer (outermost)      │  ✅ CAN depend on: Application, Core
-│   - HTTP handlers                       │  ❌ CANNOT depend on: Nothing (outermost)
-│   - Database adapters                   │
-│   - External services                   │
-└──────────────┬──────────────────────────┘
-               │ depends on ↓
-┌──────────────▼──────────────────────────┐
-│   Application Layer (middle)            │  ✅ CAN depend on: Core
-│   - Services (business logic)           │  ❌ CANNOT depend on: Infrastructure
-│   - Use Cases (coordinators)            │
-└──────────────┬──────────────────────────┘
-               │ depends on ↓
-┌──────────────▼──────────────────────────┐
-│   Core Layer (innermost)                │  ✅ CAN depend on: Nothing (pure domain)
-│   - Models/Entities                     │  ❌ CANNOT depend on: Application, Infrastructure
-│   - Port interfaces                     │
-│   - Domain logic                        │
-└─────────────────────────────────────────┘
-```
+- **[Validations](./.claude/VALIDATIONS.md)** - HTTP vs Business validations, Separation of concerns, Validation flow
+- **[Logging](./.claude/LOGGING.md)** - Structured logging patterns, Field naming, Log levels
+- **[Testing](./.claude/TESTING.md)** - Unit tests, Integration tests (BDD), Mock generation
+- **[Database](./.claude/DATABASE.md)** - Migrations, Transactions, Repository patterns, Query patterns
 
-**Rules:**
-- ✅ **Infrastructure → Application → Core** (valid dependency direction)
-- ❌ **Core → Application** (NEVER - core must be independent)
-- ❌ **Core → Infrastructure** (NEVER - core doesn't know about outer layers)
-- ❌ **Application → Infrastructure** (NEVER - application depends on ports/interfaces only)
+### Setup & Commands
 
-**Example violations to AVOID:**
-```go
-// ❌ BAD: Core importing from Application
-package ports
-import "github.com/mlgaray/ecommerce_api/internal/application/services"
+- **[Development Guide](./.claude/DEVELOPMENT.md)** - Setup, Commands, Workflows, Troubleshooting
 
-// ✅ GOOD: Application importing from Core
-package services
-import "github.com/mlgaray/ecommerce_api/internal/core/ports"
-```
+## Quick Start
 
-### Request Flow
-```
-HTTP Request → Middleware → Handler → UseCase → Service → Repository → Database
-```
-
-## Development Commands
-
-### Database Operations
 ```bash
-# Create and run migrations
-make migrate-create MIGRATION_NAME="create_table_products"
-make migrate-up
-make migrate-down
+# Install dependencies
+go mod download
 
-# Seeds (test data)
-make migrate-create-seeds MIGRATION_NAME="seed_users"
-make migrate-up-seeds
-```
-
-### Code Quality
-```bash
-# Format code and run linter (uses golangci-lint with --out-format=tab for clickable errors)
-make code-quality
-
-# Individual commands
-make fmt        # gofmt + goimports
-make lint       # golangci-lint run
-make lint-fix   # golangci-lint run --fix
-```
-
-### Testing
-```bash
-# Unit tests
-go test ./...
-
-# Integration tests (uses Cucumber/Godog with BDD approach)
-cd tests/integration && go test
-
-# Generate mocks (uses mockery with .mockery.yml config)
-make generate-mocks
-```
-
-### Environment Setup
-```bash
-# Create .env.develop file with database configuration
+# Setup environment
 make create-env-file
+
+# Run migrations
+make migrate-up
+
+# Run application
+go run main.go
 ```
 
-## Testing Strategy
+## Key Architectural Principles
 
-### Unit Tests
-- Uses `testify/assert` and generated mocks
-- Tests located alongside source files (`*_test.go`)
-- Mock generation automated with Mockery
-- Pattern: Arrange-Act-Assert with descriptive test names
+### Dependency Rule
 
-### Integration Tests
-- BDD approach using Cucumber/Godog in `tests/integration/`
-- Feature files define scenarios, step definitions in `steps/`
-- Uses sqlmock for database mocking
-- Test context shared between steps for scenario state
+**Dependencies point INWARD toward the core**
 
-## Key Technologies
-
-- **Web**: Gorilla Mux routing, rs/cors middleware
-- **Database**: PostgreSQL with lib/pq driver, golang-migrate
-- **Auth**: JWT tokens with golang-jwt/jwt/v5
-- **Logging**: Logrus with Lumberjack file rotation
-- **DI**: Uber FX framework
-- **Testing**: Testify, Mockery, Cucumber/Godog
-
-## Logging Patterns
-
-### Repository Layer (Technical Only)
-```go
-logs.WithFields(map[string]interface{}{
-    "operation": "get_user_by_email_tx",
-    "error": err.Error(),
-}).Error("Database query failed")
+```
+Infrastructure (HTTP, DB) → Application (Services) → Core (Domain)
 ```
 
-### Handler/Service Layer (Business Context)
-```go
-logs.FromContext(ctx).WithFields(map[string]interface{}{
-    "email": request.Email,
-    "endpoint": "/auth/signin",
-    "request_id": requestID,
-}).Error("Sign in attempt failed")
-```
+- ✅ Infrastructure CAN depend on Application and Core
+- ✅ Application CAN depend on Core
+- ❌ Core CANNOT depend on Application or Infrastructure
+- ❌ Application CANNOT depend on Infrastructure
 
-## Database Patterns
+### Layer Separation
 
-### Repository Methods
-Most repositories support both direct DB and transaction contexts:
+- **Use Cases**: Coordinators only, NO business logic
+- **Services**: ALL business logic, domain rules, validations
+- **Repositories**: Data access only, NO business logic
+- **Handlers**: HTTP I/O only, NO business logic
+- **Models**: Rich domain models with behavior
 
-```go
-// Detects transaction from context automatically
-if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
-    return s.methodWithTx(ctx, tx, params)
-}
-return s.methodWithDB(ctx, params)
-```
+### Validation Strategy
+
+- **HTTP Validations** (`contracts/`): Required fields, format, file uploads
+- **Business Validations** (`models/`): Domain rules, invariants (via `Model.Validate()`)
+- Services call `Model.Validate()` before persisting data
+
+See [Validations](./.claude/VALIDATIONS.md) for complete guide.
 
 ### Error Handling
-- Custom error types in `core/errors/`
-- PostgreSQL-specific error handling for constraints
-- HTTP status mapping in error handlers
 
-## Configuration
+- **Domain Errors** (`core/errors/`): ValidationError, AuthenticationError, RecordNotFoundError
+- **HTTP Errors** (`infraestructure/adapters/http/errors/`): BadRequestError
+- **Technical Errors**: `fmt.Errorf()` for unexpected errors
 
-### Environment Variables (.env.develop)
-- `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
-- `ENVIRONMENT` (develop/production)
+See [Error Handling](./.claude/ERRORS.md) for complete guide.
 
-### Linting Configuration (.golangci.yml)
-- Comprehensive linter set enabled
-- Email regex validation for contracts
-- Excludes `w.Write` error checking for HTTP responses
+## Tech Stack
 
-## Dependencies Management
+- **Language**: Go 1.21+
+- **Web**: Gorilla Mux
+- **Database**: PostgreSQL with lib/pq
+- **Migrations**: golang-migrate
+- **Auth**: JWT (golang-jwt/jwt/v5)
+- **Logging**: Logrus with Lumberjack
+- **DI**: Uber FX
+- **Testing**: Testify, Mockery, Cucumber/Godog
 
-All interface definitions are in `core/ports/`. When adding new dependencies:
+## Common Commands
 
-1. Define interface in `core/ports/<name>.go`
-2. Use `package ports` in the file
-3. Implement in application or infrastructure layer
-4. Register binding in `main.go` using `fx.Annotate`
-5. Generate mocks with `make generate-mocks`
+```bash
+# Code quality
+make code-quality        # Format + lint
 
-**Import example**:
-```go
-import "github.com/mlgaray/ecommerce_api/internal/core/ports"
+# Testing
+go test ./...           # Unit tests
+cd tests/integration && go test  # Integration tests
+make generate-mocks     # Generate mocks
 
-type MyService struct {
-    productRepo   ports.ProductRepository
-    pagination    ports.PaginationService[...]
-}
+# Database
+make migrate-up         # Run migrations
+make migrate-down       # Rollback migrations
+make migrate-create MIGRATION_NAME="name"  # Create migration
+
+# Development
+go run main.go          # Run server
+go build -o bin/app     # Build binary
 ```
 
-**Note**: While you may see both domain interfaces (like `ProductRepository`) and technical utilities (like `PaginationService`) in the same `ports/` directory, this follows Go's convention of keeping packages flat and simple. Avoid creating subdirectories within ports unless absolutely necessary.
+See [Development Guide](./.claude/DEVELOPMENT.md) for complete command reference.
 
-## Layer Responsibilities
+## Project Structure
 
-### Use Cases (`internal/application/usecases/`)
-**Role**: Orchestrators/Coordinators - **NO business logic**
-
-Use cases are **thin pass-through layers** that:
-- Coordinate calls to one or more services
-- Should NOT contain business logic
-- Act as entry points for specific business operations
-- Are essentially "traffic directors"
-
-**Good Example:**
-```go
-func (uc *GetAllByShopIDUseCase) Execute(ctx context.Context, shopID, limit, cursor int) (*ports.PaginatedProducts, error) {
-    // Just coordinate - delegate to service
-    return uc.productService.GetAllByShopID(ctx, shopID, limit, cursor)
-}
+```
+.
+├── .claude/                    # Documentation
+├── internal/
+│   ├── core/                   # Domain layer (no dependencies)
+│   │   ├── errors/             # Domain errors
+│   │   ├── models/             # Rich domain models
+│   │   └── ports/              # Interface definitions
+│   ├── application/            # Business logic
+│   │   ├── services/           # Business logic implementation
+│   │   └── usecases/           # Orchestration layer
+│   └── infraestructure/        # External adapters
+│       └── adapters/
+│           ├── http/           # HTTP handlers & contracts
+│           ├── repositories/   # Database implementations
+│           └── auth/           # JWT service
+├── tests/integration/          # BDD integration tests
+├── database/migrations/        # SQL migrations
+└── main.go                     # DI container & entry point
 ```
 
-**Bad Example (DON'T DO THIS):**
-```go
-func (uc *GetAllByShopIDUseCase) Execute(ctx context.Context, shopID int) (*ports.PaginatedProducts, error) {
-    products, err := uc.repository.GetAll(ctx, shopID)
-    // ❌ Business logic in use case (should be in service)
-    var nextCursor int
-    if len(products) == limit {
-        nextCursor = products[len(products)-1].ID
-    }
-    return &ports.PaginatedProducts{...}, nil
-}
-```
+## Contributing
 
-### Services (`internal/application/services/`)
-**Role**: Business Logic Layer
+1. Read the [Architecture](./.claude/ARCHITECTURE.md) guide
+2. Follow [Layer Responsibilities](./.claude/LAYERS.md)
+3. Implement proper [Validations](./.claude/VALIDATIONS.md) (HTTP vs Business)
+4. Implement proper [Error Handling](./.claude/ERRORS.md)
+5. Use structured [Logging](./.claude/LOGGING.md)
+6. Write [Tests](./.claude/TESTING.md)
+7. Follow [Database](./.claude/DATABASE.md) patterns
+8. Use `make code-quality` before committing
 
-Services contain:
-- **ALL business logic** (calculations, transformations, validations)
-- Domain rules and constraints
-- Data aggregation and processing
-- Calls to repositories for data access
-- **Delegates cross-cutting concerns** (like pagination) to specialized services
+## Need Help?
 
-**Example with PaginationService:**
-```go
-func (s *ProductService) GetAllByShopID(ctx context.Context, shopID, limit, cursor int) (*ports.PaginatedProducts, error) {
-    products, err := s.productRepository.GetAllByShopID(ctx, shopID, limit, cursor)
-    if err != nil {
-        return nil, err
-    }
+- Check the specific guide for your topic (see [Documentation](#-documentation) above)
+- Review existing code for patterns
+- Consult [Development Guide](./.claude/DEVELOPMENT.md) for troubleshooting
 
-    // ✅ Delegate pagination logic to specialized service (reusable)
-    return s.paginationService.BuildProductsPagination(products, limit), nil
-}
-```
+---
 
-### Shared Services Pattern
-
-**PaginationService** - Generic service following hexagonal architecture:
-
-**1. Port Interface (core/ports/pagination_service.go):**
-```go
-package ports
-
-// Identifiable represents any entity that has an ID field
-// Defined in core layer - no dependencies on outer layers
-type Identifiable interface {
-    GetID() int
-}
-
-// Generic interface for cursor-based pagination
-type PaginationService[T Identifiable] interface {
-    BuildCursorPagination(items []T, limit int) (nextCursor int, hasMore bool)
-}
-```
-
-**2. Implementation (application/services/pagination_service.go):**
-```go
-package services
-
-import "github.com/mlgaray/ecommerce_api/internal/core/ports"
-
-// Generic service implementation
-// ✅ Application layer CAN depend on core layer (inward dependency)
-type PaginationService[T ports.Identifiable] struct{}
-
-func NewPaginationService[T ports.Identifiable]() *PaginationService[T] {
-    return &PaginationService[T]{}
-}
-
-func (p *PaginationService[T]) BuildCursorPagination(
-    items []T,
-    limit int,
-) (nextCursor int, hasMore bool) {
-    if len(items) > 0 && len(items) == limit {
-        nextCursor = items[len(items)-1].GetID()
-        hasMore = true
-    }
-    return nextCursor, hasMore
-}
-```
-
-**3. Dependency Injection (main.go):**
-```go
-import (
-    "github.com/mlgaray/ecommerce_api/internal/core/models"
-    // ... other imports
-)
-
-// PAGINATION - Bind implementation to interface
-fx.Annotate(
-    services.NewPaginationService[*models.Product],
-    fx.As(new(ports.PaginationService[*models.Product])),
-),
-
-// For categories (when needed):
-// fx.Annotate(
-//     services.NewPaginationService[*models.Category],
-//     fx.As(new(ports.PaginationService[*models.Category])),
-// ),
-```
-
-**4. Usage in Services:**
-```go
-type ProductService struct {
-    productRepository ports.ProductRepository
-    paginationService ports.PaginationService[*models.Product]  // ✅ Interface, not concrete type
-}
-
-func NewProductService(
-    productRepository ports.ProductRepository,
-    paginationService ports.PaginationService[*models.Product],  // ✅ Depend on abstraction
-) *ProductService {
-    return &ProductService{
-        productRepository: productRepository,
-        paginationService: paginationService,
-    }
-}
-
-func (s *ProductService) GetAllByShopID(ctx context.Context, shopID, limit, cursor int) (*ports.PaginatedProducts, error) {
-    products, err := s.productRepository.GetAllByShopID(ctx, shopID, limit, cursor)
-    if err != nil {
-        return nil, err
-    }
-
-    // ✅ Call through interface
-    nextCursor, hasMore := s.paginationService.BuildCursorPagination(products, limit)
-
-    return &ports.PaginatedProducts{
-        Products:   products,
-        NextCursor: nextCursor,
-        HasMore:    hasMore,
-    }, nil
-}
-```
-
-**5. Model Implementation:**
-```go
-// models/product.go
-func (p *Product) GetID() int { return p.ID }
-
-// models/category.go (when needed)
-func (c *Category) GetID() int { return c.ID }
-```
-
-**Benefits:**
-- ✅ **Loose coupling** - Services depend on interfaces, not implementations
-- ✅ **Type-safe** - Generics provide compile-time type checking
-- ✅ **Testable** - Easy to mock the interface
-- ✅ **Reusable** - Single implementation for all `Identifiable` types
-- ✅ **Hexagonal Architecture** - Follows ports and adapters pattern
-- ✅ **Consistent pagination** across all entities
-
-**Pattern:** Generic interface in `core/ports/`, generic implementation in `application/services/`, bound via dependency injection.
-
-### Repositories (`internal/infraestructure/adapters/repositories/`)
-**Role**: Data Access Layer
-
-Repositories:
-- Execute database queries
-- Handle transactions
-- Map database results to domain models
-- NO business logic (only data access logic)
-
-### Handlers (`internal/infraestructure/adapters/http/`)
-**Role**: HTTP Layer
-
-Handlers:
-- Parse HTTP requests
-- Validate input
-- Call use cases
-- **Build HTTP responses from primitive data**
-- NO business logic
-
-**Important Pattern - Response Construction**:
-Use cases and services return **primitive data** (arrays, ints, bools), NOT response DTOs. The handler is responsible for constructing the HTTP response:
-
-```go
-// ✅ GOOD: Use case returns primitives
-func (uc *GetAllByShopIDUseCase) Execute(ctx context.Context, shopID, limit, cursor int) ([]*models.Product, int, bool, error) {
-    return uc.productService.GetAllByShopID(ctx, shopID, limit, cursor)
-}
-
-// ✅ GOOD: Handler constructs response
-func (h *ProductHandler) GetAllByShopID(w http.ResponseWriter, r *http.Request) {
-    products, nextCursor, hasMore, err := h.getAllByShopID.Execute(ctx, shopID, limit, cursor)
-
-    // Handler builds the response DTO
-    response := contracts.PaginatedProductsResponse{
-        Products:   products,
-        NextCursor: nextCursor,
-        HasMore:    hasMore,
-    }
-
-    json.NewEncoder(w).Encode(response)
-}
-```
-
-**Why?**
-- ✅ Use cases and services stay HTTP-agnostic
-- ✅ Response DTOs (`contracts/`) belong in infrastructure layer
-- ✅ Handler has full control over HTTP response format
-- ✅ Same use case can be called from different protocols (HTTP, gRPC, CLI)
-
-## Project Structure Notes
-
-- `entities/` vs `models/`: Entities are pure domain objects, models include database-specific fields
-- `contracts/`: HTTP request/response DTOs with validation methods
-- `usecases/`: **Coordinators only** - orchestrate service calls, NO business logic
-- `services/`: **Business logic layer** - all domain rules, calculations, transformations
-- `handlers/`: Thin HTTP adapters, minimal business logic
+**Note**: This is a learning project demonstrating Clean Architecture, Hexagonal Architecture, and Domain-Driven Design principles in Go.
