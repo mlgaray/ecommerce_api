@@ -3,9 +3,9 @@ package models
 type SelectionType string
 
 const (
-	Single    SelectionType = "single"
-	Unlimited SelectionType = "unlimited"
-	Custom    SelectionType = "custom"
+	Single   SelectionType = "single"   // User can select only 1 option
+	Multiple SelectionType = "multiple" // User can select multiple options (up to max_selections)
+	Custom   SelectionType = "custom"   // Custom selection logic defined by user
 )
 
 type Variant struct {

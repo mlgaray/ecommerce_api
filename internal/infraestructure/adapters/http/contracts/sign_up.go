@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
 type SignUpRequest struct {
@@ -13,8 +13,8 @@ type SignUpRequest struct {
 	Shop models.Shop `json:"shop"`
 }
 
-// emailRegex is a regex pattern for email validation
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$`)
+// signUpEmailRegex is a regex pattern for email validation (HTTP layer validation)
+var signUpEmailRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$`)
 
 func (r *SignUpRequest) Validate() error {
 	if err := r.validateUser(); err != nil {
@@ -23,40 +23,62 @@ func (r *SignUpRequest) Validate() error {
 	return r.validateShop()
 }
 
+// validateUser validates HTTP input for user fields
 func (r *SignUpRequest) validateUser() error {
+	// HTTP validation: user name required
 	if strings.TrimSpace(r.User.Name) == "" {
-		return &errors.BadRequestError{Message: "user_name_is_required"}
+		return &httpErrors.BadRequestError{Message: "user_name_is_required"}
 	}
+
+	// HTTP validation: user last name required
 	if strings.TrimSpace(r.User.LastName) == "" {
-		return &errors.BadRequestError{Message: "user_last_name_is_required"}
+		return &httpErrors.BadRequestError{Message: "user_last_name_is_required"}
 	}
+
+	// HTTP validation: user email required
 	if strings.TrimSpace(r.User.Email) == "" {
-		return &errors.BadRequestError{Message: "user_email_is_required"}
+		return &httpErrors.BadRequestError{Message: "user_email_is_required"}
 	}
-	if !emailRegex.MatchString(strings.TrimSpace(r.User.Email)) {
-		return &errors.BadRequestError{Message: "invalid_email_format"}
+
+	// HTTP validation: email format
+	if !signUpEmailRegex.MatchString(strings.TrimSpace(r.User.Email)) {
+		return &httpErrors.BadRequestError{Message: "invalid_email_format"}
 	}
+
+	// HTTP validation: user phone required
 	if strings.TrimSpace(r.User.Phone) == "" {
-		return &errors.BadRequestError{Message: "user_phone_is_required"}
+		return &httpErrors.BadRequestError{Message: "user_phone_is_required"}
 	}
+
+	// HTTP validation: user password required
 	if strings.TrimSpace(r.User.Password) == "" {
-		return &errors.BadRequestError{Message: "user_password_is_required"}
+		return &httpErrors.BadRequestError{Message: "user_password_is_required"}
 	}
+
 	return nil
 }
 
+// validateShop validates HTTP input for shop fields
 func (r *SignUpRequest) validateShop() error {
+	// HTTP validation: shop name required
 	if strings.TrimSpace(r.Shop.Name) == "" {
-		return &errors.BadRequestError{Message: "shop_name_is_required"}
+		return &httpErrors.BadRequestError{Message: "shop_name_is_required"}
 	}
+
+	// HTTP validation: shop slug required
 	if strings.TrimSpace(r.Shop.Slug) == "" {
-		return &errors.BadRequestError{Message: "shop_slug_is_required"}
+		return &httpErrors.BadRequestError{Message: "shop_slug_is_required"}
 	}
+
+	// HTTP validation: shop email required
 	if strings.TrimSpace(r.Shop.Email) == "" {
-		return &errors.BadRequestError{Message: "shop_email_is_required"}
+		return &httpErrors.BadRequestError{Message: "shop_email_is_required"}
 	}
+
+	// HTTP validation: shop phone required
 	if strings.TrimSpace(r.Shop.Phone) == "" {
-		return &errors.BadRequestError{Message: "shop_phone_is_required"}
+		return &httpErrors.BadRequestError{Message: "shop_phone_is_required"}
 	}
+
 	return nil
 }

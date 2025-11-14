@@ -10,4 +10,7 @@ create table public.variant_options (
                                         constraint variant_options_variant_id_fkey foreign KEY (variant_id) references product_variants (id) on update CASCADE on delete CASCADE
 ) TABLESPACE pg_default;
 
-CREATE INDEX IF NOT EXISTS idx_variant_options_variant_id ON public.variant_options (variant_id);
+-- Composite index for efficient UPDATE queries that filter by both variant_id and id
+CREATE INDEX IF NOT EXISTS idx_variant_options_variant_id_id ON public.variant_options (variant_id, id);
+
+-- This composite index also serves queries that filter by variant_id alone (leftmost prefix rule)

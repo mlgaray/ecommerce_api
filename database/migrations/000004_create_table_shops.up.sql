@@ -15,5 +15,4 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_shops_user_id ON public.shops (user_id);
-CREATE INDEX IF NOT EXISTS idx_shops_email ON public.shops (email);
 CREATE INDEX IF NOT EXISTS idx_shops_slug ON public.shops (slug);

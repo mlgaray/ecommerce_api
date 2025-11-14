@@ -1,10 +1,11 @@
 package contracts
 
 import (
+	"regexp"
 	"strings"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
 // SignInRequest represents the sign in request payload
@@ -13,20 +14,28 @@ type SignInRequest struct {
 	Password string `json:"password"`
 }
 
-// emailRegex is a regex pattern for email validation
+// emailRegex is a regex pattern for email validation (HTTP layer validation)
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$`)
 
-// Validate validates the sign in request
+// Validate validates HTTP input (format, required fields)
 func (r *SignInRequest) Validate() error {
 	email := strings.TrimSpace(r.Email)
+
+	// HTTP validation: email required
 	if email == "" {
-		return &errors.BadRequestError{Message: "email_is_required"}
+		return &httpErrors.BadRequestError{Message: "email_is_required"}
 	}
+
+	// HTTP validation: email format
 	if !emailRegex.MatchString(email) {
-		return &errors.BadRequestError{Message: "invalid_email_format"}
+		return &httpErrors.BadRequestError{Message: "invalid_email_format"}
 	}
+
+	// HTTP validation: password required
 	if strings.TrimSpace(r.Password) == "" {
-		return &errors.BadRequestError{Message: "password_is_required"}
+		return &httpErrors.BadRequestError{Message: "password_is_required"}
 	}
+
 	return nil
 }
 

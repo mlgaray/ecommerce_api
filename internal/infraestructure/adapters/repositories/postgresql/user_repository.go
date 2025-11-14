@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 
@@ -11,17 +12,44 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
+// User repository log field constants
+const (
+	UserRepositoryField           = "user_repository"
+	UserCreateFunctionField       = "create"
+	UserGetByEmailFunctionField   = "get_by_email"
+	UserAssignRoleFunctionField   = "assign_role"
+	UserScanWithRolesSubFuncField = "scan_user_with_roles"
+)
+
 type UserSQLRepository struct {
 	db *sql.DB
 }
 
-func (s *UserSQLRepository) handlePostgreSQLError(err error) error {
+// handlePostgreSQLError translates PostgreSQL errors to domain errors
+func (s *UserSQLRepository) handlePostgreSQLError(err error, email string) error {
 	if pqErr, ok := err.(*pq.Error); ok {
+		// Duplicate email (unique constraint violation)
 		if pqErr.Code == "23505" && pqErr.Constraint == "users_email_key" {
-			return &errors.ConflictError{Message: "user_already_exists"}
+			logs.WithFields(map[string]interface{}{
+				"file":       UserRepositoryField,
+				"function":   UserCreateFunctionField,
+				"constraint": pqErr.Constraint,
+				"email":      email,
+			}).Error("User with email already exists")
+
+			return &errors.DuplicateRecordError{
+				Message: errors.UserAlreadyExists,
+			}
 		}
 	}
-	return err
+	// Technical error - log details but return generic error
+	logs.WithFields(map[string]interface{}{
+		"file":     UserRepositoryField,
+		"function": UserCreateFunctionField,
+		"error":    err.Error(),
+	}).Error("Database error creating user")
+
+	return fmt.Errorf("failed to create user")
 }
 
 func (s *UserSQLRepository) Create(ctx context.Context, user *models.User) (*models.User, error) {
@@ -44,11 +72,7 @@ func (s *UserSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, user *
 	var userID int
 	err := tx.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone).Scan(&userID)
 	if err != nil {
-		logs.WithFields(map[string]interface{}{
-			"operation": "create_user_tx",
-			"error":     err.Error(),
-		}).Error(DatabaseQueryFailedLog)
-		return nil, s.handlePostgreSQLError(err)
+		return nil, s.handlePostgreSQLError(err, user.Email)
 	}
 
 	user.ID = userID
@@ -65,11 +89,7 @@ func (s *UserSQLRepository) createWithDB(ctx context.Context, user *models.User)
 	var userID int
 	err := s.db.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone).Scan(&userID)
 	if err != nil {
-		logs.WithFields(map[string]interface{}{
-			"operation": "create_user_db",
-			"error":     err.Error(),
-		}).Error(DatabaseQueryFailedLog)
-		return nil, s.handlePostgreSQLError(err)
+		return nil, s.handlePostgreSQLError(err, user.Email)
 	}
 
 	user.ID = userID
@@ -116,9 +136,9 @@ func (s *UserSQLRepository) GetByEmail(ctx context.Context, email string) (*mode
 
 func (s *UserSQLRepository) getByEmailWithTx(ctx context.Context, tx *sql.Tx, email string) (*models.User, error) {
 	const query = `
-		SELECT 
+		SELECT
 			u.id, u.name, u.email, u.phone, u.password, u.is_active,
-			COALESCE(r.id, 0) as role_id, 
+			COALESCE(r.id, 0) as role_id,
 			COALESCE(r.name, '') as role_name
 		FROM users u
 		LEFT JOIN user_roles ur ON u.id = ur.user_id
@@ -129,21 +149,24 @@ func (s *UserSQLRepository) getByEmailWithTx(ctx context.Context, tx *sql.Tx, em
 	rows, err := tx.QueryContext(ctx, query, email)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
-			"operation": "get_user_by_email_tx",
-			"error":     err.Error(),
-		}).Error(DatabaseQueryFailedLog)
-		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+			"file":     UserRepositoryField,
+			"function": UserGetByEmailFunctionField,
+			"sub_func": "tx.QueryContext",
+			"email":    email,
+			"error":    err.Error(),
+		}).Error("Database query failed")
+		return nil, fmt.Errorf("failed to get user by email")
 	}
 	defer rows.Close()
 
-	return s.scanUserWithRoles(ctx, rows)
+	return s.scanUserWithRoles(ctx, rows, email)
 }
 
 func (s *UserSQLRepository) getByEmailWithDB(ctx context.Context, email string) (*models.User, error) {
 	const query = `
-		SELECT 
+		SELECT
 			u.id, u.name, u.email, u.phone, u.password, u.is_active,
-			COALESCE(r.id, 0) as role_id, 
+			COALESCE(r.id, 0) as role_id,
 			COALESCE(r.name, '') as role_name
 		FROM users u
 		LEFT JOIN user_roles ur ON u.id = ur.user_id
@@ -154,24 +177,44 @@ func (s *UserSQLRepository) getByEmailWithDB(ctx context.Context, email string) 
 	rows, err := s.db.QueryContext(ctx, query, email)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
-			"operation": "get_user_by_email_db",
-			"error":     err.Error(),
-		}).Error(DatabaseQueryFailedLog)
-		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+			"file":     UserRepositoryField,
+			"function": UserGetByEmailFunctionField,
+			"sub_func": "db.QueryContext",
+			"email":    email,
+			"error":    err.Error(),
+		}).Error("Database query failed")
+		return nil, fmt.Errorf("failed to get user by email")
 	}
 	defer rows.Close()
 
-	return s.scanUserWithRoles(ctx, rows)
+	return s.scanUserWithRoles(ctx, rows, email)
 }
 
-func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows) (*models.User, error) {
+func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows, email string) (*models.User, error) {
 	// Verificar si hay al menos una fila antes de procesar
 	if !rows.Next() {
-		// No hay datos, retornar directamente
+		// No hay datos - usuario no encontrado
 		if err := rows.Err(); err != nil {
-			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+			logs.WithFields(map[string]interface{}{
+				"file":     UserRepositoryField,
+				"function": UserScanWithRolesSubFuncField,
+				"sub_func": "rows.Next",
+				"email":    email,
+				"error":    err.Error(),
+			}).Error("Database scan failed")
+			return nil, fmt.Errorf("failed to scan user rows")
 		}
-		return nil, &errors.NotFoundError{Message: errors.UserNotFound}
+
+		// Domain error: user not found
+		logs.WithFields(map[string]interface{}{
+			"file":     UserRepositoryField,
+			"function": UserScanWithRolesSubFuncField,
+			"email":    email,
+		}).Error("User not found")
+
+		return nil, &errors.RecordNotFoundError{
+			Message: errors.UserNotFound,
+		}
 	}
 
 	// Hay datos, procesar la primera fila
@@ -188,10 +231,13 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 	)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
-			"operation": "scan_user_row",
-			"error":     err.Error(),
-		}).Error(DatabaseScanFailedLog)
-		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+			"file":     UserRepositoryField,
+			"function": UserScanWithRolesSubFuncField,
+			"sub_func": "rows.Scan",
+			"email":    email,
+			"error":    err.Error(),
+		}).Error("Database scan failed")
+		return nil, fmt.Errorf("failed to scan user row")
 	}
 
 	// Agregar el primer role si existe
@@ -211,10 +257,13 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 		)
 		if err != nil {
 			logs.WithFields(map[string]interface{}{
-				"operation": "scan_user_row_additional",
-				"error":     err.Error(),
-			}).Error(DatabaseScanFailedLog)
-			return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+				"file":     UserRepositoryField,
+				"function": UserScanWithRolesSubFuncField,
+				"sub_func": "rows.Scan",
+				"email":    email,
+				"error":    err.Error(),
+			}).Error("Database scan failed on additional roles")
+			return nil, fmt.Errorf("failed to scan user roles")
 		}
 
 		// Solo agregar role si existe y no está duplicado
@@ -228,7 +277,14 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, &errors.InternalServiceError{Message: errors.DatabaseError}
+		logs.WithFields(map[string]interface{}{
+			"file":     UserRepositoryField,
+			"function": UserScanWithRolesSubFuncField,
+			"sub_func": "rows.Err",
+			"email":    email,
+			"error":    err.Error(),
+		}).Error("Database rows iteration error")
+		return nil, fmt.Errorf("failed to iterate user rows")
 	}
 
 	user.Roles = roles

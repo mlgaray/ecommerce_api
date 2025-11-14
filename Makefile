@@ -115,6 +115,25 @@ migrate-seeds-version:
 
 .PHONY: migrate-seeds-version
 
+# Functions migrations (stored procedures)
+migrate-up-functions:
+	@echo "Running functions migrations..."
+	migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" -verbose up
+
+.PHONY: migrate-up-functions
+
+migrate-down-functions:
+	@echo "Running functions migrations..."
+	migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" -verbose down
+
+.PHONY: migrate-down-functions
+
+migrate-functions-version:
+	@echo "Checking functions migrations version..."
+	migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" version
+
+.PHONY: migrate-functions-version
+
 # Code formatting and linting
 fmt:
 	@echo "formatting..."
