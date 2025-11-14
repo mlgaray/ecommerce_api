@@ -18,5 +18,6 @@ func NewCreateProductUseCase(productService ports.ProductService) ports.CreatePr
 }
 
 func (uc *CreateProductUseCase) Execute(ctx context.Context, product *models.Product, imageBuffers [][]byte, shopID int) (*models.Product, error) {
+	// Uses stored procedure for optimal performance (single DB round trip)
 	return uc.productService.Create(ctx, product, imageBuffers, shopID)
 }

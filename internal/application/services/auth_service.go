@@ -27,12 +27,12 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) ComparePassword(ctx context.Context, hashedPassword, password string) error {
 	if hashedPassword == "" || password == "" {
-		return &errors.BadRequestError{Message: "passwords cannot be empty"}
+		return &errors.ValidationError{Message: errors.PasswordsCannotBeEmpty}
 	}
 
 	if hashedPassword == password {
 		return nil // Passwords match
 	}
 
-	return &errors.UnauthorizedError{Message: "passwords_do_not_match"}
+	return &errors.AuthenticationError{Message: errors.InvalidUserCredentials}
 }

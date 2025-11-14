@@ -32,9 +32,9 @@ Feature: Get Products by Shop ID
   Scenario: Get products with negative limit
     When I send a get products request for shop 1 with limit -1
     Then the response status should be 400
-    And the user should receive an error message "invalid limit format"
+    And the user should receive an error message "invalid_limit_format"
 
   Scenario: Get products with negative cursor
     When I send a get products request for shop 1 with cursor -1
     Then the response status should be 400
-    And the user should receive an error message "invalid cursor format"
+    And the user should receive an error message "invalid_cursor_format"

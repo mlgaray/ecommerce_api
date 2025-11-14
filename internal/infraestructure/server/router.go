@@ -54,6 +54,8 @@ func (r *router) authRoutes() {
 func (r *router) productRoutes() {
 	sub := r.router.PathPrefix("/products").Subrouter()
 	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
+	sub.HandleFunc("/{product_id}", r.productHandler.GetByID).Methods(http.MethodGet)
+	sub.HandleFunc("/{product_id}", r.productHandler.Update).Methods(http.MethodPut)
 }
 
 func (r *router) shopRoutes() {

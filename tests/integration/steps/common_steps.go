@@ -37,8 +37,21 @@ func (c *CommonSteps) iShouldReceiveAnErrorMessage(expectedMessage string) error
 	return nil
 }
 
+func (c *CommonSteps) iShouldReceiveASuccessMessage(expectedMessage string) error {
+	ctx := GetTestContext()
+
+	if ctx.successMessage == "" {
+		return fmt.Errorf("expected success message in response, got no message")
+	}
+	if ctx.successMessage != expectedMessage {
+		return fmt.Errorf("expected success message '%s', got '%s'", expectedMessage, ctx.successMessage)
+	}
+	return nil
+}
+
 // RegisterSteps registers all common step definitions
 func (c *CommonSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the response status should be (\d+)$`, c.theResponseStatusShouldBe)
 	sc.Step(`^the user should receive an error message "([^"]*)"$`, c.iShouldReceiveAnErrorMessage)
+	sc.Step(`^the user should receive a success message "([^"]*)"$`, c.iShouldReceiveASuccessMessage)
 }
