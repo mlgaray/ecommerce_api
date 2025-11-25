@@ -7,41 +7,34 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
 
+// ProductService contains business logic, validations, and data access coordination
+// Use Cases orchestrate the flow using this service (NOT repositories directly)
 type ProductService struct {
 	productRepository ports.ProductRepository
-	paginationService ports.PaginationService[*models.Product]
 	// TODO: Add AssetService injection when ready
-	// assetService 1ports.AssetService
+	// assetService ports.AssetService
 }
 
-func NewProductService(productRepository ports.ProductRepository, paginationService ports.PaginationService[*models.Product]) *ProductService {
+func NewProductService(productRepository ports.ProductRepository) *ProductService {
 	return &ProductService{
 		productRepository: productRepository,
-		paginationService: paginationService,
 	}
 }
 
-func (s *ProductService) Create(ctx context.Context, product *models.Product, imageBuffers [][]byte, shopID int) (*models.Product, error) {
-	// Validate business rules (domain validation)
-	if err := product.Validate(); err != nil {
-		return nil, err
-	}
+// validateProduct validates business rules for product creation/update
+func (s *ProductService) validateProduct(product *models.Product) error {
+	return product.Validate()
+}
 
-	// TODO: Upload images using AssetService and set URLs in product
-	// For now, we'll create a placeholder for where image URLs would be stored
-	//
-	// Example when AssetService is ready:
-	// imageURLs := make([]string, len(imageBuffers))
-	// for i, buffer := range imageBuffers {
-	//     uploadResult, err := s.assetService.UploadImage(ctx, buffer)
-	//     if err != nil {
-	//         return nil, err
-	//     }
-	//     imageURLs[i] = uploadResult.SecureURL
-	// }
-	// product.Images = imageURLs
+// validateFilters validates business rules for product filters
+func (s *ProductService) validateFilters(filters *models.ProductFilters) error {
+	return filters.Validate()
+}
 
-	// For now, just set placeholder URLs
+// prepareImagesForCreate processes image buffers for creation
+// Currently creates placeholders - will upload to AssetService in the future
+// TODO: Replace with actual AssetService integration
+func (s *ProductService) prepareImagesForCreate(imageBuffers [][]byte) []models.ProductImage {
 	placeholderImages := make([]models.ProductImage, len(imageBuffers))
 	for i := range imageBuffers {
 		placeholderImages[i] = models.ProductImage{
@@ -49,55 +42,75 @@ func (s *ProductService) Create(ctx context.Context, product *models.Product, im
 			// ID is 0 (omitted) - Repository will assign it on INSERT
 		}
 	}
-	product.Images = placeholderImages
+	return placeholderImages
+}
 
-	// Create product with shop association (uses stored procedures for optimal performance)
+// prepareImagesForUpdate processes new image buffers for update
+// Currently creates placeholders - will upload to AssetService in the future
+// TODO: Replace with actual AssetService integration
+func (s *ProductService) prepareImagesForUpdate(newImageBuffers [][]byte) []models.ProductImage {
+	newImages := make([]models.ProductImage, len(newImageBuffers))
+	for i := range newImageBuffers {
+		newImages[i] = models.ProductImage{
+			URL: "https://placeholder.com/new_image_" + string(rune(i+1)),
+			// ID is 0 (omitted) - Repository will INSERT these
+		}
+	}
+	return newImages
+}
+
+// GetAllByShopIDWithFilters retrieves products with filters
+// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer
+// Delegates to repository for data access
+func (s *ProductService) GetAllByShopIDWithFilters(ctx context.Context, filters *models.ProductFilters) ([]*models.Product, error) {
+	if err := s.validateFilters(filters); err != nil {
+		return nil, err
+	}
+	return s.productRepository.GetAllByShopIDWithFilters(ctx, *filters)
+}
+
+// CountByShopIDWithFilters returns total count of products matching filters
+// Delegates to repository - service layer can add business logic if needed
+func (s *ProductService) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
+	return s.productRepository.CountByShopIDWithFilters(ctx, filters)
+}
+
+// Create creates a new product
+// Business logic: validates product, prepares images, delegates to repository
+func (s *ProductService) Create(ctx context.Context, product *models.Product, imageBuffers [][]byte, shopID int) (*models.Product, error) {
+	// Validate business rules
+	if err := s.validateProduct(product); err != nil {
+		return nil, err
+	}
+
+	// Prepare images (placeholder URLs for now)
+	product.Images = s.prepareImagesForCreate(imageBuffers)
+
+	// Delegate to repository
 	return s.productRepository.Create(ctx, product, shopID)
 }
 
-func (s *ProductService) GetAllByShopID(ctx context.Context, shopID, limit, cursor int) ([]*models.Product, int, bool, error) {
-	// Get products from repository
-	products, err := s.productRepository.GetAllByShopID(ctx, shopID, limit, cursor)
-	if err != nil {
-		return nil, 0, false, err
-	}
-
-	nextCursor, hasMore := s.paginationService.BuildCursorPagination(products, limit)
-
-	return products, nextCursor, hasMore, nil
-}
-
+// GetByID retrieves a product by ID
+// Delegates to repository - service layer can add business logic if needed
 func (s *ProductService) GetByID(ctx context.Context, productID int) (*models.Product, error) {
-	// Get product from repository
 	return s.productRepository.GetByID(ctx, productID)
 }
 
+// Update updates an existing product
+// Business logic: validates product, prepares new images, delegates to repository
 func (s *ProductService) Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte) error {
-	// Validate business rules (domain validation)
-	if err := product.Validate(); err != nil {
+	// Validate business rules
+	if err := s.validateProduct(product); err != nil {
 		return err
 	}
 
-	// Process new images (upload when AssetService is ready)
-	// TODO: When AssetService is implemented:
-	// for i, buffer := range newImageBuffers {
-	//     uploadResult, err := s.assetService.UploadImage(ctx, buffer)
-	//     if err != nil {
-	//         return err
-	//     }
-	//     product.Images = append(product.Images, models.ProductImage{
-	//         URL: uploadResult.SecureURL,
-	//     })
-	// }
-
-	// For now, create placeholders for new images
-	for i := range newImageBuffers {
-		product.Images = append(product.Images, models.ProductImage{
-			URL: "https://placeholder.com/new_image_" + string(rune(i+1)),
-			// ID is 0 (omitted) - Repository will INSERT these
-		})
+	// Prepare new images (placeholder URLs for now) and append to product
+	if len(newImageBuffers) > 0 {
+		newImages := s.prepareImagesForUpdate(newImageBuffers)
+		// Append new images to existing images in product
+		product.Images = append(product.Images, newImages...)
 	}
 
-	// Update product via repository (uses stored procedures for optimal performance)
+	// Delegate to repository
 	return s.productRepository.Update(ctx, productID, product)
 }

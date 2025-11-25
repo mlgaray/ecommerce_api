@@ -84,12 +84,6 @@ migrate-down:
 
 .PHONY: migrate-down
 
-migrate-force:
-	@echo "Running migrations..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force $(V)
-
-.PHONY: migrate-force
-
 # Definir la meta para migrate
 migrate-up-seeds:
 	@echo "Running seeds migrations..."
@@ -104,16 +98,31 @@ migrate-down-seeds:
 .PHONY: migrate-down-seeds
 
 migrate-force-seeds:
-	@echo "Running seeds migrations..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 3
+	@echo "Forcing seeds migrations to version $(V)..."
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
 
 .PHONY: migrate-force-seeds
 
+
+
+migrate-force:
+	@echo "Forcing seeds migrations to version $(V)..."
+	migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 10
+
+.PHONY: migrate-force
+
 migrate-seeds-version:
-	@echo "Running seeds migrations..."
+	@echo "Checking seeds migrations version..."
 	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" version
 
 .PHONY: migrate-seeds-version
+
+migrate-reset-seeds:
+	@echo "Resetting seeds migrations (down all, then up)..."
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose down -all
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose up
+
+.PHONY: migrate-reset-seeds
 
 # Functions migrations (stored procedures)
 migrate-up-functions:
@@ -153,3 +162,45 @@ lint-fix:
 code-quality: fmt lint
 
 .PHONY: fmt lint lint-fix code-quality
+
+# Database reset: Drop everything and recreate from scratch
+# Order matters:
+#   DOWN: seeds -> functions -> tables (respect dependencies)
+#   UP: tables -> functions -> seeds (build dependencies)
+reset-db:
+	@echo "=========================================="
+	@echo "🔄 RESETTING DATABASE (Full Reset)"
+	@echo "=========================================="
+	@echo ""
+	@echo "Step 1/6: Dropping seeds..."
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" down -all || echo "⚠️  No seeds to drop or already dropped"
+	@echo ""
+	@echo "Step 2/6: Dropping functions (stored procedures)..."
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" down -all || echo "⚠️  No functions to drop or already dropped"
+	@echo ""
+	@echo "Step 3/6: Dropping tables and indexes..."
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" down -all || echo "⚠️  No tables to drop or already dropped"
+	@echo ""
+	@echo "Step 4/6: Creating tables and indexes..."
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" up
+	@echo ""
+	@echo "Step 5/6: Creating functions (stored procedures)..."
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" up
+	@echo ""
+	@echo "Step 6/6: Loading seeds..."
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" up
+	@echo ""
+	@echo "=========================================="
+	@echo "DATABASE RESET COMPLETE"
+	@echo "=========================================="
+
+.PHONY: reset-db
+
+# Quick reset: Reset only seeds (keeps tables and structure)
+reset-seeds:
+	@echo "🔄 Resetting seeds only..."
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" down -all || echo "⚠️  No seeds to drop"
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" up
+	@echo "✅ Seeds reset complete"
+
+.PHONY: reset-seeds

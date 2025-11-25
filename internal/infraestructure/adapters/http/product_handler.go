@@ -20,7 +20,6 @@ import (
 // Product handler log field constants
 const (
 	ProductHandlerField           = "product_handler"
-	GetAllByShopIDFunctionField   = "get_all_by_shop_id"
 	GetByIDFunctionField          = "get_by_id"
 	CreateProductFunctionField    = "create"
 	UpdateProductFunctionField    = "update"
@@ -32,10 +31,10 @@ const (
 )
 
 type ProductHandler struct {
-	createProduct  ports.CreateProductUseCase
-	getAllByShopID ports.GetAllByShopIDUseCase
-	getByID        ports.GetByIDUseCase
-	updateProduct  ports.UpdateProductUseCase
+	createProduct             ports.CreateProductUseCase
+	getAllByShopIDWithFilters ports.GetAllByShopIDWithFiltersUseCase
+	getByID                   ports.GetByIDUseCase
+	updateProduct             ports.UpdateProductUseCase
 }
 
 func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -195,63 +194,17 @@ func (p *ProductHandler) buildProductCreateRequest(r *http.Request) (*contracts.
 	}, nil
 }
 
-func NewProductHandler(createProductUseCase ports.CreateProductUseCase, getAllUseCase ports.GetAllByShopIDUseCase, getByIDUseCase ports.GetByIDUseCase, updateProductUseCase ports.UpdateProductUseCase) *ProductHandler {
+func NewProductHandler(
+	createProductUseCase ports.CreateProductUseCase,
+	getAllByShopIDWithFiltersUseCase ports.GetAllByShopIDWithFiltersUseCase,
+	getByIDUseCase ports.GetByIDUseCase,
+	updateProductUseCase ports.UpdateProductUseCase,
+) *ProductHandler {
 	return &ProductHandler{
-		createProduct:  createProductUseCase,
-		getAllByShopID: getAllUseCase,
-		getByID:        getByIDUseCase,
-		updateProduct:  updateProductUseCase,
-	}
-}
-
-func (p *ProductHandler) GetAllByShopID(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	// Parse and validate shop_id
-	shopID, err := p.parseShopID(r)
-	if err != nil {
-		httpErrors.HandleError(w, err)
-		return
-	}
-
-	// Parse and validate pagination parameters
-	limit, cursor, err := p.parsePaginationParams(r)
-	if err != nil {
-		httpErrors.HandleError(w, err)
-		return
-	}
-
-	// Execute use case
-	products, nextCursor, hasMore, err := p.getAllByShopID.Execute(ctx, shopID, limit, cursor)
-	if err != nil {
-		logs.WithFields(map[string]interface{}{
-			"file":     ProductHandlerField,
-			"function": GetAllByShopIDFunctionField,
-			"shop_id":  shopID,
-			"limit":    limit,
-			"cursor":   cursor,
-			"error":    err.Error(),
-		}).Error("Error retrieving products")
-		httpErrors.HandleError(w, err)
-		return
-	}
-
-	// Build HTTP response
-	response := contracts.PaginatedProductsResponse{
-		Products:   products,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logs.WithFields(map[string]interface{}{
-			"file":     ProductHandlerField,
-			"function": GetAllByShopIDFunctionField,
-			"sub_func": "json.Encode",
-			"error":    err.Error(),
-		}).Error("Error encoding response")
+		createProduct:             createProductUseCase,
+		getAllByShopIDWithFilters: getAllByShopIDWithFiltersUseCase,
+		getByID:                   getByIDUseCase,
+		updateProduct:             updateProductUseCase,
 	}
 }
 
@@ -282,43 +235,94 @@ func (p *ProductHandler) parseShopID(r *http.Request) (int, error) {
 	return shopID, nil
 }
 
-func (p *ProductHandler) parsePaginationParams(r *http.Request) (int, int, error) {
-	limitStr := r.URL.Query().Get("limit")
-	cursorStr := r.URL.Query().Get("cursor")
+func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-	limit := 20 // default
-	if limitStr != "" {
-		parsedLimit, err := strconv.Atoi(limitStr)
-		if err != nil || parsedLimit <= 0 {
-			logs.WithFields(map[string]interface{}{
-				"file":     ProductHandlerField,
-				"function": ParsePaginationSubFuncField,
-				"sub_func": "strconv.Atoi",
-				"limit":    limitStr,
-				"error":    err,
-			}).Error("Invalid limit parameter")
-			return 0, 0, &httpErrors.BadRequestError{Message: "invalid_limit_format"}
-		}
-		limit = parsedLimit
+	// Parse shop_id from URL path
+	shopID, err := p.parseShopID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
 	}
 
-	cursor := 0 // default (first page)
-	if cursorStr != "" {
-		parsedCursor, err := strconv.Atoi(cursorStr)
-		if err != nil || parsedCursor < 0 {
-			logs.WithFields(map[string]interface{}{
-				"file":     ProductHandlerField,
-				"function": ParsePaginationSubFuncField,
-				"sub_func": "strconv.Atoi",
-				"cursor":   cursorStr,
-				"error":    err,
-			}).Error("Invalid cursor parameter")
-			return 0, 0, &httpErrors.BadRequestError{Message: "invalid_cursor_format"}
-		}
-		cursor = parsedCursor
+	// Parse query parameters into ProductFiltersRequest
+	queryParams := r.URL.Query()
+	filtersRequest, err := contracts.ParseQueryParams(queryParams, shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": "get_all_by_shop_id_with_filters",
+			"sub_func": "parse_query_params",
+			"error":    err.Error(),
+		}).Error("Error parsing query parameters")
+		httpErrors.HandleError(w, err)
+		return
 	}
 
-	return limit, cursor, nil
+	// Validate HTTP request (format, types)
+	if err := filtersRequest.Validate(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": "get_all_by_shop_id_with_filters",
+			"sub_func": "validate_request",
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Invalid filter parameters")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Convert to domain model
+	filters := filtersRequest.ToModel()
+
+	// Execute use case (business validation happens in service layer)
+	// Filters passed by pointer so normalized values (Limit, SortBy, SortOrder) propagate back
+	// Lightweight query - no variants for real-time search performance
+	// totalCount is only returned on first page (cursor empty), nil on subsequent pages
+	products, nextCursor, hasMore, totalCount, err := p.getAllByShopIDWithFilters.Execute(ctx, &filters)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":        ProductHandlerField,
+			"function":    "get_all_by_shop_id_with_filters",
+			"shop_id":     shopID,
+			"has_search":  filters.Search != nil,
+			"has_filters": filters.CategoryID != nil || filters.IsActive != nil,
+			"limit":       filters.Limit,
+			"last_id":     filters.LastID,
+			"error":       err.Error(),
+		}).Error("Error retrieving products with filters")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Build HTTP response (handler constructs response DTO)
+	response := contracts.PaginatedProductsResponse{
+		Products:   products,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+		TotalCount: totalCount, // Only on first page, nil on subsequent pages
+	}
+
+	// Log successful search
+	logs.WithFields(map[string]interface{}{
+		"file":         ProductHandlerField,
+		"function":     "get_all_by_shop_id_with_filters",
+		"shop_id":      shopID,
+		"has_search":   filters.Search != nil,
+		"result_count": len(products),
+		"has_more":     hasMore,
+	}).Debug("Products retrieved successfully with filters (lightweight - no variants)")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": "get_all_by_shop_id_with_filters",
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
 }
 
 func (p *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {

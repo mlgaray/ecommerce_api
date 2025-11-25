@@ -1,0 +1,135 @@
+package models
+
+import (
+	"github.com/mlgaray/ecommerce_api/internal/core/errors"
+)
+
+// ProductFilters represents search and filter criteria for products
+// This is a domain model with business validation rules
+type ProductFilters struct {
+	// Required filters
+	ShopID int // Required: shop context for multi-tenancy
+
+	// Optional search filter
+	Search *string // nil = no search applied
+
+	// Optional category filter
+	CategoryID *int // nil = no category filter
+
+	// Optional boolean filters
+	IsActive      *bool // nil = no filter on active status
+	IsHighlighted *bool // nil = no filter on highlighted status
+	IsPromotional *bool // nil = no filter on promotional status
+
+	// Optional price range filters
+	MinPrice *float64 // nil = no minimum price filter
+	MaxPrice *float64 // nil = no maximum price filter
+
+	// Sorting
+	SortBy    string // "price", "name", "created_at" (default: "created_at")
+	SortOrder string // "asc", "desc" (default: "desc")
+
+	// Pagination (cursor-based)
+	Limit         int         // Number of items per page (default: 20, max: 100)
+	LastID        *int        // ID of the last item from previous page (nil = first page)
+	LastSortValue interface{} // Value of the sort field from last item (nil = first page or sorting by ID)
+}
+
+// Validate validates business rules for ProductFilters
+// This ensures domain invariants are maintained
+func (f *ProductFilters) Validate() error {
+	if err := f.validateShopID(); err != nil {
+		return err
+	}
+
+	f.normalizeLimit()
+
+	if err := f.validatePriceRange(); err != nil {
+		return err
+	}
+
+	if err := f.validateAndNormalizeSorting(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateShopID validates shop_id is present (multi-tenancy requirement)
+func (f *ProductFilters) validateShopID() error {
+	if f.ShopID <= 0 {
+		return &errors.ValidationError{
+			Message: errors.ShopIDIsRequired,
+		}
+	}
+	return nil
+}
+
+// normalizeLimit ensures limit is within valid bounds
+func (f *ProductFilters) normalizeLimit() {
+	if f.Limit <= 0 {
+		f.Limit = DefaultLimit
+	}
+	if f.Limit > MaxLimit {
+		f.Limit = MaxLimit
+	}
+}
+
+// validatePriceRange validates price range filters
+func (f *ProductFilters) validatePriceRange() error {
+	if f.MinPrice != nil && *f.MinPrice < 0 {
+		return &errors.ValidationError{
+			Message: errors.MinPriceCannotBeNegative,
+		}
+	}
+
+	if f.MaxPrice != nil && *f.MaxPrice < 0 {
+		return &errors.ValidationError{
+			Message: errors.MaxPriceCannotBeNegative,
+		}
+	}
+
+	if f.MinPrice != nil && f.MaxPrice != nil && *f.MinPrice > *f.MaxPrice {
+		return &errors.ValidationError{
+			Message: errors.MinPriceCannotBeGreaterThanMaxPrice,
+		}
+	}
+
+	return nil
+}
+
+// validateAndNormalizeSorting validates sort field and order, sets defaults
+func (f *ProductFilters) validateAndNormalizeSorting() error {
+	// Validate sort field (prevent SQL injection)
+	validSortFields := map[string]bool{
+		SortByPrice:     true,
+		SortByName:      true,
+		SortByCreatedAt: true,
+		"":              true, // Empty = use default
+	}
+
+	if !validSortFields[f.SortBy] {
+		return &errors.ValidationError{
+			Message: errors.InvalidSortField,
+		}
+	}
+
+	// Set default sort field
+	if f.SortBy == "" {
+		f.SortBy = SortByCreatedAt
+	}
+
+	// Validate sort order
+	if f.SortOrder != SortOrderAsc && f.SortOrder != SortOrderDesc && f.SortOrder != "" {
+		return &errors.ValidationError{
+			Message: errors.InvalidSortOrder,
+		}
+	}
+
+	// Set default sort order
+	if f.SortOrder == "" {
+		f.SortOrder = SortOrderDesc
+	}
+
+	return nil
+}

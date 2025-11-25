@@ -179,9 +179,11 @@ func (ctx *TestContext) SetupProductTestApp() error {
 				return &mockDataBaseConnection{db: db}
 			},
 
-			// Provide product dependencies
-			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
+			// Provide product dependencies (following dependency order)
+			// 1. Repository first (no dependencies)
 			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+			// 2. Service depends on Repository
+			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
 
 			// Provide pagination service
 			fx.Annotate(
@@ -189,9 +191,9 @@ func (ctx *TestContext) SetupProductTestApp() error {
 				fx.As(new(ports.PaginationService[*models.Product])),
 			),
 
-			// Provide use cases
+			// Provide use cases (depend on Services, NOT repositories)
 			fx.Annotate(product.NewCreateProductUseCase, fx.As(new(ports.CreateProductUseCase))),
-			fx.Annotate(product.NewGetAllByShopIDUseCase, fx.As(new(ports.GetAllByShopIDUseCase))),
+			fx.Annotate(product.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllByShopIDWithFiltersUseCase))),
 			fx.Annotate(product.NewGetByIDUseCase, fx.As(new(ports.GetByIDUseCase))),
 			fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
 
@@ -202,7 +204,7 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 			router.HandleFunc("/products", handler.Create).Methods("POST")
-			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopID).Methods("GET")
+			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopIDWithFilters).Methods("GET")
 			router.HandleFunc("/products/{product_id}", handler.GetByID).Methods("GET")
 			router.HandleFunc("/products/{product_id}", handler.Update).Methods("PUT")
 

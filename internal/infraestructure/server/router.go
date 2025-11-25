@@ -60,7 +60,10 @@ func (r *router) productRoutes() {
 
 func (r *router) shopRoutes() {
 	sub := r.router.PathPrefix("/shops").Subrouter()
-	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopID).Methods(http.MethodGet)
+	// GET /shops/{shop_id}/products?search=laptop&category_id=1&is_active=true&limit=20&cursor=0
+	// Supports both filtered and non-filtered queries (backward compatible)
+	// If no query params provided, returns all products with default pagination
+	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
 }
 
 func (r *router) metricsRoutes() {
