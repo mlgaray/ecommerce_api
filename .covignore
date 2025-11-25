@@ -1,0 +1,23 @@
+# Mocks - auto-generated files
+mocks/
+
+# Integration tests - not unit tests
+tests/integration/
+
+# Entry point - minimal logic, DI setup
+main.go
+
+# Infrastructure adapters - DB access, external services (hard to unit test)
+internal/infraestructure/adapters/repositories/
+
+# HTTP handlers - thin layer, tested via integration tests
+internal/infraestructure/adapters/http/
+
+# Server setup - configuration, routing
+internal/infraestructure/server/
+
+# Logs adapter - external dependency wrapper
+internal/infraestructure/adapters/logs/
+
+# Auth adapter - JWT wrapper
+internal/infraestructure/adapters/auth/

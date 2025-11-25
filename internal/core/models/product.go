@@ -1,6 +1,10 @@
 package models
 
-import "github.com/mlgaray/ecommerce_api/internal/core/errors"
+import (
+	"time"
+
+	"github.com/mlgaray/ecommerce_api/internal/core/errors"
+)
 
 type Product struct {
 	ID               int            `json:"id,omitempty"`
@@ -16,11 +20,29 @@ type Product struct {
 	IsHighlighted    bool           `json:"is_highlighted"`
 	Stock            int            `json:"stock"`
 	MinimumStock     int            `json:"minimum_stock,omitempty"`
+	CreatedAt        time.Time      `json:"created_at,omitempty"` // Timestamp de creación
 }
 
 // GetID implements Identifiable interface for pagination
 func (p *Product) GetID() int {
 	return p.ID
+}
+
+// GetSortValue implements Sortable interface for pagination
+// Returns the value of the field being sorted by, or nil if not supported
+func (p *Product) GetSortValue(sortBy string) interface{} {
+	switch sortBy {
+	case "price":
+		return p.Price
+	case "name":
+		return p.Name
+	case "created_at":
+		return p.CreatedAt
+	case "id":
+		return nil // When sorting by ID, no additional sort value needed
+	default:
+		return nil // Unsupported sort field
+	}
 }
 
 // Validate validates business rules for the Product domain model
