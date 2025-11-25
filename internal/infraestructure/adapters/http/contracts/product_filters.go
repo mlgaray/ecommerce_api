@@ -84,8 +84,8 @@ func (r *ProductFiltersRequest) ToModel() models.ProductFilters {
 		SortBy:        r.SortBy,
 		SortOrder:     r.SortOrder,
 		Limit:         r.Limit,
-		LastID:        nil,        // Will be populated from cursor
-		LastSortValue: nil,        // Will be populated from cursor
+		LastID:        nil, // Will be populated from cursor
+		LastSortValue: nil, // Will be populated from cursor
 	}
 
 	// Decode cursor if present
@@ -113,84 +113,106 @@ func ParseQueryParams(queryParams map[string][]string, shopID int) (*ProductFilt
 		ShopID: shopID,
 	}
 
-	// Parse search
-	if search := getQueryParam(queryParams, "search"); search != "" {
-		request.Search = &search
+	request.parseSearchParam(queryParams)
+
+	if err := request.parseFilterParams(queryParams); err != nil {
+		return nil, err
 	}
 
+	if err := request.parsePriceParams(queryParams); err != nil {
+		return nil, err
+	}
+
+	if err := request.parsePaginationParams(queryParams); err != nil {
+		return nil, err
+	}
+
+	return request, nil
+}
+
+// parseSearchParam extracts search query parameter
+func (r *ProductFiltersRequest) parseSearchParam(queryParams map[string][]string) {
+	if search := getQueryParam(queryParams, "search"); search != "" {
+		r.Search = &search
+	}
+}
+
+// parseFilterParams extracts category and boolean filter parameters
+func (r *ProductFiltersRequest) parseFilterParams(queryParams map[string][]string) error {
 	// Parse category_id
 	if categoryIDStr := getQueryParam(queryParams, "category_id"); categoryIDStr != "" {
 		categoryID, err := strconv.Atoi(categoryIDStr)
 		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_category_id_format"}
+			return &httpErrors.BadRequestError{Message: "invalid_category_id_format"}
 		}
-		request.CategoryID = &categoryID
+		r.CategoryID = &categoryID
 	}
 
-	// Parse is_active
-	if isActiveStr := getQueryParam(queryParams, "is_active"); isActiveStr != "" {
-		isActive, err := strconv.ParseBool(isActiveStr)
+	// Parse boolean filters
+	if err := r.parseBoolParam(queryParams, "is_active", &r.IsActive); err != nil {
+		return err
+	}
+	if err := r.parseBoolParam(queryParams, "is_highlighted", &r.IsHighlighted); err != nil {
+		return err
+	}
+	if err := r.parseBoolParam(queryParams, "is_promotional", &r.IsPromotional); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// parseBoolParam parses a boolean query parameter into the target pointer
+func (r *ProductFiltersRequest) parseBoolParam(queryParams map[string][]string, key string, target **bool) error {
+	if str := getQueryParam(queryParams, key); str != "" {
+		value, err := strconv.ParseBool(str)
 		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_is_active_format"}
+			return &httpErrors.BadRequestError{Message: "invalid_" + key + "_format"}
 		}
-		request.IsActive = &isActive
+		*target = &value
 	}
+	return nil
+}
 
-	// Parse is_highlighted
-	if isHighlightedStr := getQueryParam(queryParams, "is_highlighted"); isHighlightedStr != "" {
-		isHighlighted, err := strconv.ParseBool(isHighlightedStr)
-		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_is_highlighted_format"}
-		}
-		request.IsHighlighted = &isHighlighted
-	}
-
-	// Parse is_promotional
-	if isPromotionalStr := getQueryParam(queryParams, "is_promotional"); isPromotionalStr != "" {
-		isPromotional, err := strconv.ParseBool(isPromotionalStr)
-		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_is_promotional_format"}
-		}
-		request.IsPromotional = &isPromotional
-	}
-
-	// Parse min_price
+// parsePriceParams extracts price range parameters
+func (r *ProductFiltersRequest) parsePriceParams(queryParams map[string][]string) error {
 	if minPriceStr := getQueryParam(queryParams, "min_price"); minPriceStr != "" {
 		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
 		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_min_price_format"}
+			return &httpErrors.BadRequestError{Message: "invalid_min_price_format"}
 		}
-		request.MinPrice = &minPrice
+		r.MinPrice = &minPrice
 	}
 
-	// Parse max_price
 	if maxPriceStr := getQueryParam(queryParams, "max_price"); maxPriceStr != "" {
 		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
 		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_max_price_format"}
+			return &httpErrors.BadRequestError{Message: "invalid_max_price_format"}
 		}
-		request.MaxPrice = &maxPrice
+		r.MaxPrice = &maxPrice
 	}
 
-	// Parse sort
-	request.SortBy = getQueryParam(queryParams, "sort")
-	request.SortOrder = getQueryParam(queryParams, "order")
+	return nil
+}
 
-	// Parse limit
+// parsePaginationParams extracts sorting and pagination parameters
+func (r *ProductFiltersRequest) parsePaginationParams(queryParams map[string][]string) error {
+	r.SortBy = getQueryParam(queryParams, "sort")
+	r.SortOrder = getQueryParam(queryParams, "order")
+
 	if limitStr := getQueryParam(queryParams, "limit"); limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			return nil, &httpErrors.BadRequestError{Message: "invalid_limit_format"}
+			return &httpErrors.BadRequestError{Message: "invalid_limit_format"}
 		}
-		request.Limit = limit
+		r.Limit = limit
 	}
 
-	// Parse cursor (opaque string, no parsing needed)
 	if cursorStr := getQueryParam(queryParams, "cursor"); cursorStr != "" {
-		request.Cursor = cursorStr
+		r.Cursor = cursorStr
 	}
 
-	return request, nil
+	return nil
 }
 
 // getQueryParam safely retrieves a single query parameter value

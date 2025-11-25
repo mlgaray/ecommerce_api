@@ -40,13 +40,13 @@ const (
 	PasswordsCannotBeEmpty = "passwords_cannot_be_empty"
 
 	// ProductFilters related error messages
-	ShopIDIsRequired                     = "shop_id_is_required"
-	CursorCannotBeNegative               = "cursor_cannot_be_negative"
-	MinPriceCannotBeNegative             = "min_price_cannot_be_negative"
-	MaxPriceCannotBeNegative             = "max_price_cannot_be_negative"
-	MinPriceCannotBeGreaterThanMaxPrice  = "min_price_cannot_be_greater_than_max_price"
-	InvalidSortField                     = "invalid_sort_field"
-	InvalidSortOrder                     = "invalid_sort_order"
+	ShopIDIsRequired                    = "shop_id_is_required"
+	CursorCannotBeNegative              = "cursor_cannot_be_negative"
+	MinPriceCannotBeNegative            = "min_price_cannot_be_negative"
+	MaxPriceCannotBeNegative            = "max_price_cannot_be_negative"
+	MinPriceCannotBeGreaterThanMaxPrice = "min_price_cannot_be_greater_than_max_price"
+	InvalidSortField                    = "invalid_sort_field"
+	InvalidSortOrder                    = "invalid_sort_order"
 
 	// Authorization error messages
 	Forbidden = "forbidden"

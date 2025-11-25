@@ -38,22 +38,45 @@ type ProductFilters struct {
 // Validate validates business rules for ProductFilters
 // This ensures domain invariants are maintained
 func (f *ProductFilters) Validate() error {
-	// Business rule: shop_id is required (multi-tenancy)
+	if err := f.validateShopID(); err != nil {
+		return err
+	}
+
+	f.normalizeLimit()
+
+	if err := f.validatePriceRange(); err != nil {
+		return err
+	}
+
+	if err := f.validateAndNormalizeSorting(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateShopID validates shop_id is present (multi-tenancy requirement)
+func (f *ProductFilters) validateShopID() error {
 	if f.ShopID <= 0 {
 		return &errors.ValidationError{
 			Message: errors.ShopIDIsRequired,
 		}
 	}
+	return nil
+}
 
-	// Business rule: limit must be positive and within reasonable bounds
+// normalizeLimit ensures limit is within valid bounds
+func (f *ProductFilters) normalizeLimit() {
 	if f.Limit <= 0 {
-		f.Limit = 20 // Default
+		f.Limit = DefaultLimit
 	}
-	if f.Limit > 100 {
-		f.Limit = 100 // Max to prevent abuse
+	if f.Limit > MaxLimit {
+		f.Limit = MaxLimit
 	}
+}
 
-	// Business rule: price range validations
+// validatePriceRange validates price range filters
+func (f *ProductFilters) validatePriceRange() error {
 	if f.MinPrice != nil && *f.MinPrice < 0 {
 		return &errors.ValidationError{
 			Message: errors.MinPriceCannotBeNegative,
@@ -72,12 +95,17 @@ func (f *ProductFilters) Validate() error {
 		}
 	}
 
-	// Business rule: validate sort field (prevent SQL injection)
+	return nil
+}
+
+// validateAndNormalizeSorting validates sort field and order, sets defaults
+func (f *ProductFilters) validateAndNormalizeSorting() error {
+	// Validate sort field (prevent SQL injection)
 	validSortFields := map[string]bool{
-		"price":      true,
-		"name":       true,
-		"created_at": true,
-		"":           true, // Empty = use default
+		SortByPrice:     true,
+		SortByName:      true,
+		SortByCreatedAt: true,
+		"":              true, // Empty = use default
 	}
 
 	if !validSortFields[f.SortBy] {
@@ -88,11 +116,11 @@ func (f *ProductFilters) Validate() error {
 
 	// Set default sort field
 	if f.SortBy == "" {
-		f.SortBy = "created_at"
+		f.SortBy = SortByCreatedAt
 	}
 
-	// Business rule: validate sort order
-	if f.SortOrder != "asc" && f.SortOrder != "desc" && f.SortOrder != "" {
+	// Validate sort order
+	if f.SortOrder != SortOrderAsc && f.SortOrder != SortOrderDesc && f.SortOrder != "" {
 		return &errors.ValidationError{
 			Message: errors.InvalidSortOrder,
 		}
@@ -100,7 +128,7 @@ func (f *ProductFilters) Validate() error {
 
 	// Set default sort order
 	if f.SortOrder == "" {
-		f.SortOrder = "desc"
+		f.SortOrder = SortOrderDesc
 	}
 
 	return nil

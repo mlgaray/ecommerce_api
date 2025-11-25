@@ -35,10 +35,10 @@ func newValidProductWithID(id int) *models.Product {
 	return p
 }
 
-// newValidFilters creates valid filters for testing
-func newValidFilters(shopID int) models.ProductFilters {
+// newValidFilters creates valid filters for testing with default shop ID
+func newValidFilters() models.ProductFilters {
 	return models.ProductFilters{
-		ShopID: shopID,
+		ShopID: 1,
 		Limit:  20,
 	}
 }
@@ -630,7 +630,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when filters are valid then returns products", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 		expectedProducts := []*models.Product{
 			newValidProductWithID(1),
 			newValidProductWithID(2),
@@ -873,7 +873,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when repository returns error then propagates error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 		expectedError := stdErrors.New("database error")
 
 		repoMock := mocks.NewProductRepository(t)
@@ -895,7 +895,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when no products found then returns empty slice", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
@@ -1031,7 +1031,7 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when filters are valid then returns count", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 		expectedCount := 42
 
 		repoMock := mocks.NewProductRepository(t)
@@ -1052,7 +1052,7 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when no products then returns zero", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
@@ -1072,7 +1072,7 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when repository returns error then propagates error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
-		filters := newValidFilters(1)
+		filters := newValidFilters()
 		expectedError := stdErrors.New("count query failed")
 
 		repoMock := mocks.NewProductRepository(t)

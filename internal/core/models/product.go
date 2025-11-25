@@ -32,13 +32,13 @@ func (p *Product) GetID() int {
 // Returns the value of the field being sorted by, or nil if not supported
 func (p *Product) GetSortValue(sortBy string) interface{} {
 	switch sortBy {
-	case "price":
+	case SortByPrice:
 		return p.Price
-	case "name":
+	case SortByName:
 		return p.Name
-	case "created_at":
+	case SortByCreatedAt:
 		return p.CreatedAt
-	case "id":
+	case SortByID:
 		return nil // When sorting by ID, no additional sort value needed
 	default:
 		return nil // Unsupported sort field

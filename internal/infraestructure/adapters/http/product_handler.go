@@ -235,33 +235,6 @@ func (p *ProductHandler) parseShopID(r *http.Request) (int, error) {
 	return shopID, nil
 }
 
-func (p *ProductHandler) parsePaginationParams(r *http.Request) (int, string, error) {
-	limitStr := r.URL.Query().Get("limit")
-	cursorStr := r.URL.Query().Get("cursor")
-
-	limit := 20 // default
-	if limitStr != "" {
-		parsedLimit, err := strconv.Atoi(limitStr)
-		if err != nil || parsedLimit <= 0 {
-			logs.WithFields(map[string]interface{}{
-				"file":     ProductHandlerField,
-				"function": ParsePaginationSubFuncField,
-				"sub_func": "strconv.Atoi",
-				"limit":    limitStr,
-				"error":    err,
-			}).Error("Invalid limit parameter")
-			return 0, "", &httpErrors.BadRequestError{Message: "invalid_limit_format"}
-		}
-		limit = parsedLimit
-	}
-
-	// Cursor is an opaque string - no parsing needed here
-	// Empty string means first page
-	cursor := cursorStr
-
-	return limit, cursor, nil
-}
-
 func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

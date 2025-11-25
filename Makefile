@@ -84,12 +84,6 @@ migrate-down:
 
 .PHONY: migrate-down
 
-migrate-force:
-	@echo "Running migrations..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force $(V)
-
-.PHONY: migrate-force
-
 # Definir la meta para migrate
 migrate-up-seeds:
 	@echo "Running seeds migrations..."

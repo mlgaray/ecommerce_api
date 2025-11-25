@@ -355,7 +355,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 	// - ILIKE with pg_trgm (name only): ~30-40ms (index scan, fewer results)
 	if filters.Search != nil && *filters.Search != "" {
 		searchTerm := *filters.Search
-		
+
 		// ILIKE with trigram index: Fast partial matching
 		// Searches only in name (more precise, better UX for real-time search)
 		conditions = append(conditions, fmt.Sprintf(
@@ -413,8 +413,8 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 
 	// ORDER BY with validated and sanitized fields
 	// Always include id as secondary sort for stable pagination
-	baseQuery += fmt.Sprintf(" ORDER BY p.%s %s, p.id %s", 
-		filters.SortBy, 
+	baseQuery += fmt.Sprintf(" ORDER BY p.%s %s, p.id %s",
+		filters.SortBy,
 		strings.ToUpper(filters.SortOrder),
 		strings.ToUpper(filters.SortOrder))
 
@@ -599,7 +599,6 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 		searchTerm := *filters.Search
 		conditions = append(conditions, fmt.Sprintf("p.name ILIKE $%d", argPos))
 		args = append(args, "%"+searchTerm+"%")
-		argPos++
 	}
 
 	// Append all WHERE conditions
@@ -633,12 +632,12 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 	countDuration := time.Since(startTime).Milliseconds()
 
 	logs.WithFields(map[string]interface{}{
-		"file":         ProductRepositoryField,
-		"function":     "count_by_shop_id_with_filters",
-		"duration_ms":  countDuration,
-		"total_count":  totalCount,
-		"shop_id":      filters.ShopID,
-		"has_search":   filters.Search != nil,
+		"file":        ProductRepositoryField,
+		"function":    "count_by_shop_id_with_filters",
+		"duration_ms": countDuration,
+		"total_count": totalCount,
+		"shop_id":     filters.ShopID,
+		"has_search":  filters.Search != nil,
 	}).Debug("COUNT query completed")
 
 	// Alert if COUNT is slow (target < 100ms even with search)
