@@ -12,6 +12,7 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
@@ -19,6 +20,7 @@ import (
 	authhttp "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
+	"github.com/mlgaray/ecommerce_api/tests/integration/stubs"
 )
 
 // mockDataBaseConnection implements postgresql.DataBaseConnection for testing
@@ -182,7 +184,9 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			// Provide product dependencies (following dependency order)
 			// 1. Repository first (no dependencies)
 			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
-			// 2. Service depends on Repository
+			// 2. AssetService stub for testing (no external dependencies)
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			// 3. Service depends on Repository and AssetService
 			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
 
 			// Provide pagination service
@@ -207,6 +211,51 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopIDWithFilters).Methods("GET")
 			router.HandleFunc("/products/{product_id}", handler.GetByID).Methods("GET")
 			router.HandleFunc("/products/{product_id}", handler.Update).Methods("PUT")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupCategoryTestApp initializes the test application for category tests
+func (ctx *TestContext) SetupCategoryTestApp() error {
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide category dependencies
+			fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
+
+			// Provide use case
+			fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+
+			// Provide handler
+			authhttp.NewCategoryHandler,
+		),
+		fx.Invoke(func(handler *authhttp.CategoryHandler) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+			router.HandleFunc("/categories", handler.Create).Methods("POST")
 
 			ctx.server = httptest.NewServer(router)
 		}),

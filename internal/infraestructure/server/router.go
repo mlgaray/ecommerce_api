@@ -14,21 +14,23 @@ type Router interface {
 	RouteApp() *mux.Router
 }
 type router struct {
-	router         *mux.Router
-	authHandler    ports.AuthHandler
-	healthHandler  ports.HealthHandler
-	productHandler ports.ProductHandler
+	router          *mux.Router
+	authHandler     ports.AuthHandler
+	healthHandler   ports.HealthHandler
+	productHandler  ports.ProductHandler
+	categoryHandler ports.CategoryHandler
 }
 
-func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler, productHandler ports.ProductHandler) *router {
+func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler, productHandler ports.ProductHandler, categoryHandler ports.CategoryHandler) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 	r.Use(middleware.PrometheusMiddleware)
 	return &router{
-		router:         r,
-		authHandler:    authHandler,
-		healthHandler:  healthHandler,
-		productHandler: productHandler,
+		router:          r,
+		authHandler:     authHandler,
+		healthHandler:   healthHandler,
+		productHandler:  productHandler,
+		categoryHandler: categoryHandler,
 	}
 }
 
@@ -36,6 +38,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.healthRoutes()
 	r.authRoutes()
 	r.productRoutes()
+	r.categoryRoutes()
 	r.metricsRoutes()
 	r.shopRoutes()
 	return r.router
@@ -56,6 +59,11 @@ func (r *router) productRoutes() {
 	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
 	sub.HandleFunc("/{product_id}", r.productHandler.GetByID).Methods(http.MethodGet)
 	sub.HandleFunc("/{product_id}", r.productHandler.Update).Methods(http.MethodPut)
+}
+
+func (r *router) categoryRoutes() {
+	sub := r.router.PathPrefix("/categories").Subrouter()
+	sub.HandleFunc("", r.categoryHandler.Create).Methods(http.MethodPost)
 }
 
 func (r *router) shopRoutes() {

@@ -151,47 +151,75 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *ProductHandler) buildProductCreateRequest(r *http.Request) (*contracts.ProductCreateRequest, error) {
-	// Extract product JSON from form data
+	product, err := p.parseProductJSON(r)
+	if err != nil {
+		return nil, err
+	}
+
+	shopID, err := p.parseShopIDFromForm(r)
+	if err != nil {
+		return nil, err
+	}
+
+	images, err := p.parseImagesFromForm(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contracts.ProductCreateRequest{
+		Product: *product,
+		ShopID:  shopID,
+		Images:  images,
+	}, nil
+}
+
+func (p *ProductHandler) parseProductJSON(r *http.Request) (*models.Product, error) {
 	productJSON := r.FormValue("product")
 	if strings.TrimSpace(productJSON) == "" {
 		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
 	}
 
-	// Parse product JSON
 	var product models.Product
 	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
 		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
 	}
 
-	// Get shop ID from form
+	return &product, nil
+}
+
+func (p *ProductHandler) parseShopIDFromForm(r *http.Request) (int, error) {
 	shopIDStr := r.FormValue("shop_id")
 	if strings.TrimSpace(shopIDStr) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "shop_id_required"}
+		return 0, &httpErrors.BadRequestError{Message: "shop_id_required"}
 	}
 
 	shopID, err := strconv.Atoi(shopIDStr)
 	if err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
+		return 0, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
 	}
 
-	// Get images from form
+	return shopID, nil
+}
+
+func (p *ProductHandler) parseImagesFromForm(r *http.Request) ([]*multipart.FileHeader, error) {
 	var images []*multipart.FileHeader
+
 	if r.MultipartForm != nil && r.MultipartForm.File != nil {
 		for i := 0; ; i++ {
 			key := "images[" + strconv.Itoa(i) + "]"
-			if files, exists := r.MultipartForm.File[key]; exists && len(files) > 0 {
-				images = append(images, files[0])
-			} else {
+			files, exists := r.MultipartForm.File[key]
+			if !exists || len(files) == 0 {
 				break
 			}
+			images = append(images, files[0])
 		}
 	}
 
-	return &contracts.ProductCreateRequest{
-		Product: product,
-		ShopID:  shopID,
-		Images:  images,
-	}, nil
+	if len(images) == 0 {
+		return nil, &httpErrors.BadRequestError{Message: "product_image_required"}
+	}
+
+	return images, nil
 }
 
 func NewProductHandler(
@@ -454,8 +482,11 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: Extract shopID from context (JWT middleware)
+	shopID := 1 // Hardcoded for now
+
 	// Update product via use case
-	err = p.updateProduct.Execute(ctx, productID, &request.Product, imageBuffers)
+	err = p.updateProduct.Execute(ctx, productID, &request.Product, imageBuffers, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":         ProductHandlerField,

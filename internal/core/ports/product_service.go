@@ -17,9 +17,10 @@ type ProductService interface {
 	// GetByID retrieves a product by ID.
 	GetByID(ctx context.Context, productID int) (*models.Product, error)
 
-	// Update updates an existing product.
-	// Validates product, prepares new images, and persists via repository.
-	Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte) error
+	// Update updates an existing product with new images.
+	// Validates product, uploads new images to storage, persists via repository.
+	// Handles cleanup of removed images from storage.
+	Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte, shopID int) error
 
 	// GetAllByShopIDWithFilters retrieves products with filters.
 	// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.

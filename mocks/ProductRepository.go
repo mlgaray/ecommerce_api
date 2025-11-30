@@ -38,6 +38,72 @@ func (_m *ProductRepository) EXPECT() *ProductRepository_Expecter {
 	return &ProductRepository_Expecter{mock: &_m.Mock}
 }
 
+// CountByShopIDWithFilters provides a mock function for the type ProductRepository
+func (_mock *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
+	ret := _mock.Called(ctx, filters)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByShopIDWithFilters")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) (int, error)); ok {
+		return returnFunc(ctx, filters)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) int); ok {
+		r0 = returnFunc(ctx, filters)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.ProductFilters) error); ok {
+		r1 = returnFunc(ctx, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProductRepository_CountByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByShopIDWithFilters'
+type ProductRepository_CountByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// CountByShopIDWithFilters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filters models.ProductFilters
+func (_e *ProductRepository_Expecter) CountByShopIDWithFilters(ctx interface{}, filters interface{}) *ProductRepository_CountByShopIDWithFilters_Call {
+	return &ProductRepository_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, filters)}
+}
+
+func (_c *ProductRepository_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, filters models.ProductFilters)) *ProductRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.ProductFilters
+		if args[1] != nil {
+			arg1 = args[1].(models.ProductFilters)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProductRepository_CountByShopIDWithFilters_Call) Return(n int, err error) *ProductRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *ProductRepository_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, filters models.ProductFilters) (int, error)) *ProductRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type ProductRepository
 func (_mock *ProductRepository) Create(ctx context.Context, product *models.Product, shopID int) (*models.Product, error) {
 	ret := _mock.Called(ctx, product, shopID)
@@ -93,141 +159,21 @@ func (_c *ProductRepository_Create_Call) Run(run func(ctx context.Context, produ
 		if args[2] != nil {
 			arg2 = args[2].(int)
 		}
-		run(arg0, arg1, arg2)
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
 
-func (_c *ProductRepository_Create_Call) Return(product *models.Product, err error) *ProductRepository_Create_Call {
-	_c.Call.Return(product, err)
+func (_c *ProductRepository_Create_Call) Return(product1 *models.Product, err error) *ProductRepository_Create_Call {
+	_c.Call.Return(product1, err)
 	return _c
 }
 
 func (_c *ProductRepository_Create_Call) RunAndReturn(run func(ctx context.Context, product *models.Product, shopID int) (*models.Product, error)) *ProductRepository_Create_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByID provides a mock function for the type ProductRepository
-func (_mock *ProductRepository) GetByID(ctx context.Context, productID int) (*models.Product, error) {
-	ret := _mock.Called(ctx, productID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByID")
-	}
-
-	var r0 *models.Product
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (*models.Product, error)); ok {
-		return returnFunc(ctx, productID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) *models.Product); ok {
-		r0 = returnFunc(ctx, productID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Product)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = returnFunc(ctx, productID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ProductRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
-type ProductRepository_GetByID_Call struct {
-	*mock.Call
-}
-
-// GetByID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - productID int
-func (_e *ProductRepository_Expecter) GetByID(ctx interface{}, productID interface{}) *ProductRepository_GetByID_Call {
-	return &ProductRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, productID)}
-}
-
-func (_c *ProductRepository_GetByID_Call) Run(run func(ctx context.Context, productID int)) *ProductRepository_GetByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 int
-		if args[1] != nil {
-			arg1 = args[1].(int)
-		}
-		run(arg0, arg1)
-	})
-	return _c
-}
-
-func (_c *ProductRepository_GetByID_Call) Return(product *models.Product, err error) *ProductRepository_GetByID_Call {
-	_c.Call.Return(product, err)
-	return _c
-}
-
-func (_c *ProductRepository_GetByID_Call) RunAndReturn(run func(ctx context.Context, productID int) (*models.Product, error)) *ProductRepository_GetByID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Update provides a mock function for the type ProductRepository
-func (_mock *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) error {
-	ret := _mock.Called(ctx, productID, product)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Update")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product) error); ok {
-		r0 = returnFunc(ctx, productID, product)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ProductRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
-type ProductRepository_Update_Call struct {
-	*mock.Call
-}
-
-// Update is a helper method to define mock.On call
-//   - ctx context.Context
-//   - productID int
-//   - product *models.Product
-func (_e *ProductRepository_Expecter) Update(ctx interface{}, productID interface{}, product interface{}) *ProductRepository_Update_Call {
-	return &ProductRepository_Update_Call{Call: _e.mock.On("Update", ctx, productID, product)}
-}
-
-func (_c *ProductRepository_Update_Call) Run(run func(ctx context.Context, productID int, product *models.Product)) *ProductRepository_Update_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 int
-		if args[1] != nil {
-			arg1 = args[1].(int)
-		}
-		var arg2 *models.Product
-		if args[2] != nil {
-			arg2 = args[2].(*models.Product)
-		}
-		run(arg0, arg1, arg2)
-	})
-	return _c
-}
-
-func (_c *ProductRepository_Update_Call) Return(err error) *ProductRepository_Update_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ProductRepository_Update_Call) RunAndReturn(run func(ctx context.Context, productID int, product *models.Product) error) *ProductRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -282,7 +228,10 @@ func (_c *ProductRepository_GetAllByShopIDWithFilters_Call) Run(run func(ctx con
 		if args[1] != nil {
 			arg1 = args[1].(models.ProductFilters)
 		}
-		run(arg0, arg1)
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -297,65 +246,144 @@ func (_c *ProductRepository_GetAllByShopIDWithFilters_Call) RunAndReturn(run fun
 	return _c
 }
 
-// CountByShopIDWithFilters provides a mock function for the type ProductRepository
-func (_mock *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
-	ret := _mock.Called(ctx, filters)
+// GetByID provides a mock function for the type ProductRepository
+func (_mock *ProductRepository) GetByID(ctx context.Context, productID int) (*models.Product, error) {
+	ret := _mock.Called(ctx, productID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CountByShopIDWithFilters")
+		panic("no return value specified for GetByID")
 	}
 
-	var r0 int
+	var r0 *models.Product
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) (int, error)); ok {
-		return returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (*models.Product, error)); ok {
+		return returnFunc(ctx, productID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) int); ok {
-		r0 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) *models.Product); ok {
+		r0 = returnFunc(ctx, productID)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Product)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, models.ProductFilters) error); ok {
-		r1 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, productID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// ProductRepository_CountByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByShopIDWithFilters'
-type ProductRepository_CountByShopIDWithFilters_Call struct {
+// ProductRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type ProductRepository_GetByID_Call struct {
 	*mock.Call
 }
 
-// CountByShopIDWithFilters is a helper method to define mock.On call
+// GetByID is a helper method to define mock.On call
 //   - ctx context.Context
-//   - filters models.ProductFilters
-func (_e *ProductRepository_Expecter) CountByShopIDWithFilters(ctx interface{}, filters interface{}) *ProductRepository_CountByShopIDWithFilters_Call {
-	return &ProductRepository_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, filters)}
+//   - productID int
+func (_e *ProductRepository_Expecter) GetByID(ctx interface{}, productID interface{}) *ProductRepository_GetByID_Call {
+	return &ProductRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, productID)}
 }
 
-func (_c *ProductRepository_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, filters models.ProductFilters)) *ProductRepository_CountByShopIDWithFilters_Call {
+func (_c *ProductRepository_GetByID_Call) Run(run func(ctx context.Context, productID int)) *ProductRepository_GetByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 models.ProductFilters
+		var arg1 int
 		if args[1] != nil {
-			arg1 = args[1].(models.ProductFilters)
+			arg1 = args[1].(int)
 		}
-		run(arg0, arg1)
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
 
-func (_c *ProductRepository_CountByShopIDWithFilters_Call) Return(count int, err error) *ProductRepository_CountByShopIDWithFilters_Call {
-	_c.Call.Return(count, err)
+func (_c *ProductRepository_GetByID_Call) Return(product *models.Product, err error) *ProductRepository_GetByID_Call {
+	_c.Call.Return(product, err)
 	return _c
 }
 
-func (_c *ProductRepository_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, filters models.ProductFilters) (int, error)) *ProductRepository_CountByShopIDWithFilters_Call {
+func (_c *ProductRepository_GetByID_Call) RunAndReturn(run func(ctx context.Context, productID int) (*models.Product, error)) *ProductRepository_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type ProductRepository
+func (_mock *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) ([]string, error) {
+	ret := _mock.Called(ctx, productID, product)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product) ([]string, error)); ok {
+		return returnFunc(ctx, productID, product)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product) []string); ok {
+		r0 = returnFunc(ctx, productID, product)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.Product) error); ok {
+		r1 = returnFunc(ctx, productID, product)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProductRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type ProductRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - productID int
+//   - product *models.Product
+func (_e *ProductRepository_Expecter) Update(ctx interface{}, productID interface{}, product interface{}) *ProductRepository_Update_Call {
+	return &ProductRepository_Update_Call{Call: _e.mock.On("Update", ctx, productID, product)}
+}
+
+func (_c *ProductRepository_Update_Call) Run(run func(ctx context.Context, productID int, product *models.Product)) *ProductRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Product
+		if args[2] != nil {
+			arg2 = args[2].(*models.Product)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ProductRepository_Update_Call) Return(deletedRefs []string, err error) *ProductRepository_Update_Call {
+	_c.Call.Return(deletedRefs, err)
+	return _c
+}
+
+func (_c *ProductRepository_Update_Call) RunAndReturn(run func(ctx context.Context, productID int, product *models.Product) ([]string, error)) *ProductRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

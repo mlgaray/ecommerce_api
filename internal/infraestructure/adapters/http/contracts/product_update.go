@@ -31,7 +31,7 @@ func (r *ProductUpdateRequest) Validate() error {
 	// CRITICAL: Validate that at least one image exists (existing OR new)
 	// User could delete all existing images, so we need at least one new image
 	if len(r.Product.Images) == 0 && len(r.NewImages) == 0 {
-		return &httpErrors.BadRequestError{Message: "at_least_one_image_is_required"}
+		return &httpErrors.BadRequestError{Message: "product_image_required"}
 	}
 
 	// Validate new images (if any)

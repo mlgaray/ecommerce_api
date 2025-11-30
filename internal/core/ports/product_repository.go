@@ -12,5 +12,6 @@ type ProductRepository interface {
 	// CountByShopIDWithFilters returns total count of products matching filters (for pagination "X of Y")
 	CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error)
 	GetByID(ctx context.Context, productID int) (*models.Product, error)
-	Update(ctx context.Context, productID int, product *models.Product) error
+	// Update updates product and returns storage_refs of deleted images for cleanup
+	Update(ctx context.Context, productID int, product *models.Product) (deletedRefs []string, err error)
 }

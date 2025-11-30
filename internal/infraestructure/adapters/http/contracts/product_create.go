@@ -119,7 +119,7 @@ func (r *ProductCreateRequest) validateVariantOptions(variant *models.Variant, v
 
 func (r *ProductCreateRequest) validateImages() error {
 	if len(r.Images) == 0 {
-		return &httpErrors.BadRequestError{Message: "at_least_one_image_is_required"}
+		return &httpErrors.BadRequestError{Message: "product_image_required"}
 	}
 
 	// Validate each image

@@ -1,1 +1,1 @@
-DELETE FROM public.product_images;
+DELETE FROM public.images;

@@ -2,10 +2,18 @@
 -- Reduces 5 round trips to 1, and eliminates loops with batch INSERTs
 -- Example: 3 variants × 5 options = 18 individual INSERTs → 2 batch INSERTs
 
+-- Drop old signature (TEXT[] for images)
 DROP FUNCTION IF EXISTS create_product(
     VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
     BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL,
     INTEGER, INTEGER, TEXT[], JSONB
+);
+
+-- Drop new signature (JSONB for images)
+DROP FUNCTION IF EXISTS create_product(
+    VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
+    BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL,
+    INTEGER, INTEGER, JSONB, JSONB
 );
 
 CREATE OR REPLACE FUNCTION create_product(
@@ -20,7 +28,7 @@ CREATE OR REPLACE FUNCTION create_product(
     p_promotional_price DECIMAL(10,2),
     p_category_id INTEGER,
     p_shop_id INTEGER,
-    p_images TEXT[],
+    p_images JSONB,      -- [{"url": "...", "storage_ref": "..."}]
     p_variants JSONB
 ) RETURNS INTEGER AS $$
 DECLARE
@@ -39,10 +47,14 @@ BEGIN
         p_category_id, p_shop_id
     ) RETURNING id INTO v_product_id;
 
-    -- 2. Insert images (batch with UNNEST)
-    IF p_images IS NOT NULL AND COALESCE(array_length(p_images, 1), 0) > 0 THEN
-        INSERT INTO product_images (url, product_id)
-        SELECT unnest(p_images), v_product_id;
+    -- 2. Insert images (batch with jsonb_array_elements)
+    IF p_images IS NOT NULL AND COALESCE(jsonb_array_length(p_images), 0) > 0 THEN
+        INSERT INTO images (url, storage_ref, product_id)
+        SELECT
+            img->>'url',
+            COALESCE(img->>'storage_ref', ''),
+            v_product_id
+        FROM jsonb_array_elements(p_images) img;
     END IF;
 
     -- 3. Insert variants and their options (avoid O(n²) array concatenation)
@@ -92,7 +104,7 @@ COMMENT ON FUNCTION create_product IS
 'Creates a product with images, variants and options in a single call.
 Performance optimizations:
 - Product: 1 INSERT
-- Images: 1 batch INSERT (all at once)
+- Images: 1 batch INSERT (all at once) into unified images table
 - Variants: N INSERTs (loop - typically 2-5 items)
 - Options: N batch INSERTs (one per variant, avoids O(n²) array concatenation)
 - COALESCE() for NULL safety on all length checks

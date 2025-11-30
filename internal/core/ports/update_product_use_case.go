@@ -7,5 +7,5 @@ import (
 )
 
 type UpdateProductUseCase interface {
-	Execute(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte) error
+	Execute(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte, shopID int) error
 }

@@ -25,7 +25,10 @@ const (
 	InsufficientStock                             = "insufficient_stock"
 
 	// Category related error messages
-	CategoryNotFound = "category_not_found"
+	CategoryNotFound            = "category_not_found"
+	CategoryNameIsRequired      = "category_name_is_required"
+	CategoryAlreadyExistsInShop = "category_already_exists_in_shop"
+	CategoryImageIsRequired     = "category_image_is_required"
 
 	// Authentication related error messages
 	TokenExpired            = "token_expired"

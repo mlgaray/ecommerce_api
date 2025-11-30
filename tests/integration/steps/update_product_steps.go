@@ -29,8 +29,11 @@ func (u *UpdateProductSteps) setupSQLExpectations() {
 
 	if ctx.scenario == validUpdateScenario {
 		// Mock successful product update via stored procedure
-		ctx.mockSQLMock.ExpectExec("SELECT update_product").
-			WillReturnResult(sqlmock.NewResult(0, 1))
+		// The SP returns an array of deleted storage_refs for Cloudinary cleanup
+		rows := sqlmock.NewRows([]string{"update_product"}).
+			AddRow("{}") // Empty array - no images deleted
+		ctx.mockSQLMock.ExpectQuery("SELECT update_product").
+			WillReturnRows(rows)
 	}
 }
 
@@ -46,7 +49,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndValidUpdateData(productID int
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -72,7 +75,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndKeepExistingImages(productID 
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 			{ID: 2, URL: "https://existing.com/image2.jpg"},
 		},
@@ -100,7 +103,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndAddNewImages(productID int) e
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -126,7 +129,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNoImages(productID int) error
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images:       []models.ProductImage{}, // No existing images
+		Images:       []*models.Image{}, // No existing images
 	}
 
 	ctx.productImages = [][]byte{} // No new images
@@ -150,7 +153,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndEmptyName(productID int) erro
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -175,7 +178,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndEmptyDescription(productID in
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -200,7 +203,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNoCategory(productID int) err
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     nil, // No category
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -225,7 +228,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndInvalidShopID(productID int) 
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -250,7 +253,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndOversizedNewImage(productID i
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -282,7 +285,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndInvalidNewImageType(productID
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -309,7 +312,7 @@ func (u *UpdateProductSteps) iHaveAnInvalidProductID(invalidID string) error {
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -335,7 +338,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNegativePrice(productID int) 
 		Stock:        20,
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -360,7 +363,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNegativeStock(productID int) 
 		Stock:        -5, // Negative stock
 		MinimumStock: 5,
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -385,7 +388,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNegativeMinimumStock(productI
 		Stock:        20,
 		MinimumStock: -5, // Negative minimum stock
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -410,7 +413,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDWithMinimumStockButNoStock(produ
 		Stock:        0, // No stock
 		MinimumStock: 5, // But has minimum stock
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -435,7 +438,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDWithMinimumStockGreaterThanStock
 		Stock:        10, // Stock is 10
 		MinimumStock: 20, // But minimum stock is 20
 		Category:     &models.Category{ID: 1},
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -462,7 +465,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAsPromotionalWithoutPromotionalP
 		Category:         &models.Category{ID: 1},
 		IsPromotional:    true, // Is promotional
 		PromotionalPrice: 0,    // But no promotional price
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
@@ -489,7 +492,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDWithPromotionalPriceNotLowerThan
 		Category:         &models.Category{ID: 1},
 		IsPromotional:    true,
 		PromotionalPrice: 120.00, // Promotional price is higher!
-		Images: []models.ProductImage{
+		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
 		},
 	}
