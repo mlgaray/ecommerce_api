@@ -56,17 +56,25 @@ func TestProductService_Create(t *testing.T) {
 		imageBuffers := [][]byte{[]byte("image1"), []byte("image2")}
 
 		expectedProduct := newValidProductWithID(1)
-		expectedProduct.Images = []models.ProductImage{
-			{URL: "https://placeholder.com/image_" + string(rune(1))},
-			{URL: "https://placeholder.com/image_" + string(rune(2))},
+		expectedProduct.Images = []*models.Image{
+			{URL: "https://cloudinary.com/image1.jpg", StorageRef: "shop_1/products/abc1"},
+			{URL: "https://cloudinary.com/image2.jpg", StorageRef: "shop_1/products/abc2"},
 		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			UploadMultiple(ctx, imageBuffers, "shop_1/products").
+			Return([]*models.Image{
+				{URL: "https://cloudinary.com/image1.jpg", StorageRef: "shop_1/products/abc1"},
+				{URL: "https://cloudinary.com/image2.jpg", StorageRef: "shop_1/products/abc2"},
+			}, nil)
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(expectedProduct, nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, imageBuffers, shopID)
@@ -86,12 +94,15 @@ func TestProductService_Create(t *testing.T) {
 
 		expectedProduct := newValidProductWithID(1)
 
+		assetMock := mocks.NewAssetService(t)
+		// AssetService should NOT be called when no images
+
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(expectedProduct, nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, imageBuffers, shopID)
@@ -110,7 +121,8 @@ func TestProductService_Create(t *testing.T) {
 		product.Price = 0 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -131,7 +143,8 @@ func TestProductService_Create(t *testing.T) {
 		product.Price = -50.00 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -152,7 +165,8 @@ func TestProductService_Create(t *testing.T) {
 		product.Stock = -5 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -173,7 +187,8 @@ func TestProductService_Create(t *testing.T) {
 		product.MinimumStock = -1 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -195,7 +210,8 @@ func TestProductService_Create(t *testing.T) {
 		product.MinimumStock = 10 // Invalid: greater than stock
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -217,7 +233,8 @@ func TestProductService_Create(t *testing.T) {
 		product.MinimumStock = 5 // Invalid: requires stock
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -239,7 +256,8 @@ func TestProductService_Create(t *testing.T) {
 		product.PromotionalPrice = 0 // Invalid: promotional requires price
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -262,7 +280,8 @@ func TestProductService_Create(t *testing.T) {
 		product.PromotionalPrice = 150.00 // Invalid: greater than regular
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -285,7 +304,8 @@ func TestProductService_Create(t *testing.T) {
 		product.PromotionalPrice = 100.00 // Invalid: equal to regular
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -316,7 +336,8 @@ func TestProductService_Create(t *testing.T) {
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(expectedProduct, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -338,7 +359,8 @@ func TestProductService_Create(t *testing.T) {
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(nil, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -349,12 +371,21 @@ func TestProductService_Create(t *testing.T) {
 		assert.Equal(t, expectedError, err)
 	})
 
-	t.Run("when images provided then prepares placeholder URLs", func(t *testing.T) {
+	t.Run("when images provided then uploads via AssetService", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
 		product := newValidProduct()
 		imageBuffers := [][]byte{[]byte("img1"), []byte("img2"), []byte("img3")}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			UploadMultiple(ctx, imageBuffers, "shop_1/products").
+			Return([]*models.Image{
+				{URL: "https://cloudinary.com/img1.jpg", StorageRef: "shop_1/products/abc1"},
+				{URL: "https://cloudinary.com/img2.jpg", StorageRef: "shop_1/products/abc2"},
+				{URL: "https://cloudinary.com/img3.jpg", StorageRef: "shop_1/products/abc3"},
+			}, nil)
 
 		var capturedProduct *models.Product
 		repoMock := mocks.NewProductRepository(t)
@@ -365,7 +396,7 @@ func TestProductService_Create(t *testing.T) {
 			}).
 			Return(newValidProductWithID(1), nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.Create(ctx, product, imageBuffers, shopID)
@@ -373,9 +404,9 @@ func TestProductService_Create(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Len(t, capturedProduct.Images, 3)
-		for _, img := range capturedProduct.Images {
-			assert.Contains(t, img.URL, "https://placeholder.com/image_")
-		}
+		assert.Equal(t, "https://cloudinary.com/img1.jpg", capturedProduct.Images[0].URL)
+		assert.Equal(t, "https://cloudinary.com/img2.jpg", capturedProduct.Images[1].URL)
+		assert.Equal(t, "https://cloudinary.com/img3.jpg", capturedProduct.Images[2].URL)
 	})
 }
 
@@ -395,7 +426,8 @@ func TestProductService_GetByID(t *testing.T) {
 			GetByID(ctx, productID).
 			Return(expectedProduct, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetByID(ctx, productID)
@@ -417,7 +449,8 @@ func TestProductService_GetByID(t *testing.T) {
 			GetByID(ctx, productID).
 			Return(nil, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetByID(ctx, productID)
@@ -440,7 +473,8 @@ func TestProductService_GetByID(t *testing.T) {
 			GetByID(ctx, productID).
 			Return(nil, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetByID(ctx, productID)
@@ -461,17 +495,19 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
-			Return(nil)
+			Return([]string{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, nil)
+		err := service.Update(ctx, productID, product, nil, shopID)
 
 		// Assert
 		assert.NoError(t, err)
@@ -481,47 +517,51 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
-		product.Images = []models.ProductImage{
+		product.Images = []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1"},
 		}
 		newImageBuffers := [][]byte{[]byte("new_img1"), []byte("new_img2")}
 
-		var capturedProduct *models.Product
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			UploadMultiple(ctx, newImageBuffers, "shop_1/products").
+			Return([]*models.Image{
+				{URL: "https://cloudinary.com/new1.jpg", StorageRef: "shop_1/products/new1"},
+				{URL: "https://cloudinary.com/new2.jpg", StorageRef: "shop_1/products/new2"},
+			}, nil)
+
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
-			Run(func(ctx context.Context, id int, p *models.Product) {
-				capturedProduct = p
-			}).
-			Return(nil)
+			Return([]string{}, nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, newImageBuffers)
+		err := service.Update(ctx, productID, product, newImageBuffers, shopID)
 
 		// Assert
 		assert.NoError(t, err)
-		assert.Len(t, capturedProduct.Images, 3) // 1 existing + 2 new
-		assert.Equal(t, "https://existing.com/image1", capturedProduct.Images[0].URL)
-		assert.Contains(t, capturedProduct.Images[1].URL, "https://placeholder.com/new_image_")
-		assert.Contains(t, capturedProduct.Images[2].URL, "https://placeholder.com/new_image_")
+		assert.Len(t, product.Images, 3) // 1 existing + 2 new
 	})
 
 	t.Run("when price is invalid then returns validation error without calling repository", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
 		product.Price = -10.00 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
 		// Repository should NOT be called
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, nil)
+		err := service.Update(ctx, productID, product, nil, shopID)
 
 		// Assert
 		assert.Error(t, err)
@@ -534,14 +574,16 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
 		product.Stock = -1 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, nil)
+		err := service.Update(ctx, productID, product, nil, shopID)
 
 		// Assert
 		assert.Error(t, err)
@@ -554,15 +596,17 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
 		product.IsPromotional = true
 		product.PromotionalPrice = 0 // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, nil)
+		err := service.Update(ctx, productID, product, nil, shopID)
 
 		// Assert
 		assert.Error(t, err)
@@ -574,18 +618,20 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
 		expectedError := stdErrors.New("constraint violation")
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
-			Return(expectedError)
+			Return([]string{}, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, nil)
+		err := service.Update(ctx, productID, product, nil, shopID)
 
 		// Assert
 		assert.Error(t, err)
@@ -596,29 +642,27 @@ func TestProductService_Update(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
-		product.Images = []models.ProductImage{
+		product.Images = []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1"},
 		}
 		var emptyBuffers [][]byte
 
-		var capturedProduct *models.Product
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
-			Run(func(ctx context.Context, id int, p *models.Product) {
-				capturedProduct = p
-			}).
-			Return(nil)
+			Return([]string{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, emptyBuffers)
+		err := service.Update(ctx, productID, product, emptyBuffers, shopID)
 
 		// Assert
 		assert.NoError(t, err)
-		assert.Len(t, capturedProduct.Images, 1) // Only existing image
+		assert.Len(t, product.Images, 1) // Only existing image
 	})
 }
 
@@ -641,7 +685,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return(expectedProducts, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -660,7 +705,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -682,7 +728,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -705,7 +752,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -729,7 +777,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -755,7 +804,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -778,7 +828,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -801,7 +852,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		}
 
 		repoMock := mocks.NewProductRepository(t)
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -831,7 +883,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 					GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 					Return([]*models.Product{}, nil)
 
-				service := NewProductService(repoMock)
+				assetMock := mocks.NewAssetService(t)
+				service := NewProductService(repoMock, assetMock)
 
 				// Act
 				_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -859,7 +912,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 					GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 					Return([]*models.Product{}, nil)
 
-				service := NewProductService(repoMock)
+				assetMock := mocks.NewAssetService(t)
+				service := NewProductService(repoMock, assetMock)
 
 				// Act
 				_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -881,7 +935,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -902,7 +957,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -929,7 +985,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			}).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -956,7 +1013,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			}).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -984,7 +1042,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			}).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -1012,7 +1071,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			}).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -1039,7 +1099,8 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 			CountByShopIDWithFilters(ctx, filters).
 			Return(expectedCount, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.CountByShopIDWithFilters(ctx, filters)
@@ -1059,7 +1120,8 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 			CountByShopIDWithFilters(ctx, filters).
 			Return(0, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.CountByShopIDWithFilters(ctx, filters)
@@ -1080,7 +1142,8 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 			CountByShopIDWithFilters(ctx, filters).
 			Return(0, expectedError)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.CountByShopIDWithFilters(ctx, filters)
@@ -1097,7 +1160,7 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 // =============================================================================
 
 func TestProductService_prepareImagesForCreate(t *testing.T) {
-	t.Run("when multiple images then creates placeholder URLs for each", func(t *testing.T) {
+	t.Run("when multiple images then uploads via AssetService", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
@@ -1108,6 +1171,15 @@ func TestProductService_prepareImagesForCreate(t *testing.T) {
 			[]byte("image_data_3"),
 		}
 
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			UploadMultiple(ctx, imageBuffers, "shop_1/products").
+			Return([]*models.Image{
+				{URL: "https://cloudinary.com/image1.jpg", StorageRef: "shop_1/products/ref1"},
+				{URL: "https://cloudinary.com/image2.jpg", StorageRef: "shop_1/products/ref2"},
+				{URL: "https://cloudinary.com/image3.jpg", StorageRef: "shop_1/products/ref3"},
+			}, nil)
+
 		var capturedProduct *models.Product
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
@@ -1117,7 +1189,7 @@ func TestProductService_prepareImagesForCreate(t *testing.T) {
 			}).
 			Return(newValidProductWithID(1), nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.Create(ctx, product, imageBuffers, shopID)
@@ -1125,10 +1197,12 @@ func TestProductService_prepareImagesForCreate(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Len(t, capturedProduct.Images, 3)
-		// Verify each image has a placeholder URL
-		for _, img := range capturedProduct.Images {
-			assert.Contains(t, img.URL, "https://placeholder.com/image_")
+		// Verify each image has URL and StorageRef from AssetService
+		for i, img := range capturedProduct.Images {
+			assert.Contains(t, img.URL, "https://cloudinary.com/image")
+			assert.NotEmpty(t, img.StorageRef)
 			assert.Equal(t, 0, img.ID) // New images have no ID yet
+			_ = i
 		}
 	})
 
@@ -1147,7 +1221,8 @@ func TestProductService_prepareImagesForCreate(t *testing.T) {
 			}).
 			Return(newValidProductWithID(1), nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.Create(ctx, product, nil, shopID)
@@ -1163,8 +1238,9 @@ func TestProductService_prepareImagesForUpdate(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := newValidProduct()
-		product.Images = []models.ProductImage{
+		product.Images = []*models.Image{
 			{ID: 100, URL: "https://cdn.example.com/existing1.jpg"},
 			{ID: 101, URL: "https://cdn.example.com/existing2.jpg"},
 		}
@@ -1172,29 +1248,32 @@ func TestProductService_prepareImagesForUpdate(t *testing.T) {
 			[]byte("new_image_data"),
 		}
 
-		var capturedProduct *models.Product
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			UploadMultiple(ctx, newImageBuffers, "shop_1/products").
+			Return([]*models.Image{
+				{URL: "https://cloudinary.com/new.jpg", StorageRef: "shop_1/products/new123"},
+			}, nil)
+
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
 			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
-			Run(func(ctx context.Context, id int, p *models.Product) {
-				capturedProduct = p
-			}).
-			Return(nil)
+			Return([]string{}, nil)
 
-		service := NewProductService(repoMock)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		err := service.Update(ctx, productID, product, newImageBuffers)
+		err := service.Update(ctx, productID, product, newImageBuffers, shopID)
 
 		// Assert
 		assert.NoError(t, err)
-		assert.Len(t, capturedProduct.Images, 3)
+		assert.Len(t, product.Images, 3)
 		// First two are existing images
-		assert.Equal(t, 100, capturedProduct.Images[0].ID)
-		assert.Equal(t, 101, capturedProduct.Images[1].ID)
-		// Third is new image with placeholder URL
-		assert.Equal(t, 0, capturedProduct.Images[2].ID)
-		assert.Contains(t, capturedProduct.Images[2].URL, "https://placeholder.com/new_image_")
+		assert.Equal(t, 100, product.Images[0].ID)
+		assert.Equal(t, 101, product.Images[1].ID)
+		// Third is new image
+		assert.Equal(t, 0, product.Images[2].ID)
+		assert.Equal(t, "https://cloudinary.com/new.jpg", product.Images[2].URL)
 	})
 }
 
@@ -1216,7 +1295,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(newValidProductWithID(1), nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -1239,7 +1319,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 			Create(ctx, mock.AnythingOfType("*models.Product"), shopID).
 			Return(newValidProductWithID(1), nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		result, err := service.Create(ctx, product, nil, shopID)
@@ -1271,7 +1352,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -1312,7 +1394,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
@@ -1337,7 +1420,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
-		service := NewProductService(repoMock)
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
 
 		// Act
 		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)

@@ -1,4 +1,5 @@
 -- Stored procedure for product update with batch operations
+-- Returns deleted storage_refs for Cloudinary cleanup
 -- Clean, maintainable, scalable approach with best practices
 
 DROP FUNCTION IF EXISTS update_product(
@@ -19,12 +20,13 @@ CREATE OR REPLACE FUNCTION update_product(
     p_is_promotional BOOLEAN,
     p_promotional_price DECIMAL(10,2),
     p_category_id INTEGER,
-    p_images JSONB,      -- [{"id": 1, "url": "..."}, {"url": "new"}]
+    p_images JSONB,      -- [{"id": 1, "url": "...", "storage_ref": "..."}, {"url": "new", "storage_ref": "..."}]
     p_variants JSONB     -- [{"id": 1, "name": "...", "options": [...]}, {"name": "new", ...}]
-) RETURNS VOID AS $$
+) RETURNS text[] AS $$
 DECLARE
     v_variant JSONB;
     v_variant_id INTEGER;
+    v_deleted_refs text[];
 BEGIN
     -- 1. UPDATE basic product fields
     UPDATE products
@@ -42,10 +44,26 @@ BEGIN
 
     -- 2. UPSERT images (optimized with != ALL for better index usage)
     IF COALESCE(jsonb_array_length(p_images), 0) = 0 THEN
-        DELETE FROM product_images WHERE product_id = p_product_id;
+        -- Capture refs before deletion for Cloudinary cleanup
+        SELECT array_agg(storage_ref) INTO v_deleted_refs
+        FROM images
+        WHERE product_id = p_product_id AND storage_ref != '';
+
+        DELETE FROM images WHERE product_id = p_product_id;
     ELSE
+        -- Capture refs of images to be deleted (not in incoming list)
+        SELECT array_agg(storage_ref) INTO v_deleted_refs
+        FROM images
+        WHERE product_id = p_product_id
+          AND storage_ref != ''
+          AND id != ALL (
+            SELECT (img->>'id')::INTEGER
+            FROM jsonb_array_elements(p_images) img
+            WHERE img->>'id' IS NOT NULL AND img->>'id' != ''
+          );
+
         -- Delete images NOT in the incoming list (using != ALL for performance)
-        DELETE FROM product_images
+        DELETE FROM images
         WHERE product_id = p_product_id
           AND id != ALL (
             SELECT (img->>'id')::INTEGER
@@ -54,8 +72,11 @@ BEGIN
           );
 
         -- Insert new images (batch)
-        INSERT INTO product_images (url, product_id)
-        SELECT img->>'url', p_product_id
+        INSERT INTO images (url, storage_ref, product_id)
+        SELECT
+            img->>'url',
+            COALESCE(img->>'storage_ref', ''),
+            p_product_id
         FROM jsonb_array_elements(p_images) img
         WHERE img->>'id' IS NULL OR img->>'id' = '';
     END IF;
@@ -136,6 +157,9 @@ BEGIN
         END LOOP;
     END IF;
 
+    -- Return deleted storage refs for Cloudinary cleanup (fire-and-forget)
+    RETURN COALESCE(v_deleted_refs, '{}');
+
 EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION 'Error updating product (ID: %): %', p_product_id, SQLERRM;
@@ -145,15 +169,17 @@ $$ LANGUAGE plpgsql;
 -- Function documentation
 COMMENT ON FUNCTION update_product IS
 'Updates a product with images, variants and options in a single database call.
+Returns text[] with storage_refs of deleted images for Cloudinary cleanup.
 Strategy:
 - Product: 1 UPDATE
-- Images: DELETE + batch INSERT (2 queries)
+- Images: Capture refs + DELETE + batch INSERT (uses unified images table)
 - Variants: DELETE + loop for UPDATE/INSERT (N queries for N variants)
 - Options: CTE with DELETE + batch UPDATE + batch INSERT per variant (1 query × N variants)
 Optimizations applied:
 - != ALL() instead of NOT IN for better index usage and NULL handling
 - CTE for option_data to parse JSONB once (avoids 3x parsing overhead)
 - COALESCE() for NULL safety
+- Returns deleted storage_refs for async Cloudinary cleanup
 Clean approach: Loop variants (few items), batch options per variant (many items).
 Reduces ~10+ Go round trips to 1 stored procedure call.
 Exception handling included for validation errors.';

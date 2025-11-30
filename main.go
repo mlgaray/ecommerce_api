@@ -12,9 +12,11 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/assets"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
@@ -66,6 +68,20 @@ var Module = fx.Options(
 		fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewProductHandler, fx.As(new(ports.ProductHandler))),
+
+		// ASSETS (Cloudinary)
+		fx.Annotate(assets.NewCloudinaryConnection, fx.As(new(assets.CloudinaryConnection))),
+		fx.Annotate(assets.NewCloudinaryAssetService, fx.As(new(ports.AssetService))),
+
+		// CATEGORY
+		// Repository first (no dependencies)
+		fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
+		// Service depends on Repository + AssetService
+		fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
+		// Use Case depends on Service
+		fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+		// Handler depends on Use Cases
+		fx.Annotate(http.NewCategoryHandler, fx.As(new(ports.CategoryHandler))),
 
 		// SERVER
 		server.NewServer,

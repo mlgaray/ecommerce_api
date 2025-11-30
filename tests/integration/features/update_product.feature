@@ -26,7 +26,7 @@ Feature: Product Update
     Given I have a product with id 1 and no images
     When I send an update product request
     Then the response status should be 400
-    And the user should receive an error message "at_least_one_image_is_required"
+    And the user should receive an error message "product_image_required"
 
   Scenario: Update product with empty name
     Given I have a product with id 1 and empty name

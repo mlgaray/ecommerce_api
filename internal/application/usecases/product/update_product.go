@@ -17,7 +17,7 @@ func NewUpdateProductUseCase(productService ports.ProductService) ports.UpdatePr
 	}
 }
 
-func (uc *UpdateProductUseCase) Execute(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte) error {
+func (uc *UpdateProductUseCase) Execute(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte, shopID int) error {
 	// Uses stored procedure for optimal performance (single DB round trip)
-	return uc.productService.Update(ctx, productID, product, newImageBuffers)
+	return uc.productService.Update(ctx, productID, product, newImageBuffers, shopID)
 }

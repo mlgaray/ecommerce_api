@@ -67,7 +67,7 @@ func TestProductRepository_Create(t *testing.T) {
 			Category: &models.Category{
 				ID: 1,
 			},
-			Images: []models.ProductImage{
+			Images: []*models.Image{
 				{URL: "http://example.com/image1.jpg"},
 			},
 			Variants: []*models.Variant{
@@ -149,7 +149,7 @@ func TestProductRepository_Create(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{variant},
 		}
 
@@ -188,7 +188,7 @@ func TestProductRepository_Create(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{},
 		}
 
@@ -247,7 +247,7 @@ func TestProductRepository_Create(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{},
 		}
 
@@ -306,7 +306,7 @@ func TestProductRepository_Update(t *testing.T) {
 			Category: &models.Category{
 				ID: 2,
 			},
-			Images: []models.ProductImage{
+			Images: []*models.Image{
 				{ID: 1, URL: "http://example.com/image1.jpg"},
 				{URL: "http://example.com/image2.jpg"},
 			},
@@ -325,8 +325,9 @@ func TestProductRepository_Update(t *testing.T) {
 			},
 		}
 
-		// Mock stored procedure call
-		mock.ExpectExec(`SELECT update_product`).
+		// Mock stored procedure call - returns deleted storage_refs
+		rows := sqlmock.NewRows([]string{"update_product"}).AddRow("{}")
+		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
 				product.Name,
@@ -342,12 +343,12 @@ func TestProductRepository_Update(t *testing.T) {
 				sqlmock.AnyArg(), // images JSON
 				sqlmock.AnyArg(), // variants JSON
 			).
-			WillReturnResult(sqlmock.NewResult(0, 1))
+			WillReturnRows(rows)
 
 		repo := &ProductRepository{db: db}
 
 		// Act
-		err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product)
 
 		// Assert
 		assert.NoError(t, err)
@@ -376,14 +377,14 @@ func TestProductRepository_Update(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{{URL: "http://example.com/image.jpg"}},
+			Images:           []*models.Image{{URL: "http://example.com/image.jpg"}},
 			Variants:         []*models.Variant{},
 		}
 
 		repo := &ProductRepository{db: db}
 
 		// Act
-		err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product)
 
 		// Assert
 		// In practice, marshaling valid structs succeeds
@@ -417,14 +418,14 @@ func TestProductRepository_Update(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{variant},
 		}
 
 		repo := &ProductRepository{db: db}
 
 		// Act
-		err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product)
 
 		// Assert
 		// Similar to other marshaling tests - kept for structure
@@ -450,7 +451,7 @@ func TestProductRepository_Update(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 999},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{},
 		}
 
@@ -459,7 +460,7 @@ func TestProductRepository_Update(t *testing.T) {
 			Code:    "P0001", // RAISE_EXCEPTION
 			Message: "Error updating product (ID: 1): category does not exist",
 		}
-		mock.ExpectExec(`SELECT update_product`).
+		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
 				product.Name,
@@ -480,7 +481,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product)
 
 		// Assert
 		assert.Error(t, err)
@@ -508,13 +509,13 @@ func TestProductRepository_Update(t *testing.T) {
 			IsPromotional:    false,
 			PromotionalPrice: 0,
 			Category:         &models.Category{ID: 1},
-			Images:           []models.ProductImage{},
+			Images:           []*models.Image{},
 			Variants:         []*models.Variant{},
 		}
 
 		// Mock generic database error (not PostgreSQL specific)
 		expectedError := errors.New("connection timeout")
-		mock.ExpectExec(`SELECT update_product`).
+		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
 				product.Name,
@@ -535,7 +536,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product)
 
 		// Assert
 		assert.Error(t, err)

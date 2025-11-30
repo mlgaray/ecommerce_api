@@ -64,12 +64,12 @@ func (r *ProductRepository) GetByID(ctx context.Context, productID int) (*models
 			COALESCE(
 				(SELECT jsonb_agg(
 					jsonb_build_object(
-						'id', pi2.id,
-						'url', pi2.url
-					) ORDER BY pi2.id
+						'id', img.id,
+						'url', img.url
+					) ORDER BY img.id
 				)
-				FROM product_images pi2
-				WHERE pi2.product_id = p.id),
+				FROM images img
+				WHERE img.product_id = p.id),
 				'[]'::jsonb
 			) AS images,
 			COALESCE(
@@ -177,10 +177,17 @@ func (r *ProductRepository) GetByID(ctx context.Context, productID int) (*models
 func (r *ProductRepository) Create(ctx context.Context, product *models.Product, shopID int) (*models.Product, error) {
 	startTime := time.Now()
 
-	// 1. Prepare image URLs array
-	imageURLs := make([]string, len(product.Images))
-	for i, img := range product.Images {
-		imageURLs[i] = img.URL
+	// 1. Serialize images to JSONB
+	// Format: [{"url": "...", "storage_ref": "..."}]
+	imagesJSON, err := json.Marshal(product.Images)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductRepositoryField,
+			"function": ProductCreateFunctionField,
+			"sub_func": MarshalImagesSubFuncField,
+			"error":    err.Error(),
+		}).Error(LogFailedMarshalImages)
+		return nil, fmt.Errorf("failed to prepare images: %w", err)
 	}
 
 	// 2. Serialize variants to JSON
@@ -213,7 +220,7 @@ func (r *ProductRepository) Create(ctx context.Context, product *models.Product,
 		product.PromotionalPrice,
 		product.Category.ID,
 		shopID,
-		pq.Array(imageURLs),
+		imagesJSON,
 		variantsJSON,
 	).Scan(&productID)
 
@@ -268,6 +275,7 @@ func (r *ProductRepository) Create(ctx context.Context, product *models.Product,
 	return product, nil
 }
 
+//nolint:gocyclo // Dynamic query building requires multiple conditional branches
 func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) ([]*models.Product, error) {
 	startTime := time.Now()
 
@@ -282,12 +290,12 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 			COALESCE(
 				(SELECT jsonb_agg(
 					jsonb_build_object(
-						'id', pi2.id,
-						'url', pi2.url
-					) ORDER BY pi2.id
+						'id', img.id,
+						'url', img.url
+					) ORDER BY img.id
 				)
-				FROM product_images pi2
-				WHERE pi2.product_id = p.id),
+				FROM images img
+				WHERE img.product_id = p.id),
 				'[]'::jsonb
 			) AS images
 		FROM products p
@@ -541,6 +549,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 	return products, nil
 }
 
+//nolint:gocyclo // Dynamic query building requires multiple conditional branches
 func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
 	startTime := time.Now()
 
@@ -653,11 +662,11 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 	return totalCount, nil
 }
 
-func (r *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) error {
+func (r *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) ([]string, error) {
 	startTime := time.Now()
 
 	// Serialize images to JSONB
-	// Format: [{"id": 1, "url": "..."}, {"url": "new_image"}]
+	// Format: [{"id": 1, "url": "...", "storage_ref": "..."}, {"url": "new", "storage_ref": "..."}]
 	imagesJSON, err := json.Marshal(product.Images)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -667,7 +676,7 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 			"product_id": productID,
 			"error":      err.Error(),
 		}).Error(LogFailedMarshalImages)
-		return fmt.Errorf("database operation failed")
+		return nil, fmt.Errorf("database operation failed")
 	}
 
 	// Serialize variants to JSONB
@@ -681,7 +690,7 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 			"product_id": productID,
 			"error":      err.Error(),
 		}).Error(LogFailedMarshalVariants)
-		return fmt.Errorf("database operation failed")
+		return nil, fmt.Errorf("database operation failed")
 	}
 
 	logs.WithFields(map[string]interface{}{
@@ -693,9 +702,10 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 		"duration_ms":   time.Since(startTime).Milliseconds(),
 	}).Debug("Data prepared for stored procedure")
 
-	// Call stored procedure (single query does everything)
+	// Call stored procedure - returns deleted storage_refs for Cloudinary cleanup
 	spStart := time.Now()
-	_, err = r.db.ExecContext(ctx, `
+	var deletedRefs []string
+	err = r.db.QueryRowContext(ctx, `
 		SELECT update_product($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		productID,
 		product.Name,
@@ -710,7 +720,7 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 		product.Category.ID,
 		imagesJSON,
 		variantsJSON,
-	)
+	).Scan(pq.Array(&deletedRefs))
 
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -723,38 +733,37 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 
 		// Check if it's a PostgreSQL error from the stored procedure
 		if pqErr, ok := err.(*pq.Error); ok {
-			// RAISE EXCEPTION from stored procedure comes as pq.Error
 			logs.WithFields(map[string]interface{}{
 				"file":       ProductRepositoryField,
 				"function":   ProductUpdateFunctionField,
-				"pg_code":    pqErr.Code,    // PostgreSQL error code
-				"pg_message": pqErr.Message, // Error message from RAISE EXCEPTION
-				"pg_detail":  pqErr.Detail,  // Additional detail if any
-				"pg_hint":    pqErr.Hint,    // Hint if provided
+				"pg_code":    pqErr.Code,
+				"pg_message": pqErr.Message,
+				"pg_detail":  pqErr.Detail,
+				"pg_hint":    pqErr.Hint,
 			}).Debug("PostgreSQL error details from stored procedure")
 
-			// Return error with SP context (preserves original message)
-			return fmt.Errorf("stored procedure error: %s", pqErr.Message)
+			return nil, fmt.Errorf("stored procedure error: %s", pqErr.Message)
 		}
 
-		// Not a PostgreSQL error (network, context cancelled, etc.)
-		return fmt.Errorf("database operation failed: %w", err)
+		return nil, fmt.Errorf("database operation failed: %w", err)
 	}
 
 	logs.WithFields(map[string]interface{}{
-		"file":        ProductRepositoryField,
-		"function":    ProductUpdateFunctionField,
-		"sub_func":    CallStoredProcedureSubFuncField,
-		"product_id":  productID,
-		"duration_ms": time.Since(spStart).Milliseconds(),
+		"file":         ProductRepositoryField,
+		"function":     ProductUpdateFunctionField,
+		"sub_func":     CallStoredProcedureSubFuncField,
+		"product_id":   productID,
+		"deleted_refs": len(deletedRefs),
+		"duration_ms":  time.Since(spStart).Milliseconds(),
 	}).Debug("Stored procedure executed successfully")
 
 	logs.WithFields(map[string]interface{}{
 		"file":              ProductRepositoryField,
 		"function":          ProductUpdateFunctionField,
 		"product_id":        productID,
+		"deleted_refs":      len(deletedRefs),
 		"total_duration_ms": time.Since(startTime).Milliseconds(),
 	}).Info("Product update completed (stored procedure)")
 
-	return nil
+	return deletedRefs, nil
 }

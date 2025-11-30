@@ -99,7 +99,7 @@ migrate-down-seeds:
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 7
 
 .PHONY: migrate-force-seeds
 

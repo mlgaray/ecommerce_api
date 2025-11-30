@@ -2,22 +2,23 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	"github.com/mlgaray/ecommerce_api/internal/core/ports" // Used for interface types in struct
 )
 
 // ProductService contains business logic, validations, and data access coordination
 // Use Cases orchestrate the flow using this service (NOT repositories directly)
 type ProductService struct {
 	productRepository ports.ProductRepository
-	// TODO: Add AssetService injection when ready
-	// assetService ports.AssetService
+	assetService      ports.AssetService
 }
 
-func NewProductService(productRepository ports.ProductRepository) *ProductService {
+func NewProductService(productRepository ports.ProductRepository, assetService ports.AssetService) *ProductService {
 	return &ProductService{
 		productRepository: productRepository,
+		assetService:      assetService,
 	}
 }
 
@@ -31,32 +32,13 @@ func (s *ProductService) validateFilters(filters *models.ProductFilters) error {
 	return filters.Validate()
 }
 
-// prepareImagesForCreate processes image buffers for creation
-// Currently creates placeholders - will upload to AssetService in the future
-// TODO: Replace with actual AssetService integration
-func (s *ProductService) prepareImagesForCreate(imageBuffers [][]byte) []models.ProductImage {
-	placeholderImages := make([]models.ProductImage, len(imageBuffers))
-	for i := range imageBuffers {
-		placeholderImages[i] = models.ProductImage{
-			URL: "https://placeholder.com/image_" + string(rune(i+1)),
-			// ID is 0 (omitted) - Repository will assign it on INSERT
+// deleteUploadedImages deletes images from storage (fire-and-forget for rollback)
+func (s *ProductService) deleteUploadedImages(ctx context.Context, images []*models.Image) {
+	for _, img := range images {
+		if img != nil && img.StorageRef != "" {
+			_ = s.assetService.Delete(ctx, img.StorageRef)
 		}
 	}
-	return placeholderImages
-}
-
-// prepareImagesForUpdate processes new image buffers for update
-// Currently creates placeholders - will upload to AssetService in the future
-// TODO: Replace with actual AssetService integration
-func (s *ProductService) prepareImagesForUpdate(newImageBuffers [][]byte) []models.ProductImage {
-	newImages := make([]models.ProductImage, len(newImageBuffers))
-	for i := range newImageBuffers {
-		newImages[i] = models.ProductImage{
-			URL: "https://placeholder.com/new_image_" + string(rune(i+1)),
-			// ID is 0 (omitted) - Repository will INSERT these
-		}
-	}
-	return newImages
 }
 
 // GetAllByShopIDWithFilters retrieves products with filters
@@ -75,19 +57,34 @@ func (s *ProductService) CountByShopIDWithFilters(ctx context.Context, filters m
 	return s.productRepository.CountByShopIDWithFilters(ctx, filters)
 }
 
-// Create creates a new product
-// Business logic: validates product, prepares images, delegates to repository
+// Create creates a new product with images
+// Business logic: validates product, uploads images to storage, persists via repository
+// Handles rollback: if DB fails, deletes uploaded images from storage
 func (s *ProductService) Create(ctx context.Context, product *models.Product, imageBuffers [][]byte, shopID int) (*models.Product, error) {
-	// Validate business rules
+	// 1. Validate business rules
 	if err := s.validateProduct(product); err != nil {
 		return nil, err
 	}
 
-	// Prepare images (placeholder URLs for now)
-	product.Images = s.prepareImagesForCreate(imageBuffers)
+	// 2. Upload images to storage (parallel via AssetService)
+	if len(imageBuffers) > 0 {
+		folder := fmt.Sprintf("shop_%d/products", shopID)
+		images, err := s.assetService.UploadMultiple(ctx, imageBuffers, folder)
+		if err != nil {
+			return nil, err
+		}
+		product.Images = images
+	}
 
-	// Delegate to repository
-	return s.productRepository.Create(ctx, product, shopID)
+	// 3. Persist to database
+	created, err := s.productRepository.Create(ctx, product, shopID)
+	if err != nil {
+		// Rollback: delete uploaded images from storage
+		s.deleteUploadedImages(ctx, product.Images)
+		return nil, err
+	}
+
+	return created, nil
 }
 
 // GetByID retrieves a product by ID
@@ -96,21 +93,38 @@ func (s *ProductService) GetByID(ctx context.Context, productID int) (*models.Pr
 	return s.productRepository.GetByID(ctx, productID)
 }
 
-// Update updates an existing product
-// Business logic: validates product, prepares new images, delegates to repository
-func (s *ProductService) Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte) error {
-	// Validate business rules
+// Update updates an existing product with new images
+// Business logic: validates product, uploads new images to storage, persists via repository
+// Handles: upload new images → persist to DB → delete removed images from storage
+func (s *ProductService) Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte, shopID int) error {
+	// 1. Validate business rules
 	if err := s.validateProduct(product); err != nil {
 		return err
 	}
 
-	// Prepare new images (placeholder URLs for now) and append to product
+	// 2. Upload new images to storage (parallel via AssetService)
 	if len(newImageBuffers) > 0 {
-		newImages := s.prepareImagesForUpdate(newImageBuffers)
+		folder := fmt.Sprintf("shop_%d/products", shopID)
+		newImages, err := s.assetService.UploadMultiple(ctx, newImageBuffers, folder)
+		if err != nil {
+			return err
+		}
 		// Append new images to existing images in product
 		product.Images = append(product.Images, newImages...)
 	}
 
-	// Delegate to repository
-	return s.productRepository.Update(ctx, productID, product)
+	// 3. Persist to database - returns refs of deleted images
+	deletedRefs, err := s.productRepository.Update(ctx, productID, product)
+	if err != nil {
+		return err
+	}
+
+	// 4. Cleanup: delete removed images from storage (fire-and-forget)
+	for _, ref := range deletedRefs {
+		if ref != "" {
+			_ = s.assetService.Delete(ctx, ref)
+		}
+	}
+
+	return nil
 }
