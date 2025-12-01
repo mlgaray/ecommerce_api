@@ -51,11 +51,6 @@ const (
 	InvalidSortField                    = "invalid_sort_field"
 	InvalidSortOrder                    = "invalid_sort_order"
 
-	// General error messages
-	InternalServerError = "internal_server_error"
-	BadRequest          = "bad_request"
-	Unauthorized        = "unauthorized"
-	Forbidden           = "forbidden"
-	Conflict            = "conflict"
-	DatabaseError       = "database_error"
+	// Authorization error messages
+	Forbidden = "forbidden"
 )

@@ -1,0 +1,53 @@
+name: Backport to Develop
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Create backport PR to develop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create backport branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="backport/main-to-develop-$(date +%Y%m%d-%H%M%S)"
+
+          # Create branch from main
+          git checkout -b $BRANCH_NAME
+
+          # Push the branch
+          git push origin $BRANCH_NAME
+
+          # Create PR using gh cli
+          gh pr create \
+            --base develop \
+            --head $BRANCH_NAME \
+            --title "chore: backport main to develop" \
+            --body "Automatic backport PR from \`main\` to \`develop\`.
+
+          This PR syncs the latest changes from \`main\` back to \`develop\`.
+
+          **Triggered by:** ${{ github.event.head_commit.message }}
+
+          ---
+          *This PR was created automatically by the backport workflow.*"
