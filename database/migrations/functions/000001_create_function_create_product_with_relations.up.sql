@@ -80,12 +80,11 @@ BEGIN
                 INSERT INTO variant_options (name, price, "order", variant_id)
                 SELECT
                     opt->>'name',
-                    (opt->>'price')::DECIMAL,
-                    (opt->>'order')::INTEGER,
+                    COALESCE((opt->>'price')::DECIMAL, 0),  -- Default to 0 if price not provided
+                    COALESCE((opt->>'order')::INTEGER, 0),
                     v_variant_id
                 FROM jsonb_array_elements(v_variant->'options') opt
                 WHERE opt->>'name' IS NOT NULL  -- Validation: skip options without name
-                  AND opt->>'price' IS NOT NULL  -- Validation: skip options without price
                   AND jsonb_typeof(opt) = 'object';
             END IF;
         END LOOP;
@@ -107,8 +106,8 @@ Performance optimizations:
 - Images: 1 batch INSERT (all at once) into unified images table
 - Variants: N INSERTs (loop - typically 2-5 items)
 - Options: N batch INSERTs (one per variant, avoids O(n²) array concatenation)
-- COALESCE() for NULL safety on all length checks
-- Data validation: skips options without name or price
+- COALESCE() for NULL safety on all length checks and default values
+- Data validation: skips options without name (price defaults to 0 if not provided)
 - Exception handling for validation errors
 Example: 3 variants + 15 options = 6 total INSERTs (3 variants + 3 batch option INSERTs)
 Avoids O(n²) array_cat() overhead with 100+ options.
