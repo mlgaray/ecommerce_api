@@ -22,29 +22,29 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create backport branch
+      - name: Create backport branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH_NAME="backport/main-to-develop-$(date +%Y%m%d-%H%M%S)"
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
-          git fetch origin develop
-          git checkout -b $BRANCH_NAME origin/main
+          # Create branch from main
+          git checkout -b $BRANCH_NAME
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ env.BRANCH_NAME }}
-          base: develop
-          title: "chore: backport main to develop"
-          body: |
-            Automatic backport PR from `main` to `develop`.
+          # Push the branch
+          git push origin $BRANCH_NAME
 
-            This PR syncs the latest changes from `main` back to `develop`.
+          # Create PR using gh cli
+          gh pr create \
+            --base develop \
+            --head $BRANCH_NAME \
+            --title "chore: backport main to develop" \
+            --body "Automatic backport PR from \`main\` to \`develop\`.
 
-            **Triggered by:** ${{ github.event.head_commit.message }}
+          This PR syncs the latest changes from \`main\` back to \`develop\`.
 
-            ---
-            *This PR was created automatically by the backport workflow.*
-          labels: backport, automated
-          delete-branch: true
+          **Triggered by:** ${{ github.event.head_commit.message }}
+
+          ---
+          *This PR was created automatically by the backport workflow.*" \
+            --label "backport"
