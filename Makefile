@@ -117,13 +117,6 @@ migrate-seeds-version:
 
 .PHONY: migrate-seeds-version
 
-migrate-reset-seeds:
-	@echo "Resetting seeds migrations (down all, then up)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose down -all
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose up
-
-.PHONY: migrate-reset-seeds
-
 # Functions migrations (stored procedures)
 migrate-up-functions:
 	@echo "Running functions migrations..."
