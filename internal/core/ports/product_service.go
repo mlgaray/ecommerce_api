@@ -23,9 +23,9 @@ type ProductService interface {
 	Update(ctx context.Context, productID int, product *models.Product, newImageBuffers [][]byte, shopID int) error
 
 	// GetAllByShopIDWithFilters retrieves products with filters.
-	// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.
+	// Assumes filters are already validated by the Use Case.
 	// Returns products with LIMIT+1 strategy for pagination.
-	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.ProductFilters) ([]*models.Product, error)
+	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error)
 
 	// CountByShopIDWithFilters returns total count of products matching filters.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error)

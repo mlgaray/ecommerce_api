@@ -27,11 +27,6 @@ func (s *ProductService) validateProduct(product *models.Product) error {
 	return product.Validate()
 }
 
-// validateFilters validates business rules for product filters
-func (s *ProductService) validateFilters(filters *models.ProductFilters) error {
-	return filters.Validate()
-}
-
 // deleteUploadedImages deletes images from storage (fire-and-forget for rollback)
 func (s *ProductService) deleteUploadedImages(ctx context.Context, images []*models.Image) {
 	for _, img := range images {
@@ -41,15 +36,12 @@ func (s *ProductService) deleteUploadedImages(ctx context.Context, images []*mod
 	}
 }
 
-// GetAllByShopIDWithFilters retrieves products with filters
-// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer
-// ShopID is a context parameter (not a filter), passed separately
-// Delegates to repository for data access
-func (s *ProductService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.ProductFilters) ([]*models.Product, error) {
-	if err := s.validateFilters(filters); err != nil {
-		return nil, err
-	}
-	return s.productRepository.GetAllByShopIDWithFilters(ctx, shopID, *filters)
+// GetAllByShopIDWithFilters retrieves products with filters.
+// Assumes filters are already validated by the Use Case.
+// ShopID is a context parameter (not a filter), passed separately.
+// Delegates to repository for data access.
+func (s *ProductService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error) {
+	return s.productRepository.GetAllByShopIDWithFilters(ctx, shopID, filters)
 }
 
 // CountByShopIDWithFilters returns total count of products matching filters

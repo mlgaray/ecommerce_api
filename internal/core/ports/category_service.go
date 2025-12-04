@@ -15,9 +15,9 @@ type CategoryService interface {
 	Create(ctx context.Context, category *models.Category, imageBuffer []byte, shopID int) (*models.Category, error)
 
 	// GetAllByShopIDWithFilters retrieves categories with filters.
-	// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.
+	// Assumes filters are already validated by the Use Case.
 	// Returns categories with LIMIT+1 strategy for pagination.
-	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, error)
+	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error)
 
 	// CountByShopIDWithFilters returns total count of categories matching filters.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)

@@ -26,9 +26,10 @@ func NewGetAllByShopIDWithFiltersUseCase(
 }
 
 // Execute orchestrates the complete flow:
-//  1. Fetches total count on first page only (delegates to ProductService)
-//  2. Fetches products with filters (delegates to ProductService - validates internally)
-//  3. Applies pagination logic (delegates to PaginationService)
+//  1. Validates and normalizes filters (once, before parallel execution)
+//  2. Fetches total count on first page only (delegates to ProductService)
+//  3. Fetches products with filters (delegates to ProductService)
+//  4. Applies pagination logic (delegates to PaginationService)
 //
 // ShopID is a context parameter (not a filter), passed separately.
 //
@@ -43,6 +44,11 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 	shopID int,
 	filters *models.ProductFilters,
 ) ([]*models.Product, string, bool, *int, error) {
+	// Validate and normalize filters BEFORE parallel execution (avoids data race)
+	if err := filters.Validate(); err != nil {
+		return nil, "", false, nil, err
+	}
+
 	var (
 		totalCount *int
 		products   []*models.Product
@@ -66,7 +72,7 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 
 		// Query 2: SELECT products (parallel)
 		wg.Go(func() {
-			productsResult, productsErr = uc.productService.GetAllByShopIDWithFilters(ctx, shopID, filters)
+			productsResult, productsErr = uc.productService.GetAllByShopIDWithFilters(ctx, shopID, *filters)
 		})
 
 		wg.Wait()
@@ -79,7 +85,7 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 		}
 	} else {
 		// Subsequent pages: only fetch products (no count needed)
-		products, err = uc.productService.GetAllByShopIDWithFilters(ctx, shopID, filters)
+		products, err = uc.productService.GetAllByShopIDWithFilters(ctx, shopID, *filters)
 	}
 
 	if err != nil {
