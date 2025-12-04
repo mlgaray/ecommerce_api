@@ -13,9 +13,10 @@ import (
 )
 
 var opts = godog.Options{
-	Output: colors.Colored(os.Stdout),
-	Format: "pretty", // can be "pretty", "progress", "junit", "cucumber"
-	Tags:   "~@wip",  // "@wip",  F   //"~@wip",
+	Output:      colors.Colored(os.Stdout),
+	Format:      "pretty", // can be "pretty", "progress", "junit", "cucumber"
+	Tags:        "~@wip",  // "@wip",  F   //"~@wip",
+	Concurrency: 1,        // Run scenarios sequentially to avoid data races with shared testCtx
 }
 
 func init() {

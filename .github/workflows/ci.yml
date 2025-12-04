@@ -61,4 +61,3 @@ jobs:
       run: |
         cd tests/integration
         go test -v ./...
-      continue-on-error: true
