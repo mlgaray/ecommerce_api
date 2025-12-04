@@ -51,15 +51,15 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 
 	// First page: execute COUNT and SELECT in parallel to reduce latency
 	if filters.LastID == nil {
-		var wg sync.WaitGroup
+		var (
+			wg       sync.WaitGroup
+			count    int
+			countErr error
+		)
 
 		// Query 1: COUNT (parallel)
 		wg.Go(func() {
-			count, countErr := uc.productService.CountByShopIDWithFilters(ctx, shopID, *filters)
-			if countErr == nil {
-				totalCount = &count
-			}
-			// Log error but don't fail - count is optional
+			count, countErr = uc.productService.CountByShopIDWithFilters(ctx, shopID, *filters)
 		})
 
 		// Query 2: SELECT products (parallel)
@@ -68,6 +68,11 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 		})
 
 		wg.Wait()
+
+		// Assign count after both goroutines complete (no race)
+		if countErr == nil {
+			totalCount = &count
+		}
 	} else {
 		// Subsequent pages: only fetch products (no count needed)
 		products, err = uc.productService.GetAllByShopIDWithFilters(ctx, shopID, filters)
