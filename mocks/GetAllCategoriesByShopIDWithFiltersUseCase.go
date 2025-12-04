@@ -39,7 +39,7 @@ func (_m *GetAllCategoriesByShopIDWithFiltersUseCase) EXPECT() *GetAllCategories
 }
 
 // Execute provides a mock function for the type GetAllCategoriesByShopIDWithFiltersUseCase
-func (_mock *GetAllCategoriesByShopIDWithFiltersUseCase) Execute(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, string, bool, *int, error) {
+func (_mock *GetAllCategoriesByShopIDWithFiltersUseCase) Execute(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, string, bool, *int, error) {
 	ret := _mock.Called(ctx, shopID, filters)
 
 	if len(ret) == 0 {
@@ -51,34 +51,34 @@ func (_mock *GetAllCategoriesByShopIDWithFiltersUseCase) Execute(ctx context.Con
 	var r2 bool
 	var r3 *int
 	var r4 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.CategoryFilters) ([]*models.Category, string, bool, *int, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) ([]*models.Category, string, bool, *int, error)); ok {
 		return returnFunc(ctx, shopID, filters)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.CategoryFilters) []*models.Category); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) []*models.Category); ok {
 		r0 = returnFunc(ctx, shopID, filters)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*models.Category)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.CategoryFilters) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.CategoryFilters) string); ok {
 		r1 = returnFunc(ctx, shopID, filters)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *models.CategoryFilters) bool); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, models.CategoryFilters) bool); ok {
 		r2 = returnFunc(ctx, shopID, filters)
 	} else {
 		r2 = ret.Get(2).(bool)
 	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, int, *models.CategoryFilters) *int); ok {
+	if returnFunc, ok := ret.Get(3).(func(context.Context, int, models.CategoryFilters) *int); ok {
 		r3 = returnFunc(ctx, shopID, filters)
 	} else {
 		if ret.Get(3) != nil {
 			r3 = ret.Get(3).(*int)
 		}
 	}
-	if returnFunc, ok := ret.Get(4).(func(context.Context, int, *models.CategoryFilters) error); ok {
+	if returnFunc, ok := ret.Get(4).(func(context.Context, int, models.CategoryFilters) error); ok {
 		r4 = returnFunc(ctx, shopID, filters)
 	} else {
 		r4 = ret.Error(4)
@@ -94,12 +94,12 @@ type GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call struct {
 // Execute is a helper method to define mock.On call
 //   - ctx context.Context
 //   - shopID int
-//   - filters *models.CategoryFilters
+//   - filters models.CategoryFilters
 func (_e *GetAllCategoriesByShopIDWithFiltersUseCase_Expecter) Execute(ctx interface{}, shopID interface{}, filters interface{}) *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call {
 	return &GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call{Call: _e.mock.On("Execute", ctx, shopID, filters)}
 }
 
-func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) Run(run func(ctx context.Context, shopID int, filters *models.CategoryFilters)) *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call {
+func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) Run(run func(ctx context.Context, shopID int, filters models.CategoryFilters)) *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -109,9 +109,9 @@ func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) Run(run func(
 		if args[1] != nil {
 			arg1 = args[1].(int)
 		}
-		var arg2 *models.CategoryFilters
+		var arg2 models.CategoryFilters
 		if args[2] != nil {
-			arg2 = args[2].(*models.CategoryFilters)
+			arg2 = args[2].(models.CategoryFilters)
 		}
 		run(
 			arg0,
@@ -127,7 +127,7 @@ func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) Return(catego
 	return _c
 }
 
-func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, string, bool, *int, error)) *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call {
+func (_c *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, string, bool, *int, error)) *GetAllCategoriesByShopIDWithFiltersUseCase_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

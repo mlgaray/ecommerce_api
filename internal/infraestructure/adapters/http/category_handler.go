@@ -216,8 +216,8 @@ func (h *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *ht
 	// Convert to domain model
 	filters := filtersRequest.ToCategoryFilters()
 
-	// Execute use case
-	categories, nextCursor, hasMore, totalCount, err := h.getAllByShopIDWithFilters.Execute(ctx, shopID, &filters)
+	// Execute use case (filters passed by value - immutable)
+	categories, nextCursor, hasMore, totalCount, err := h.getAllByShopIDWithFilters.Execute(ctx, shopID, filters)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":       CategoryHandlerField,

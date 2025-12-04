@@ -59,15 +59,19 @@ type CategoryFilters struct {
 	LastSortValue interface{} // Value of the sort field from last item
 }
 
-// Validate validates business rules for CategoryFilters
-func (f *CategoryFilters) Validate() error {
-	f.normalizeLimit()
+// Validated validates business rules and returns a normalized copy of CategoryFilters.
+// This is an immutable operation - the original struct is not modified.
+// Returns the validated/normalized copy and any validation error.
+func (f CategoryFilters) Validated() (CategoryFilters, error) {
+	result := f // Create a copy
 
-	if err := f.validateAndNormalizeSorting(); err != nil {
-		return err
+	result.normalizeLimit()
+
+	if err := result.validateAndNormalizeSorting(); err != nil {
+		return CategoryFilters{}, err
 	}
 
-	return nil
+	return result, nil
 }
 
 // normalizeLimit ensures limit is within valid bounds

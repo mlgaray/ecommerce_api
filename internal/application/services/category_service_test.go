@@ -348,14 +348,18 @@ func TestCategoryService_EdgeCases(t *testing.T) {
 // =============================================================================
 // GetAllByShopIDWithFilters Tests
 // =============================================================================
+// Note: Validation and normalization tests have been moved to the Use Case layer.
+// The service now assumes filters are already validated by the Use Case.
 
 func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
-	t.Run("when filters are valid then returns categories", func(t *testing.T) {
+	t.Run("when called then delegates to repository", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit: 20,
+		filters := models.CategoryFilters{
+			Limit:     20,
+			SortBy:    "created_at",
+			SortOrder: "desc",
 		}
 		expectedCategories := []*models.Category{
 			{ID: 1, Name: "Electronics"},
@@ -364,7 +368,7 @@ func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
 
 		repoMock := mocks.NewCategoryRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
 			Return(expectedCategories, nil)
 
 		assetMock := mocks.NewAssetService(t)
@@ -378,124 +382,18 @@ func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
 		assert.Len(t, result, 2)
 	})
 
-	t.Run("when invalid sort field then returns validation error", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit:  20,
-			SortBy: "invalid_field",
-		}
-
-		repoMock := mocks.NewCategoryRepository(t)
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		var validationErr *errors.ValidationError
-		assert.True(t, stdErrors.As(err, &validationErr))
-		assert.Equal(t, errors.InvalidSortField, validationErr.Message)
-	})
-
-	t.Run("when invalid sort order then returns validation error", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit:     20,
-			SortOrder: "invalid",
-		}
-
-		repoMock := mocks.NewCategoryRepository(t)
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		var validationErr *errors.ValidationError
-		assert.True(t, stdErrors.As(err, &validationErr))
-		assert.Equal(t, errors.InvalidSortOrder, validationErr.Message)
-	})
-
-	t.Run("when valid sort fields then passes validation", func(t *testing.T) {
-		validSortFields := []string{"name", "created_at", ""}
-		for _, sortBy := range validSortFields {
-			t.Run("sort_by_"+sortBy, func(t *testing.T) {
-				// Arrange
-				ctx := context.Background()
-				shopID := 1
-				filters := &models.CategoryFilters{
-					Limit:  20,
-					SortBy: sortBy,
-				}
-
-				repoMock := mocks.NewCategoryRepository(t)
-				repoMock.EXPECT().
-					GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-					Return([]*models.Category{}, nil)
-
-				assetMock := mocks.NewAssetService(t)
-				service := NewCategoryService(repoMock, assetMock)
-
-				// Act
-				_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-				// Assert
-				assert.NoError(t, err)
-			})
-		}
-	})
-
-	t.Run("when valid sort orders then passes validation", func(t *testing.T) {
-		validSortOrders := []string{"asc", "desc", ""}
-		for _, sortOrder := range validSortOrders {
-			t.Run("sort_order_"+sortOrder, func(t *testing.T) {
-				// Arrange
-				ctx := context.Background()
-				shopID := 1
-				filters := &models.CategoryFilters{
-					Limit:     20,
-					SortOrder: sortOrder,
-				}
-
-				repoMock := mocks.NewCategoryRepository(t)
-				repoMock.EXPECT().
-					GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-					Return([]*models.Category{}, nil)
-
-				assetMock := mocks.NewAssetService(t)
-				service := NewCategoryService(repoMock, assetMock)
-
-				// Act
-				_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-				// Assert
-				assert.NoError(t, err)
-			})
-		}
-	})
-
 	t.Run("when repository returns error then propagates error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit: 20,
 		}
 		expectedError := stdErrors.New("database error")
 
 		repoMock := mocks.NewCategoryRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
 			Return(nil, expectedError)
 
 		assetMock := mocks.NewAssetService(t)
@@ -514,13 +412,13 @@ func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 999
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit: 20,
 		}
 
 		repoMock := mocks.NewCategoryRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
 			Return([]*models.Category{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
@@ -534,137 +432,19 @@ func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
 		assert.Empty(t, result)
 	})
 
-	t.Run("when limit is zero then defaults to 20", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit: 0,
-		}
-
-		var capturedFilters models.CategoryFilters
-		repoMock := mocks.NewCategoryRepository(t)
-		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-			Run(func(ctx context.Context, sID int, f models.CategoryFilters) {
-				capturedFilters = f
-			}).
-			Return([]*models.Category{}, nil)
-
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, 20, capturedFilters.Limit)
-	})
-
-	t.Run("when limit exceeds 100 then caps at 100", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit: 500,
-		}
-
-		var capturedFilters models.CategoryFilters
-		repoMock := mocks.NewCategoryRepository(t)
-		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-			Run(func(ctx context.Context, sID int, f models.CategoryFilters) {
-				capturedFilters = f
-			}).
-			Return([]*models.Category{}, nil)
-
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, 100, capturedFilters.Limit)
-	})
-
-	t.Run("when sort_by is empty then defaults to created_at", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit:  20,
-			SortBy: "",
-		}
-
-		var capturedFilters models.CategoryFilters
-		repoMock := mocks.NewCategoryRepository(t)
-		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-			Run(func(ctx context.Context, sID int, f models.CategoryFilters) {
-				capturedFilters = f
-			}).
-			Return([]*models.Category{}, nil)
-
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, "created_at", capturedFilters.SortBy)
-	})
-
-	t.Run("when sort_order is empty then defaults to desc", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		shopID := 1
-		filters := &models.CategoryFilters{
-			Limit:     20,
-			SortOrder: "",
-		}
-
-		var capturedFilters models.CategoryFilters
-		repoMock := mocks.NewCategoryRepository(t)
-		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-			Run(func(ctx context.Context, sID int, f models.CategoryFilters) {
-				capturedFilters = f
-			}).
-			Return([]*models.Category{}, nil)
-
-		assetMock := mocks.NewAssetService(t)
-		service := NewCategoryService(repoMock, assetMock)
-
-		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
-
-		// Assert
-		assert.NoError(t, err)
-		assert.Equal(t, "desc", capturedFilters.SortOrder)
-	})
-
 	t.Run("when search filter applied then passes to repository", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
 		searchTerm := "Electronics"
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Search: &searchTerm,
 			Limit:  20,
 		}
 
-		var capturedFilters models.CategoryFilters
 		repoMock := mocks.NewCategoryRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
-			Run(func(ctx context.Context, sID int, f models.CategoryFilters) {
-				capturedFilters = f
-			}).
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
 			Return([]*models.Category{{ID: 1, Name: "Electronics"}}, nil)
 
 		assetMock := mocks.NewAssetService(t)
@@ -676,8 +456,6 @@ func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Len(t, result, 1)
-		assert.NotNil(t, capturedFilters.Search)
-		assert.Equal(t, searchTerm, *capturedFilters.Search)
 	})
 }
 

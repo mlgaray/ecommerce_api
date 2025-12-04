@@ -18,7 +18,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     20,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -34,11 +34,11 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		paginationServiceMock := mocks.NewPaginationService[*models.Category](t)
 
 		categoryServiceMock.EXPECT().
-			CountByShopIDWithFilters(ctx, shopID, *filters).
+			CountByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(expectedCount, nil)
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, nil)
 
 		paginationServiceMock.EXPECT().
@@ -63,7 +63,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     2,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -84,11 +84,11 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		paginationServiceMock := mocks.NewPaginationService[*models.Category](t)
 
 		categoryServiceMock.EXPECT().
-			CountByShopIDWithFilters(ctx, shopID, *filters).
+			CountByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(expectedCount, nil)
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(categoriesFromRepo, nil)
 
 		paginationServiceMock.EXPECT().
@@ -114,7 +114,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		ctx := context.Background()
 		shopID := 1
 		lastID := 10
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     20,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -131,7 +131,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 
 		// CountByShopIDWithFilters should NOT be called on subsequent pages
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, nil)
 
 		paginationServiceMock.EXPECT().
@@ -155,7 +155,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     20,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -166,11 +166,11 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		paginationServiceMock := mocks.NewPaginationService[*models.Category](t)
 
 		categoryServiceMock.EXPECT().
-			CountByShopIDWithFilters(ctx, shopID, *filters).
+			CountByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(0, nil)
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(nil, expectedError)
 
 		useCase := NewGetAllByShopIDWithFiltersUseCase(categoryServiceMock, paginationServiceMock)
@@ -191,7 +191,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 1
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     20,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -206,11 +206,11 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 
 		// Count fails but should not fail the request
 		categoryServiceMock.EXPECT().
-			CountByShopIDWithFilters(ctx, shopID, *filters).
+			CountByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(0, errors.New("count error"))
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, nil)
 
 		paginationServiceMock.EXPECT().
@@ -234,7 +234,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		shopID := 999
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Limit:     20,
 			SortBy:    "created_at",
 			SortOrder: "desc",
@@ -246,11 +246,11 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		paginationServiceMock := mocks.NewPaginationService[*models.Category](t)
 
 		categoryServiceMock.EXPECT().
-			CountByShopIDWithFilters(ctx, shopID, *filters).
+			CountByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(0, nil)
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(emptyCategories, nil)
 
 		paginationServiceMock.EXPECT().
@@ -276,7 +276,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 		ctx := context.Background()
 		shopID := 1
 		searchTerm := "Electronics"
-		filters := &models.CategoryFilters{
+		filters := models.CategoryFilters{
 			Search:    &searchTerm,
 			Limit:     20,
 			SortBy:    "name",
@@ -297,7 +297,7 @@ func TestGetAllByShopIDWithFiltersUseCase_Execute(t *testing.T) {
 			Return(1, nil)
 
 		categoryServiceMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, nil)
 
 		paginationServiceMock.EXPECT().

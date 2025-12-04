@@ -27,7 +27,7 @@ func NewGetAllByShopIDWithFiltersUseCase(
 }
 
 // Execute orchestrates the complete flow:
-//  1. Validates and normalizes filters (once, before parallel execution)
+//  1. Validates and normalizes filters (immutable - returns a copy)
 //  2. Fetches total count on first page only (delegates to CategoryService)
 //  3. Fetches categories with filters (delegates to CategoryService)
 //  4. Applies pagination logic (delegates to PaginationService)
@@ -41,21 +41,22 @@ func NewGetAllByShopIDWithFiltersUseCase(
 func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 	ctx context.Context,
 	shopID int,
-	filters *models.CategoryFilters,
+	filters models.CategoryFilters,
 ) ([]*models.Category, string, bool, *int, error) {
-	// Validate and normalize filters BEFORE parallel execution (avoids data race)
-	if err := filters.Validate(); err != nil {
+	// Validate and normalize filters (immutable - returns a validated copy)
+	validatedFilters, err := filters.Validated()
+	if err != nil {
 		return nil, "", false, nil, err
 	}
 
 	var (
 		totalCount *int
 		categories []*models.Category
-		err        error
+		fetchErr   error
 	)
 
 	// First page: execute COUNT and SELECT in parallel to reduce latency
-	if filters.LastID == nil {
+	if validatedFilters.LastID == nil {
 		var (
 			wg               sync.WaitGroup
 			count            int
@@ -66,36 +67,36 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 
 		// Query 1: COUNT (parallel)
 		wg.Go(func() {
-			count, countErr = uc.categoryService.CountByShopIDWithFilters(ctx, shopID, *filters)
+			count, countErr = uc.categoryService.CountByShopIDWithFilters(ctx, shopID, validatedFilters)
 		})
 
 		// Query 2: SELECT categories (parallel)
 		wg.Go(func() {
-			categoriesResult, categoriesErr = uc.categoryService.GetAllByShopIDWithFilters(ctx, shopID, *filters)
+			categoriesResult, categoriesErr = uc.categoryService.GetAllByShopIDWithFilters(ctx, shopID, validatedFilters)
 		})
 
 		wg.Wait()
 
 		// Assign results after both goroutines complete (no race)
 		categories = categoriesResult
-		err = categoriesErr
+		fetchErr = categoriesErr
 		if countErr == nil {
 			totalCount = &count
 		}
 	} else {
 		// Subsequent pages: only fetch categories (no count needed)
-		categories, err = uc.categoryService.GetAllByShopIDWithFilters(ctx, shopID, *filters)
+		categories, fetchErr = uc.categoryService.GetAllByShopIDWithFilters(ctx, shopID, validatedFilters)
 	}
 
-	if err != nil {
-		return nil, "", false, nil, err
+	if fetchErr != nil {
+		return nil, "", false, nil, fetchErr
 	}
 
 	// Apply pagination logic (delegated to PaginationService)
 	trimmedCategories, nextCursor, hasMore := uc.paginationService.ApplyPagination(
 		categories,
-		filters.Limit,
-		filters.SortBy,
+		validatedFilters.Limit,
+		validatedFilters.SortBy,
 	)
 
 	return trimmedCategories, nextCursor, hasMore, totalCount, nil

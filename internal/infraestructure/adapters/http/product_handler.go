@@ -303,12 +303,12 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 	// Convert to domain model (ShopID passed separately)
 	filters := filtersRequest.ToProductFilters()
 
-	// Execute use case (business validation happens in service layer)
+	// Execute use case (business validation happens in use case layer)
 	// ShopID is a context parameter, passed separately from filters
-	// Filters passed by pointer so normalized values (Limit, SortBy, SortOrder) propagate back
+	// Filters passed by value (immutable) - use case calls Validated() internally
 	// Lightweight query - no variants for real-time search performance
 	// totalCount is only returned on first page (cursor empty), nil on subsequent pages
-	products, nextCursor, hasMore, totalCount, err := p.getAllByShopIDWithFilters.Execute(ctx, shopID, &filters)
+	products, nextCursor, hasMore, totalCount, err := p.getAllByShopIDWithFilters.Execute(ctx, shopID, filters)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":        ProductHandlerField,

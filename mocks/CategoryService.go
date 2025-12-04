@@ -191,7 +191,7 @@ func (_c *CategoryService_Create_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // GetAllByShopIDWithFilters provides a mock function for the type CategoryService
-func (_mock *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, error) {
+func (_mock *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error) {
 	ret := _mock.Called(ctx, shopID, filters)
 
 	if len(ret) == 0 {
@@ -200,17 +200,17 @@ func (_mock *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, sho
 
 	var r0 []*models.Category
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.CategoryFilters) ([]*models.Category, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) ([]*models.Category, error)); ok {
 		return returnFunc(ctx, shopID, filters)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.CategoryFilters) []*models.Category); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) []*models.Category); ok {
 		r0 = returnFunc(ctx, shopID, filters)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*models.Category)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.CategoryFilters) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.CategoryFilters) error); ok {
 		r1 = returnFunc(ctx, shopID, filters)
 	} else {
 		r1 = ret.Error(1)
@@ -226,12 +226,12 @@ type CategoryService_GetAllByShopIDWithFilters_Call struct {
 // GetAllByShopIDWithFilters is a helper method to define mock.On call
 //   - ctx context.Context
 //   - shopID int
-//   - filters *models.CategoryFilters
+//   - filters models.CategoryFilters
 func (_e *CategoryService_Expecter) GetAllByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *CategoryService_GetAllByShopIDWithFilters_Call {
 	return &CategoryService_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", ctx, shopID, filters)}
 }
 
-func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters *models.CategoryFilters)) *CategoryService_GetAllByShopIDWithFilters_Call {
+func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.CategoryFilters)) *CategoryService_GetAllByShopIDWithFilters_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -241,9 +241,9 @@ func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Run(run func(ctx conte
 		if args[1] != nil {
 			arg1 = args[1].(int)
 		}
-		var arg2 *models.CategoryFilters
+		var arg2 models.CategoryFilters
 		if args[2] != nil {
-			arg2 = args[2].(*models.CategoryFilters)
+			arg2 = args[2].(models.CategoryFilters)
 		}
 		run(
 			arg0,
@@ -259,7 +259,7 @@ func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Return(categorys []*mo
 	return _c
 }
 
-func (_c *CategoryService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, error)) *CategoryService_GetAllByShopIDWithFilters_Call {
+func (_c *CategoryService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error)) *CategoryService_GetAllByShopIDWithFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }

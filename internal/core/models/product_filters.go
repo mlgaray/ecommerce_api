@@ -33,19 +33,23 @@ type ProductFilters struct {
 	LastSortValue interface{} // Value of the sort field from last item (nil = first page or sorting by ID)
 }
 
-// Validate validates business rules for ProductFilters
-func (f *ProductFilters) Validate() error {
-	f.normalizeLimit()
+// Validated validates business rules and returns a normalized copy of ProductFilters.
+// This is an immutable operation - the original struct is not modified.
+// Returns the validated/normalized copy and any validation error.
+func (f ProductFilters) Validated() (ProductFilters, error) {
+	result := f // Create a copy
 
-	if err := f.validatePriceRange(); err != nil {
-		return err
+	result.normalizeLimit()
+
+	if err := result.validatePriceRange(); err != nil {
+		return ProductFilters{}, err
 	}
 
-	if err := f.validateAndNormalizeSorting(); err != nil {
-		return err
+	if err := result.validateAndNormalizeSorting(); err != nil {
+		return ProductFilters{}, err
 	}
 
-	return nil
+	return result, nil
 }
 
 // normalizeLimit ensures limit is within valid bounds
