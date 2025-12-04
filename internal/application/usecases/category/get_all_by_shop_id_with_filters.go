@@ -51,9 +51,9 @@ func (uc *GetAllByShopIDWithFiltersUseCase) Execute(
 	// First page: execute COUNT and SELECT in parallel to reduce latency
 	if filters.LastID == nil {
 		var (
-			wg            sync.WaitGroup
-			count         int
-			countErr      error
+			wg               sync.WaitGroup
+			count            int
+			countErr         error
 			categoriesResult []*models.Category
 			categoriesErr    error
 		)
