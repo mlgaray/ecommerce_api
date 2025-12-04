@@ -34,22 +34,21 @@ func (c *dataBaseConnection) Connect() *sql.DB {
 	// defer db.Close()
 
 	// CONNECTION POOL OPTIMIZATION
-	// MaxOpenConns: Maximum number of open connections to the database
-	// Recommended: 2-4x number of CPU cores for I/O bound operations
+	// MaxOpenConns: Hard ceiling on total connections (in-use + idle)
+	// Recommended: Based on DB capacity and number of app replicas
 	db.SetMaxOpenConns(25)
 
-	// MaxIdleConns: Maximum number of connections in the idle connection pool
-	// Should be less than or equal to MaxOpenConns
-	// Higher value = faster query execution (no need to create new connections)
-	db.SetMaxIdleConns(10)
+	// MaxIdleConns: Should equal MaxOpenConns to avoid frequent reconnections
+	// When smaller than MaxOpenConns, connections open/close more frequently
+	db.SetMaxIdleConns(25)
 
-	// ConnMaxLifetime: Maximum amount of time a connection may be reused
-	// Prevents issues with stale connections and database connection limits
+	// ConnMaxLifetime: Recycle connections periodically for reliability
+	// Helps with load balancers and prevents stale connections
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// ConnMaxIdleTime: Maximum amount of time a connection may be idle before being closed
-	// Helps free up resources when load is low
-	db.SetConnMaxIdleTime(1 * time.Minute)
+	// ConnMaxIdleTime: Close idle connections after period of inactivity
+	// Allows pool to scale down after high load periods
+	db.SetConnMaxIdleTime(5 * time.Minute)
 
 	// Verifica la conexión
 	err = db.Ping()
@@ -58,7 +57,7 @@ func (c *dataBaseConnection) Connect() *sql.DB {
 	}
 
 	fmt.Println("Conexión exitosa a la base de datos!")
-	fmt.Printf("Connection pool configured: MaxOpen=%d, MaxIdle=%d\n", 25, 10)
+	fmt.Printf("Connection pool configured: MaxOpen=%d, MaxIdle=%d\n", 25, 25)
 
 	return db
 }

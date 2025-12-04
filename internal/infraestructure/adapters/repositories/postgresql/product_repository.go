@@ -276,7 +276,7 @@ func (r *ProductRepository) Create(ctx context.Context, product *models.Product,
 }
 
 //nolint:gocyclo // Dynamic query building requires multiple conditional branches
-func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) ([]*models.Product, error) {
+func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error) {
 	startTime := time.Now()
 
 	// Lightweight query - NO variants/options (for real-time search performance)
@@ -304,7 +304,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 
 	// Build dynamic WHERE conditions
 	conditions := []string{}
-	args := []interface{}{filters.ShopID}
+	args := []interface{}{shopID}
 	argPos := 2
 
 	// Category filter
@@ -381,7 +381,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 		// This ensures stable pagination even when sort_field has duplicate values
 		sortField := fmt.Sprintf("p.%s", filters.SortBy)
 
-		if filters.SortOrder == "desc" {
+		if filters.SortOrder == SortOrderDesc {
 			// DESC: (sort_field < last_value) OR (sort_field = last_value AND id < last_id)
 			if filters.LastSortValue != nil {
 				conditions = append(conditions, fmt.Sprintf(
@@ -434,7 +434,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 	logs.WithFields(map[string]interface{}{
 		"file":          ProductRepositoryField,
 		"function":      "get_all_by_shop_id_with_filters",
-		"shop_id":       filters.ShopID,
+		"shop_id":       shopID,
 		"sort_by":       filters.SortBy,
 		"sort_order":    filters.SortOrder,
 		"has_search":    filters.Search != nil,
@@ -532,7 +532,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 		"function":     "get_all_by_shop_id_with_filters",
 		"duration_ms":  queryDuration,
 		"result_count": len(products),
-		"shop_id":      filters.ShopID,
+		"shop_id":      shopID,
 		"has_search":   filters.Search != nil,
 	}).Debug("Products query with filters completed (lightweight - no variants)")
 
@@ -542,7 +542,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 			"file":        ProductRepositoryField,
 			"function":    "get_all_by_shop_id_with_filters",
 			"duration_ms": queryDuration,
-			"shop_id":     filters.ShopID,
+			"shop_id":     shopID,
 		}).Warn("Slow query detected - target is <50ms for real-time search")
 	}
 
@@ -550,13 +550,13 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, filte
 }
 
 //nolint:gocyclo // Dynamic query building requires multiple conditional branches
-func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
+func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error) {
 	startTime := time.Now()
 
 	// Build COUNT query with same filters as GetAllByShopIDWithFilters
 	// But WITHOUT cursor, ORDER BY, or LIMIT (we want total count)
 	countQuery := "SELECT COUNT(*) FROM products p WHERE p.shop_id = $1"
-	args := []interface{}{filters.ShopID}
+	args := []interface{}{shopID}
 	argPos := 2
 
 	var conditions []string
@@ -619,7 +619,7 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 	logs.WithFields(map[string]interface{}{
 		"file":          ProductRepositoryField,
 		"function":      "count_by_shop_id_with_filters",
-		"shop_id":       filters.ShopID,
+		"shop_id":       shopID,
 		"has_search":    filters.Search != nil,
 		"has_category":  filters.CategoryID != nil,
 		"has_price_min": filters.MinPrice != nil,
@@ -645,7 +645,7 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 		"function":    "count_by_shop_id_with_filters",
 		"duration_ms": countDuration,
 		"total_count": totalCount,
-		"shop_id":     filters.ShopID,
+		"shop_id":     shopID,
 		"has_search":  filters.Search != nil,
 	}).Debug("COUNT query completed")
 
@@ -655,7 +655,7 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, filter
 			"file":        ProductRepositoryField,
 			"function":    "count_by_shop_id_with_filters",
 			"duration_ms": countDuration,
-			"shop_id":     filters.ShopID,
+			"shop_id":     shopID,
 		}).Warn("Slow COUNT query detected - target is <100ms")
 	}
 

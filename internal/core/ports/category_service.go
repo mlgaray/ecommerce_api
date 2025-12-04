@@ -13,4 +13,12 @@ type CategoryService interface {
 	// Validates category, uploads image to storage, and persists via repository.
 	// Handles rollback if persistence fails after image upload.
 	Create(ctx context.Context, category *models.Category, imageBuffer []byte, shopID int) (*models.Category, error)
+
+	// GetAllByShopIDWithFilters retrieves categories with filters.
+	// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.
+	// Returns categories with LIMIT+1 strategy for pagination.
+	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, error)
+
+	// CountByShopIDWithFilters returns total count of categories matching filters.
+	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)
 }

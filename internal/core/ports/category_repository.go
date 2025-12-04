@@ -13,4 +13,12 @@ type CategoryRepository interface {
 	// Image data (URL, StorageRef) is read from category.Image if present.
 	// Returns DuplicateRecordError if a category with the same name already exists in the shop.
 	Create(ctx context.Context, category *models.Category, shopID int) (*models.Category, error)
+
+	// GetAllByShopIDWithFilters retrieves categories with filters and pagination.
+	// Returns categories with LIMIT+1 strategy for cursor-based pagination.
+	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error)
+
+	// CountByShopIDWithFilters returns total count of categories matching filters.
+	// Used for first page to show "X of Y" in frontend.
+	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)
 }

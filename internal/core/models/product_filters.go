@@ -4,12 +4,10 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
-// ProductFilters represents search and filter criteria for products
-// This is a domain model with business validation rules
+// ProductFilters represents search and filter criteria for products.
+// Note: ShopID is NOT included here - it's a context parameter passed separately
+// in method signatures (e.g., GetAllByShopIDWithFilters(ctx, shopID, filters)).
 type ProductFilters struct {
-	// Required filters
-	ShopID int // Required: shop context for multi-tenancy
-
 	// Optional search filter
 	Search *string // nil = no search applied
 
@@ -36,12 +34,7 @@ type ProductFilters struct {
 }
 
 // Validate validates business rules for ProductFilters
-// This ensures domain invariants are maintained
 func (f *ProductFilters) Validate() error {
-	if err := f.validateShopID(); err != nil {
-		return err
-	}
-
 	f.normalizeLimit()
 
 	if err := f.validatePriceRange(); err != nil {
@@ -52,16 +45,6 @@ func (f *ProductFilters) Validate() error {
 		return err
 	}
 
-	return nil
-}
-
-// validateShopID validates shop_id is present (multi-tenancy requirement)
-func (f *ProductFilters) validateShopID() error {
-	if f.ShopID <= 0 {
-		return &errors.ValidationError{
-			Message: errors.ShopIDIsRequired,
-		}
-	}
 	return nil
 }
 

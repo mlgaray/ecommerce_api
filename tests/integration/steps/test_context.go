@@ -173,6 +173,9 @@ func (ctx *TestContext) SetupProductTestApp() error {
 	ctx.mockDB = db
 	ctx.mockSQLMock = sqlMock
 
+	// Allow queries to be executed in any order (use case runs COUNT and SELECT in parallel)
+	sqlMock.MatchExpectationsInOrder(false)
+
 	// Create FX app with real services but mocked DB
 	ctx.app = fx.New(
 		fx.Provide(
@@ -233,6 +236,9 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 	ctx.mockDB = db
 	ctx.mockSQLMock = sqlMock
 
+	// Allow queries to be executed in any order (use case runs COUNT and SELECT in parallel)
+	sqlMock.MatchExpectationsInOrder(false)
+
 	// Create FX app with real services but mocked DB
 	ctx.app = fx.New(
 		fx.Provide(
@@ -245,9 +251,14 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Category],
+				fx.As(new(ports.PaginationService[*models.Category])),
+			),
 
-			// Provide use case
+			// Provide use cases
 			fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+			fx.Annotate(category.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllCategoriesByShopIDWithFiltersUseCase))),
 
 			// Provide handler
 			authhttp.NewCategoryHandler,
@@ -256,6 +267,7 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 			router.HandleFunc("/categories", handler.Create).Methods("POST")
+			router.HandleFunc("/shops/{shop_id}/categories", handler.GetAllByShopIDWithFilters).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),

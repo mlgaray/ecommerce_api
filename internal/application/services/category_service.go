@@ -52,3 +52,18 @@ func (s *CategoryService) Create(ctx context.Context, category *models.Category,
 
 	return created, nil
 }
+
+// GetAllByShopIDWithFilters retrieves categories with filters.
+// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.
+// Delegates to repository for data access.
+func (s *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.CategoryFilters) ([]*models.Category, error) {
+	if err := filters.Validate(); err != nil {
+		return nil, err
+	}
+	return s.categoryRepository.GetAllByShopIDWithFilters(ctx, shopID, *filters)
+}
+
+// CountByShopIDWithFilters returns total count of categories matching filters.
+func (s *CategoryService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error) {
+	return s.categoryRepository.CountByShopIDWithFilters(ctx, shopID, filters)
+}

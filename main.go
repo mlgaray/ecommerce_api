@@ -53,8 +53,9 @@ var Module = fx.Options(
 		fx.Annotate(auth.NewSignInUseCase, fx.As(new(ports.SignInUseCase))),
 		fx.Annotate(auth.NewSignUpUseCase, fx.As(new(ports.SignUpUseCase))),
 
-		// PAGINATION (shared service for cursor-based pagination)
+		// PAGINATION (shared services for cursor-based pagination)
 		fx.Annotate(services.NewPaginationService[*models.Product], fx.As(new(ports.PaginationService[*models.Product]))),
+		fx.Annotate(services.NewPaginationService[*models.Category], fx.As(new(ports.PaginationService[*models.Category]))),
 
 		// PRODUCT
 		// Repository first (no dependencies)
@@ -78,8 +79,9 @@ var Module = fx.Options(
 		fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
 		// Service depends on Repository + AssetService
 		fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
-		// Use Case depends on Service
+		// Use Cases depend on Services
 		fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+		fx.Annotate(category.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllCategoriesByShopIDWithFiltersUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewCategoryHandler, fx.As(new(ports.CategoryHandler))),
 

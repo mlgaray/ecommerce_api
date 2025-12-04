@@ -35,11 +35,11 @@ func newValidProductWithID(id int) *models.Product {
 	return p
 }
 
-// newValidFilters creates valid filters for testing with default shop ID
+// newValidFilters creates valid filters for testing
+// Note: ShopID is NOT included - it's a context parameter passed separately
 func newValidFilters() models.ProductFilters {
 	return models.ProductFilters{
-		ShopID: 1,
-		Limit:  20,
+		Limit: 20,
 	}
 }
 
@@ -674,6 +674,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when filters are valid then returns products", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 		expectedProducts := []*models.Product{
 			newValidProductWithID(1),
@@ -682,71 +683,26 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return(expectedProducts, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
 		assert.Len(t, result, 2)
 	})
 
-	t.Run("when shop_id is zero then returns validation error", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		filters := models.ProductFilters{
-			ShopID: 0, // Invalid
-			Limit:  20,
-		}
-
-		repoMock := mocks.NewProductRepository(t)
-		assetMock := mocks.NewAssetService(t)
-		service := NewProductService(repoMock, assetMock)
-
-		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
-
-		// Assert
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		var validationErr *errors.ValidationError
-		assert.True(t, stdErrors.As(err, &validationErr))
-		assert.Equal(t, errors.ShopIDIsRequired, validationErr.Message)
-	})
-
-	t.Run("when shop_id is negative then returns validation error", func(t *testing.T) {
-		// Arrange
-		ctx := context.Background()
-		filters := models.ProductFilters{
-			ShopID: -1, // Invalid
-			Limit:  20,
-		}
-
-		repoMock := mocks.NewProductRepository(t)
-		assetMock := mocks.NewAssetService(t)
-		service := NewProductService(repoMock, assetMock)
-
-		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
-
-		// Assert
-		assert.Error(t, err)
-		assert.Nil(t, result)
-		var validationErr *errors.ValidationError
-		assert.True(t, stdErrors.As(err, &validationErr))
-	})
-
 	t.Run("when min_price is negative then returns validation error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		minPrice := -10.0
 		filters := models.ProductFilters{
-			ShopID:   1,
 			Limit:    20,
 			MinPrice: &minPrice, // Invalid
 		}
@@ -756,7 +712,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -769,9 +725,9 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when max_price is negative then returns validation error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		maxPrice := -10.0
 		filters := models.ProductFilters{
-			ShopID:   1,
 			Limit:    20,
 			MaxPrice: &maxPrice, // Invalid
 		}
@@ -781,7 +737,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -794,10 +750,10 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when min_price greater than max_price then returns validation error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		minPrice := 100.0
 		maxPrice := 50.0
 		filters := models.ProductFilters{
-			ShopID:   1,
 			Limit:    20,
 			MinPrice: &minPrice,
 			MaxPrice: &maxPrice, // Invalid: max < min
@@ -808,7 +764,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -821,8 +777,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when invalid sort field then returns validation error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID: 1,
 			Limit:  20,
 			SortBy: "invalid_field", // Invalid
 		}
@@ -832,7 +788,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -845,8 +801,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when invalid sort order then returns validation error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID:    1,
 			Limit:     20,
 			SortOrder: "invalid", // Invalid
 		}
@@ -856,7 +812,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -872,22 +828,22 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			t.Run("sort_by_"+sortBy, func(t *testing.T) {
 				// Arrange
 				ctx := context.Background()
+				shopID := 1
 				filters := models.ProductFilters{
-					ShopID: 1,
 					Limit:  20,
 					SortBy: sortBy,
 				}
 
 				repoMock := mocks.NewProductRepository(t)
 				repoMock.EXPECT().
-					GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+					GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 					Return([]*models.Product{}, nil)
 
 				assetMock := mocks.NewAssetService(t)
 				service := NewProductService(repoMock, assetMock)
 
 				// Act
-				_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+				_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 				// Assert
 				assert.NoError(t, err)
@@ -901,22 +857,22 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 			t.Run("sort_order_"+sortOrder, func(t *testing.T) {
 				// Arrange
 				ctx := context.Background()
+				shopID := 1
 				filters := models.ProductFilters{
-					ShopID:    1,
 					Limit:     20,
 					SortOrder: sortOrder,
 				}
 
 				repoMock := mocks.NewProductRepository(t)
 				repoMock.EXPECT().
-					GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+					GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 					Return([]*models.Product{}, nil)
 
 				assetMock := mocks.NewAssetService(t)
 				service := NewProductService(repoMock, assetMock)
 
 				// Act
-				_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+				_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 				// Assert
 				assert.NoError(t, err)
@@ -927,19 +883,20 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when repository returns error then propagates error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 		expectedError := stdErrors.New("database error")
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, expectedError)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -950,18 +907,19 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when no products found then returns empty slice", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -971,16 +929,16 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when limit is zero then defaults to 20", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID: 1,
-			Limit:  0, // Should default to 20
+			Limit: 0, // Should default to 20
 		}
 
 		var capturedFilters models.ProductFilters
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
-			Run(func(ctx context.Context, f models.ProductFilters) {
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
+			Run(func(ctx context.Context, sID int, f models.ProductFilters) {
 				capturedFilters = f
 			}).
 			Return([]*models.Product{}, nil)
@@ -989,7 +947,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -999,16 +957,16 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when limit exceeds 100 then caps at 100", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID: 1,
-			Limit:  500, // Should cap at 100
+			Limit: 500, // Should cap at 100
 		}
 
 		var capturedFilters models.ProductFilters
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
-			Run(func(ctx context.Context, f models.ProductFilters) {
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
+			Run(func(ctx context.Context, sID int, f models.ProductFilters) {
 				capturedFilters = f
 			}).
 			Return([]*models.Product{}, nil)
@@ -1017,7 +975,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1027,8 +985,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when sort_by is empty then defaults to created_at", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID: 1,
 			Limit:  20,
 			SortBy: "", // Should default to created_at
 		}
@@ -1036,8 +994,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		var capturedFilters models.ProductFilters
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
-			Run(func(ctx context.Context, f models.ProductFilters) {
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
+			Run(func(ctx context.Context, sID int, f models.ProductFilters) {
 				capturedFilters = f
 			}).
 			Return([]*models.Product{}, nil)
@@ -1046,7 +1004,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1056,8 +1014,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 	t.Run("when sort_order is empty then defaults to desc", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID:    1,
 			Limit:     20,
 			SortOrder: "", // Should default to desc
 		}
@@ -1065,8 +1023,8 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		var capturedFilters models.ProductFilters
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
-			Run(func(ctx context.Context, f models.ProductFilters) {
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
+			Run(func(ctx context.Context, sID int, f models.ProductFilters) {
 				capturedFilters = f
 			}).
 			Return([]*models.Product{}, nil)
@@ -1075,7 +1033,7 @@ func TestProductService_GetAllByShopIDWithFilters(t *testing.T) {
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1091,19 +1049,20 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when filters are valid then returns count", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 		expectedCount := 42
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			CountByShopIDWithFilters(ctx, filters).
+			CountByShopIDWithFilters(ctx, shopID, filters).
 			Return(expectedCount, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.CountByShopIDWithFilters(ctx, filters)
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1113,18 +1072,19 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when no products then returns zero", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			CountByShopIDWithFilters(ctx, filters).
+			CountByShopIDWithFilters(ctx, shopID, filters).
 			Return(0, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.CountByShopIDWithFilters(ctx, filters)
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1134,19 +1094,20 @@ func TestProductService_CountByShopIDWithFilters(t *testing.T) {
 	t.Run("when repository returns error then propagates error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := newValidFilters()
 		expectedError := stdErrors.New("count query failed")
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			CountByShopIDWithFilters(ctx, filters).
+			CountByShopIDWithFilters(ctx, shopID, filters).
 			Return(0, expectedError)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		result, err := service.CountByShopIDWithFilters(ctx, filters)
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
 
 		// Assert
 		assert.Error(t, err)
@@ -1333,8 +1294,8 @@ func TestProductService_EdgeCases(t *testing.T) {
 	t.Run("when filters have all optional fields nil then is valid", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		filters := models.ProductFilters{
-			ShopID:        1,
 			Limit:         20,
 			Search:        nil,
 			CategoryID:    nil,
@@ -1349,14 +1310,14 @@ func TestProductService_EdgeCases(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1365,6 +1326,7 @@ func TestProductService_EdgeCases(t *testing.T) {
 	t.Run("when filters have all optional fields set then is valid", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
+		shopID := 1
 		search := "test"
 		categoryID := 5
 		isActive := true
@@ -1375,7 +1337,6 @@ func TestProductService_EdgeCases(t *testing.T) {
 		lastID := 50
 
 		filters := models.ProductFilters{
-			ShopID:        1,
 			Limit:         50,
 			Search:        &search,
 			CategoryID:    &categoryID,
@@ -1391,14 +1352,14 @@ func TestProductService_EdgeCases(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)
@@ -1407,9 +1368,9 @@ func TestProductService_EdgeCases(t *testing.T) {
 	t.Run("when price range with equal values then is valid", func(t *testing.T) {
 		// Arrange - min_price == max_price is valid (exact price match)
 		ctx := context.Background()
+		shopID := 1
 		price := 50.0
 		filters := models.ProductFilters{
-			ShopID:   1,
 			Limit:    20,
 			MinPrice: &price,
 			MaxPrice: &price,
@@ -1417,14 +1378,14 @@ func TestProductService_EdgeCases(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			GetAllByShopIDWithFilters(ctx, mock.AnythingOfType("models.ProductFilters")).
+			GetAllByShopIDWithFilters(ctx, shopID, mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
-		_, err := service.GetAllByShopIDWithFilters(ctx, &filters)
+		_, err := service.GetAllByShopIDWithFilters(ctx, shopID, &filters)
 
 		// Assert
 		assert.NoError(t, err)

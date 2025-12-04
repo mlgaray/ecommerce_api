@@ -43,18 +43,20 @@ func (s *ProductService) deleteUploadedImages(ctx context.Context, images []*mod
 
 // GetAllByShopIDWithFilters retrieves products with filters
 // Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer
+// ShopID is a context parameter (not a filter), passed separately
 // Delegates to repository for data access
-func (s *ProductService) GetAllByShopIDWithFilters(ctx context.Context, filters *models.ProductFilters) ([]*models.Product, error) {
+func (s *ProductService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.ProductFilters) ([]*models.Product, error) {
 	if err := s.validateFilters(filters); err != nil {
 		return nil, err
 	}
-	return s.productRepository.GetAllByShopIDWithFilters(ctx, *filters)
+	return s.productRepository.GetAllByShopIDWithFilters(ctx, shopID, *filters)
 }
 
 // CountByShopIDWithFilters returns total count of products matching filters
+// ShopID is a context parameter (not a filter), passed separately
 // Delegates to repository - service layer can add business logic if needed
-func (s *ProductService) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
-	return s.productRepository.CountByShopIDWithFilters(ctx, filters)
+func (s *ProductService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error) {
+	return s.productRepository.CountByShopIDWithFilters(ctx, shopID, filters)
 }
 
 // Create creates a new product with images

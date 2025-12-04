@@ -25,8 +25,8 @@ type ProductService interface {
 	// GetAllByShopIDWithFilters retrieves products with filters.
 	// Validates and normalizes filters (Limit, SortBy, SortOrder) - changes propagate via pointer.
 	// Returns products with LIMIT+1 strategy for pagination.
-	GetAllByShopIDWithFilters(ctx context.Context, filters *models.ProductFilters) ([]*models.Product, error)
+	GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters *models.ProductFilters) ([]*models.Product, error)
 
 	// CountByShopIDWithFilters returns total count of products matching filters.
-	CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error)
+	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error)
 }
