@@ -266,7 +266,7 @@ func (p *ProductHandler) parseShopID(r *http.Request) (int, error) {
 func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Parse shop_id from URL path
+	// Parse shop_id from URL path (context parameter, not a filter)
 	shopID, err := p.parseShopID(r)
 	if err != nil {
 		httpErrors.HandleError(w, err)
@@ -275,7 +275,7 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 
 	// Parse query parameters into ProductFiltersRequest
 	queryParams := r.URL.Query()
-	filtersRequest, err := contracts.ParseQueryParams(queryParams, shopID)
+	filtersRequest, err := contracts.NewProductFiltersRequest(queryParams)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -300,14 +300,15 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Convert to domain model
-	filters := filtersRequest.ToModel()
+	// Convert to domain model (ShopID passed separately)
+	filters := filtersRequest.ToProductFilters()
 
-	// Execute use case (business validation happens in service layer)
-	// Filters passed by pointer so normalized values (Limit, SortBy, SortOrder) propagate back
+	// Execute use case (business validation happens in use case layer)
+	// ShopID is a context parameter, passed separately from filters
+	// Filters passed by value (immutable) - use case calls Validated() internally
 	// Lightweight query - no variants for real-time search performance
 	// totalCount is only returned on first page (cursor empty), nil on subsequent pages
-	products, nextCursor, hasMore, totalCount, err := p.getAllByShopIDWithFilters.Execute(ctx, &filters)
+	products, nextCursor, hasMore, totalCount, err := p.getAllByShopIDWithFilters.Execute(ctx, shopID, filters)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":        ProductHandlerField,

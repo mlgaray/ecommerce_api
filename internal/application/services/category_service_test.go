@@ -344,3 +344,226 @@ func TestCategoryService_EdgeCases(t *testing.T) {
 		assert.Equal(t, repoError, err)
 	})
 }
+
+// =============================================================================
+// GetAllByShopIDWithFilters Tests
+// =============================================================================
+// Note: Validation and normalization tests have been moved to the Use Case layer.
+// The service now assumes filters are already validated by the Use Case.
+
+func TestCategoryService_GetAllByShopIDWithFilters(t *testing.T) {
+	t.Run("when called then delegates to repository", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.CategoryFilters{
+			Limit:     20,
+			SortBy:    "created_at",
+			SortOrder: "desc",
+		}
+		expectedCategories := []*models.Category{
+			{ID: 1, Name: "Electronics"},
+			{ID: 2, Name: "Clothing"},
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return(expectedCategories, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.CategoryFilters{
+			Limit: 20,
+		}
+		expectedError := stdErrors.New("database error")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return(nil, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, expectedError, err)
+	})
+
+	t.Run("when no categories found then returns empty slice", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 999
+		filters := models.CategoryFilters{
+			Limit: 20,
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return([]*models.Category{}, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Empty(t, result)
+	})
+
+	t.Run("when search filter applied then passes to repository", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		searchTerm := "Electronics"
+		filters := models.CategoryFilters{
+			Search: &searchTerm,
+			Limit:  20,
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return([]*models.Category{{ID: 1, Name: "Electronics"}}, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+	})
+}
+
+// =============================================================================
+// CountByShopIDWithFilters Tests
+// =============================================================================
+
+func TestCategoryService_CountByShopIDWithFilters(t *testing.T) {
+	t.Run("when filters are valid then returns count", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.CategoryFilters{
+			Limit: 20,
+		}
+		expectedCount := 42
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, filters).
+			Return(expectedCount, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedCount, result)
+	})
+
+	t.Run("when no categories then returns zero", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 999
+		filters := models.CategoryFilters{
+			Limit: 20,
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, filters).
+			Return(0, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, 0, result)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.CategoryFilters{
+			Limit: 20,
+		}
+		expectedError := stdErrors.New("count query failed")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, filters).
+			Return(0, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, 0, result)
+		assert.Equal(t, expectedError, err)
+	})
+
+	t.Run("when search filter applied then passes to repository", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		searchTerm := "Electronics"
+		filters := models.CategoryFilters{
+			Search: &searchTerm,
+			Limit:  20,
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, mock.MatchedBy(func(f models.CategoryFilters) bool {
+				return f.Search != nil && *f.Search == searchTerm
+			})).
+			Return(5, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, 5, result)
+	})
+}

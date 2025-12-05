@@ -72,6 +72,8 @@ func (r *router) shopRoutes() {
 	// Supports both filtered and non-filtered queries (backward compatible)
 	// If no query params provided, returns all products with default pagination
 	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
+	// GET /shops/{shop_id}/categories?search=electronics&sort=name&order=asc&limit=20&cursor=...
+	sub.HandleFunc("/{shop_id}/categories", r.categoryHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
 }
 
 func (r *router) metricsRoutes() {

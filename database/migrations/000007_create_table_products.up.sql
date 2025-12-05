@@ -34,25 +34,19 @@ CREATE INDEX idx_products_name_trgm
 ON public.products
 USING gin (name gin_trgm_ops);
 
--- 2. CRITICAL: Simple shop_id index for COUNT and basic filters
--- Used by COUNT(*) queries and shop-based filtering
--- Performance: ~10-50ms for COUNT on 500k products
-CREATE INDEX idx_products_shop_id
-ON public.products (shop_id);
-
--- 3. CRITICAL: Composite index for listing with pagination
+-- 2. CRITICAL: Composite index for listing with pagination
 -- Covers the most common query: shop products ordered by date
 -- Supports keyset pagination (cursor-based)
 -- Query: SELECT * FROM products WHERE shop_id = X ORDER BY created_at DESC, id DESC
 CREATE INDEX idx_products_shop_ordering
 ON public.products (shop_id, created_at DESC, id DESC);
 
--- 4. USEFUL: Category filter index
+-- 3. USEFUL: Category filter index
 -- Enables fast filtering by category
 CREATE INDEX idx_products_category_id
 ON public.products (category_id);
 
--- 5. OPTIONAL: Full-text search index (currently not used, reserved for future)
+-- 4. OPTIONAL: Full-text search index (currently not used, reserved for future)
 -- Spanish language full-text search for linguistic matching (plurals, conjugations)
 -- Currently using trigram (idx_products_name_trgm) instead
 CREATE INDEX idx_products_search_spanish
@@ -68,11 +62,8 @@ ANALYZE products;
 COMMENT ON INDEX idx_products_name_trgm IS
 'Trigram GIN index for fast ILIKE searches. Enables real-time search-as-you-type with ~50ms response time on 500k products.';
 
-COMMENT ON INDEX idx_products_shop_id IS
-'Simple shop_id index for COUNT queries and basic filtering. Optimized for pagination total count calculation.';
-
 COMMENT ON INDEX idx_products_shop_ordering IS
-'Composite index for product listing with date ordering. Supports keyset pagination for infinite scroll.';
+'Composite index for product listing with date ordering. Supports keyset pagination for infinite scroll. Also covers shop_id filtering (leftmost column).';
 
 COMMENT ON INDEX idx_products_category_id IS
 'Category filter index for product filtering by category.';
