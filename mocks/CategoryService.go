@@ -38,6 +38,78 @@ func (_m *CategoryService) EXPECT() *CategoryService_Expecter {
 	return &CategoryService_Expecter{mock: &_m.Mock}
 }
 
+// CountByShopIDWithFilters provides a mock function for the type CategoryService
+func (_mock *CategoryService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error) {
+	ret := _mock.Called(ctx, shopID, filters)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByShopIDWithFilters")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) (int, error)); ok {
+		return returnFunc(ctx, shopID, filters)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) int); ok {
+		r0 = returnFunc(ctx, shopID, filters)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.CategoryFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CategoryService_CountByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByShopIDWithFilters'
+type CategoryService_CountByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// CountByShopIDWithFilters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - filters models.CategoryFilters
+func (_e *CategoryService_Expecter) CountByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *CategoryService_CountByShopIDWithFilters_Call {
+	return &CategoryService_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, shopID, filters)}
+}
+
+func (_c *CategoryService_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.CategoryFilters)) *CategoryService_CountByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 models.CategoryFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.CategoryFilters)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryService_CountByShopIDWithFilters_Call) Return(n int, err error) *CategoryService_CountByShopIDWithFilters_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *CategoryService_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)) *CategoryService_CountByShopIDWithFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type CategoryService
 func (_mock *CategoryService) Create(ctx context.Context, category *models.Category, imageBuffer []byte, shopID int) (*models.Category, error) {
 	ret := _mock.Called(ctx, category, imageBuffer, shopID)
@@ -114,6 +186,80 @@ func (_c *CategoryService_Create_Call) Return(category1 *models.Category, err er
 }
 
 func (_c *CategoryService_Create_Call) RunAndReturn(run func(ctx context.Context, category *models.Category, imageBuffer []byte, shopID int) (*models.Category, error)) *CategoryService_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllByShopIDWithFilters provides a mock function for the type CategoryService
+func (_mock *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error) {
+	ret := _mock.Called(ctx, shopID, filters)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllByShopIDWithFilters")
+	}
+
+	var r0 []*models.Category
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) ([]*models.Category, error)); ok {
+		return returnFunc(ctx, shopID, filters)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.CategoryFilters) []*models.Category); ok {
+		r0 = returnFunc(ctx, shopID, filters)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Category)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.CategoryFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CategoryService_GetAllByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllByShopIDWithFilters'
+type CategoryService_GetAllByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// GetAllByShopIDWithFilters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - filters models.CategoryFilters
+func (_e *CategoryService_Expecter) GetAllByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *CategoryService_GetAllByShopIDWithFilters_Call {
+	return &CategoryService_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", ctx, shopID, filters)}
+}
+
+func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.CategoryFilters)) *CategoryService_GetAllByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 models.CategoryFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.CategoryFilters)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryService_GetAllByShopIDWithFilters_Call) Return(categorys []*models.Category, err error) *CategoryService_GetAllByShopIDWithFilters_Call {
+	_c.Call.Return(categorys, err)
+	return _c
+}
+
+func (_c *CategoryService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error)) *CategoryService_GetAllByShopIDWithFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }

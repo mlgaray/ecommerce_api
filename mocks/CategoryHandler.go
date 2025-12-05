@@ -82,3 +82,49 @@ func (_c *CategoryHandler_Create_Call) RunAndReturn(run func(w http.ResponseWrit
 	_c.Run(run)
 	return _c
 }
+
+// GetAllByShopIDWithFilters provides a mock function for the type CategoryHandler
+func (_mock *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *http.Request) {
+	_mock.Called(w, r)
+	return
+}
+
+// CategoryHandler_GetAllByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllByShopIDWithFilters'
+type CategoryHandler_GetAllByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// GetAllByShopIDWithFilters is a helper method to define mock.On call
+//   - w http.ResponseWriter
+//   - r *http.Request
+func (_e *CategoryHandler_Expecter) GetAllByShopIDWithFilters(w interface{}, r interface{}) *CategoryHandler_GetAllByShopIDWithFilters_Call {
+	return &CategoryHandler_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", w, r)}
+}
+
+func (_c *CategoryHandler_GetAllByShopIDWithFilters_Call) Run(run func(w http.ResponseWriter, r *http.Request)) *CategoryHandler_GetAllByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryHandler_GetAllByShopIDWithFilters_Call) Return() *CategoryHandler_GetAllByShopIDWithFilters_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *CategoryHandler_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(w http.ResponseWriter, r *http.Request)) *CategoryHandler_GetAllByShopIDWithFilters_Call {
+	_c.Run(run)
+	return _c
+}

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop, feature/* ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
@@ -61,4 +61,3 @@ jobs:
       run: |
         cd tests/integration
         go test -v ./...
-      continue-on-error: true

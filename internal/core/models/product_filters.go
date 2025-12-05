@@ -4,12 +4,10 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
-// ProductFilters represents search and filter criteria for products
-// This is a domain model with business validation rules
+// ProductFilters represents search and filter criteria for products.
+// Note: ShopID is NOT included here - it's a context parameter passed separately
+// in method signatures (e.g., GetAllByShopIDWithFilters(ctx, shopID, filters)).
 type ProductFilters struct {
-	// Required filters
-	ShopID int // Required: shop context for multi-tenancy
-
 	// Optional search filter
 	Search *string // nil = no search applied
 
@@ -35,34 +33,23 @@ type ProductFilters struct {
 	LastSortValue interface{} // Value of the sort field from last item (nil = first page or sorting by ID)
 }
 
-// Validate validates business rules for ProductFilters
-// This ensures domain invariants are maintained
-func (f *ProductFilters) Validate() error {
-	if err := f.validateShopID(); err != nil {
-		return err
+// Validated validates business rules and returns a normalized copy of ProductFilters.
+// This is an immutable operation - the original struct is not modified.
+// Returns the validated/normalized copy and any validation error.
+func (f ProductFilters) Validated() (ProductFilters, error) {
+	result := f // Create a copy
+
+	result.normalizeLimit()
+
+	if err := result.validatePriceRange(); err != nil {
+		return ProductFilters{}, err
 	}
 
-	f.normalizeLimit()
-
-	if err := f.validatePriceRange(); err != nil {
-		return err
+	if err := result.validateAndNormalizeSorting(); err != nil {
+		return ProductFilters{}, err
 	}
 
-	if err := f.validateAndNormalizeSorting(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateShopID validates shop_id is present (multi-tenancy requirement)
-func (f *ProductFilters) validateShopID() error {
-	if f.ShopID <= 0 {
-		return &errors.ValidationError{
-			Message: errors.ShopIDIsRequired,
-		}
-	}
-	return nil
+	return result, nil
 }
 
 // normalizeLimit ensures limit is within valid bounds

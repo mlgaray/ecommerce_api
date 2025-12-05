@@ -11,8 +11,9 @@ import (
 
 // ProductFiltersRequest represents HTTP query parameters for product search/filtering
 // This validates HTTP-specific concerns (format, types), NOT business rules
+// Note: ShopID is NOT included here - it's a context parameter passed separately
+// from the URL path (e.g., /shops/{shop_id}/products)
 type ProductFiltersRequest struct {
-	ShopID        int      // From URL path parameter
 	Search        *string  // Optional search term
 	CategoryID    *int     // Optional category filter
 	IsActive      *bool    // Optional active status filter
@@ -29,12 +30,8 @@ type ProductFiltersRequest struct {
 // Validate validates HTTP-specific concerns
 // HTTP validations: format, types, required HTTP fields
 // Business validations happen in models.ProductFilters.Validate()
+// Note: ShopID validation is NOT here - it's validated separately in the handler
 func (r *ProductFiltersRequest) Validate() error {
-	// HTTP validation: shop_id is required (comes from URL path)
-	if r.ShopID <= 0 {
-		return &httpErrors.BadRequestError{Message: "shop_id_is_required_in_path"}
-	}
-
 	// HTTP validation: if search is provided, it should not be empty or only whitespace
 	if r.Search != nil {
 		trimmed := strings.TrimSpace(*r.Search)
@@ -52,7 +49,7 @@ func (r *ProductFiltersRequest) Validate() error {
 	}
 
 	// HTTP validation: cursor is an opaque string, no format validation needed here
-	// Decoding happens in ToModel() method - invalid cursors are treated as first page
+	// Decoding happens in ToProductFilters() method - invalid cursors are treated as first page
 
 	// HTTP validation: prices should be valid numbers if provided
 	if r.MinPrice != nil && *r.MinPrice < 0 {
@@ -69,11 +66,11 @@ func (r *ProductFiltersRequest) Validate() error {
 	return nil
 }
 
-// ToModel converts HTTP request to domain model
+// ToProductFilters converts HTTP request to domain model
 // Decodes the opaque cursor (if present) into LastID and LastSortValue
-func (r *ProductFiltersRequest) ToModel() models.ProductFilters {
+// Note: ShopID is NOT included - it's passed separately as a context parameter
+func (r *ProductFiltersRequest) ToProductFilters() models.ProductFilters {
 	filters := models.ProductFilters{
-		ShopID:        r.ShopID,
 		Search:        r.Search,
 		CategoryID:    r.CategoryID,
 		IsActive:      r.IsActive,
@@ -106,12 +103,10 @@ func (r *ProductFiltersRequest) ToModel() models.ProductFilters {
 	return filters
 }
 
-// ParseQueryParams parses query parameters from URL into ProductFiltersRequest
-// This helper function extracts and converts HTTP query params
-func ParseQueryParams(queryParams map[string][]string, shopID int) (*ProductFiltersRequest, error) {
-	request := &ProductFiltersRequest{
-		ShopID: shopID,
-	}
+// NewProductFiltersRequest parses query parameters from URL into ProductFiltersRequest
+// Note: ShopID is NOT included here - it's a context parameter parsed separately from URL path
+func NewProductFiltersRequest(queryParams map[string][]string) (*ProductFiltersRequest, error) {
+	request := &ProductFiltersRequest{}
 
 	request.parseSearchParam(queryParams)
 
