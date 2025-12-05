@@ -22,7 +22,7 @@
 --
 -- Total objects created:
 -- - 500,000 products
--- - 1,500,000 images (3 per product)
+-- - 1,500,000 images (3 per product) - using unified 'images' table
 -- - 1,000,000 variants (2 per product)
 -- - 4,000,000 options (4 per variant)
 -- ============================================================================
@@ -40,7 +40,7 @@ DECLARE
     v_shop_name TEXT;
     v_category_ids INT[];
     v_category_count INT;
-    v_total_products INT := 500000;
+    v_total_products INT := 200000;
     v_batch_size INT := 10000; -- Batch commits cada 10k
     v_start_time TIMESTAMP;
     v_elapsed_interval INTERVAL;
@@ -191,13 +191,15 @@ BEGIN
 
     -- ========================================================================
     -- STEP 2: Insert images (3 per product = 1.5M images)
+    -- Uses unified 'images' table with Exclusive Belongs-To pattern
     -- ========================================================================
     RAISE NOTICE '[2/4] Inserting product images (3 per product)...';
 
-    INSERT INTO product_images (product_id, url)
+    INSERT INTO images (product_id, url, storage_ref)
     SELECT
         product_id,
-        'https://picsum.photos/800/600?random=' || product_id || '-' || img_num
+        'https://picsum.photos/800/600?random=' || product_id || '-' || img_num,
+        'bulk-insert/product-' || product_id || '-' || img_num
     FROM (
         SELECT id as product_id
         FROM products
@@ -282,7 +284,7 @@ BEGIN
     -- ========================================================================
     RAISE NOTICE '[5/5] Updating table statistics (ANALYZE)...';
     ANALYZE products;
-    ANALYZE product_images;
+    ANALYZE images;
     ANALYZE product_variants;
     ANALYZE variant_options;
     RAISE NOTICE '  ✓ Statistics updated';
@@ -329,9 +331,9 @@ BEGIN
     RAISE NOTICE 'products: % rows, %',
         (SELECT count(*) FROM products WHERE shop_id = 1),
         pg_size_pretty(pg_total_relation_size('products'));
-    RAISE NOTICE 'product_images: % rows, %',
-        (SELECT count(*) FROM product_images),
-        pg_size_pretty(pg_total_relation_size('product_images'));
+    RAISE NOTICE 'images (products): % rows, %',
+        (SELECT count(*) FROM images WHERE product_id IS NOT NULL),
+        pg_size_pretty(pg_total_relation_size('images'));
     RAISE NOTICE 'product_variants: % rows, %',
         (SELECT count(*) FROM product_variants),
         pg_size_pretty(pg_total_relation_size('product_variants'));

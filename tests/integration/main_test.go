@@ -13,9 +13,10 @@ import (
 )
 
 var opts = godog.Options{
-	Output: colors.Colored(os.Stdout),
-	Format: "pretty", // can be "pretty", "progress", "junit", "cucumber"
-	Tags:   "~@wip",  // "@wip",  F   //"~@wip",
+	Output:      colors.Colored(os.Stdout),
+	Format:      "pretty", // can be "pretty", "progress", "junit", "cucumber"
+	Tags:        "~@wip",  // "@wip",  F   //"~@wip",
+	Concurrency: 1,        // Run scenarios sequentially to avoid data races with shared testCtx
 }
 
 func init() {
@@ -49,6 +50,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getProductsByShopIDSteps := steps.NewGetProductsByShopIDSteps()
 	updateProductSteps := steps.NewUpdateProductSteps()
 	categorySteps := steps.NewCategorySteps()
+	getCategoriesByShopIDSteps := steps.NewGetCategoriesByShopIDSteps()
 	commonSteps := steps.NewCommonSteps()
 
 	// Register steps
@@ -58,6 +60,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getProductsByShopIDSteps.RegisterSteps(sc)
 	updateProductSteps.RegisterSteps(sc)
 	categorySteps.RegisterSteps(sc)
+	getCategoriesByShopIDSteps.RegisterSteps(sc)
 	commonSteps.RegisterSteps(sc)
 
 	// Setup hooks

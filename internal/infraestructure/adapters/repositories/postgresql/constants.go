@@ -16,3 +16,8 @@ const (
 	UnmarshallField        = "unmarshall"
 	NextField              = "next"
 )
+
+// Sort order constants
+const (
+	SortOrderDesc = "desc"
+)

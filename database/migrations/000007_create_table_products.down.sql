@@ -6,7 +6,6 @@
 DROP INDEX IF EXISTS idx_products_search_spanish;
 DROP INDEX IF EXISTS idx_products_category_id;
 DROP INDEX IF EXISTS idx_products_shop_ordering;
-DROP INDEX IF EXISTS idx_products_shop_id;
 DROP INDEX IF EXISTS idx_products_name_trgm;
 
 -- Drop table (CASCADE will handle any remaining dependencies)

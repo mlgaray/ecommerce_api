@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
@@ -34,6 +35,8 @@ func (m *mockDataBaseConnection) Connect() *sql.DB {
 
 // TestContext contiene todo el estado compartido entre tests
 type TestContext struct {
+	mu sync.Mutex // Protects all fields below
+
 	// HTTP
 	app      *fx.App
 	server   *httptest.Server
@@ -61,11 +64,16 @@ type TestContext struct {
 	mockSQLMock sqlmock.Sqlmock
 }
 
-// Global test context instance
-var testCtx *TestContext
+// Global test context instance with mutex for thread safety
+var (
+	testCtx   *TestContext
+	testCtxMu sync.Mutex
+)
 
-// GetTestContext returns the current test context
+// GetTestContext returns the current test context (thread-safe)
 func GetTestContext() *TestContext {
+	testCtxMu.Lock()
+	defer testCtxMu.Unlock()
 	if testCtx == nil {
 		testCtx = &TestContext{}
 	}
@@ -74,6 +82,9 @@ func GetTestContext() *TestContext {
 
 // Reset clears all test context data
 func (ctx *TestContext) Reset() {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
 	ctx.app = nil
 	ctx.server = nil
 	ctx.response = nil
@@ -110,6 +121,9 @@ func (ctx *TestContext) Reset() {
 
 // SetupTestApp initializes the test application with mocked dependencies
 func (ctx *TestContext) SetupTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
 	// Initialize logger for tests
 	logs.Init()
 
@@ -162,6 +176,9 @@ func (ctx *TestContext) SetupTestApp() error {
 
 // SetupProductTestApp initializes the test application for product tests
 func (ctx *TestContext) SetupProductTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
 	// Initialize logger for tests
 	logs.Init()
 
@@ -172,6 +189,9 @@ func (ctx *TestContext) SetupProductTestApp() error {
 	}
 	ctx.mockDB = db
 	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order (use case runs COUNT and SELECT in parallel)
+	sqlMock.MatchExpectationsInOrder(false)
 
 	// Create FX app with real services but mocked DB
 	ctx.app = fx.New(
@@ -222,6 +242,9 @@ func (ctx *TestContext) SetupProductTestApp() error {
 
 // SetupCategoryTestApp initializes the test application for category tests
 func (ctx *TestContext) SetupCategoryTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
 	// Initialize logger for tests
 	logs.Init()
 
@@ -232,6 +255,9 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 	}
 	ctx.mockDB = db
 	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order (use case runs COUNT and SELECT in parallel)
+	sqlMock.MatchExpectationsInOrder(false)
 
 	// Create FX app with real services but mocked DB
 	ctx.app = fx.New(
@@ -245,9 +271,14 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Category],
+				fx.As(new(ports.PaginationService[*models.Category])),
+			),
 
-			// Provide use case
+			// Provide use cases
 			fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+			fx.Annotate(category.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllCategoriesByShopIDWithFiltersUseCase))),
 
 			// Provide handler
 			authhttp.NewCategoryHandler,
@@ -256,6 +287,7 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 			router.HandleFunc("/categories", handler.Create).Methods("POST")
+			router.HandleFunc("/shops/{shop_id}/categories", handler.GetAllByShopIDWithFilters).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),
@@ -267,6 +299,9 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 
 // TeardownTestApp cleans up the test application
 func (ctx *TestContext) TeardownTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
 	if ctx.app != nil {
 		err := ctx.app.Stop(context.Background())
 		if err != nil {

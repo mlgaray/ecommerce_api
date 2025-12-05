@@ -39,8 +39,8 @@ func (_m *ProductService) EXPECT() *ProductService_Expecter {
 }
 
 // CountByShopIDWithFilters provides a mock function for the type ProductService
-func (_mock *ProductService) CountByShopIDWithFilters(ctx context.Context, filters models.ProductFilters) (int, error) {
-	ret := _mock.Called(ctx, filters)
+func (_mock *ProductService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error) {
+	ret := _mock.Called(ctx, shopID, filters)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CountByShopIDWithFilters")
@@ -48,16 +48,16 @@ func (_mock *ProductService) CountByShopIDWithFilters(ctx context.Context, filte
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) (int, error)); ok {
-		return returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.ProductFilters) (int, error)); ok {
+		return returnFunc(ctx, shopID, filters)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.ProductFilters) int); ok {
-		r0 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.ProductFilters) int); ok {
+		r0 = returnFunc(ctx, shopID, filters)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, models.ProductFilters) error); ok {
-		r1 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.ProductFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,24 +71,30 @@ type ProductService_CountByShopIDWithFilters_Call struct {
 
 // CountByShopIDWithFilters is a helper method to define mock.On call
 //   - ctx context.Context
+//   - shopID int
 //   - filters models.ProductFilters
-func (_e *ProductService_Expecter) CountByShopIDWithFilters(ctx interface{}, filters interface{}) *ProductService_CountByShopIDWithFilters_Call {
-	return &ProductService_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, filters)}
+func (_e *ProductService_Expecter) CountByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *ProductService_CountByShopIDWithFilters_Call {
+	return &ProductService_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, shopID, filters)}
 }
 
-func (_c *ProductService_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, filters models.ProductFilters)) *ProductService_CountByShopIDWithFilters_Call {
+func (_c *ProductService_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.ProductFilters)) *ProductService_CountByShopIDWithFilters_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 models.ProductFilters
+		var arg1 int
 		if args[1] != nil {
-			arg1 = args[1].(models.ProductFilters)
+			arg1 = args[1].(int)
+		}
+		var arg2 models.ProductFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.ProductFilters)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -99,7 +105,7 @@ func (_c *ProductService_CountByShopIDWithFilters_Call) Return(n int, err error)
 	return _c
 }
 
-func (_c *ProductService_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, filters models.ProductFilters) (int, error)) *ProductService_CountByShopIDWithFilters_Call {
+func (_c *ProductService_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.ProductFilters) (int, error)) *ProductService_CountByShopIDWithFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -185,8 +191,8 @@ func (_c *ProductService_Create_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // GetAllByShopIDWithFilters provides a mock function for the type ProductService
-func (_mock *ProductService) GetAllByShopIDWithFilters(ctx context.Context, filters *models.ProductFilters) ([]*models.Product, error) {
-	ret := _mock.Called(ctx, filters)
+func (_mock *ProductService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error) {
+	ret := _mock.Called(ctx, shopID, filters)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllByShopIDWithFilters")
@@ -194,18 +200,18 @@ func (_mock *ProductService) GetAllByShopIDWithFilters(ctx context.Context, filt
 
 	var r0 []*models.Product
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.ProductFilters) ([]*models.Product, error)); ok {
-		return returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.ProductFilters) ([]*models.Product, error)); ok {
+		return returnFunc(ctx, shopID, filters)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.ProductFilters) []*models.Product); ok {
-		r0 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.ProductFilters) []*models.Product); ok {
+		r0 = returnFunc(ctx, shopID, filters)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*models.Product)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.ProductFilters) error); ok {
-		r1 = returnFunc(ctx, filters)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.ProductFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -219,24 +225,30 @@ type ProductService_GetAllByShopIDWithFilters_Call struct {
 
 // GetAllByShopIDWithFilters is a helper method to define mock.On call
 //   - ctx context.Context
-//   - filters *models.ProductFilters
-func (_e *ProductService_Expecter) GetAllByShopIDWithFilters(ctx interface{}, filters interface{}) *ProductService_GetAllByShopIDWithFilters_Call {
-	return &ProductService_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", ctx, filters)}
+//   - shopID int
+//   - filters models.ProductFilters
+func (_e *ProductService_Expecter) GetAllByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *ProductService_GetAllByShopIDWithFilters_Call {
+	return &ProductService_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", ctx, shopID, filters)}
 }
 
-func (_c *ProductService_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, filters *models.ProductFilters)) *ProductService_GetAllByShopIDWithFilters_Call {
+func (_c *ProductService_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.ProductFilters)) *ProductService_GetAllByShopIDWithFilters_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.ProductFilters
+		var arg1 int
 		if args[1] != nil {
-			arg1 = args[1].(*models.ProductFilters)
+			arg1 = args[1].(int)
+		}
+		var arg2 models.ProductFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.ProductFilters)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -247,7 +259,7 @@ func (_c *ProductService_GetAllByShopIDWithFilters_Call) Return(products []*mode
 	return _c
 }
 
-func (_c *ProductService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, filters *models.ProductFilters) ([]*models.Product, error)) *ProductService_GetAllByShopIDWithFilters_Call {
+func (_c *ProductService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error)) *ProductService_GetAllByShopIDWithFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }
