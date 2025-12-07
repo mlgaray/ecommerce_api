@@ -249,27 +249,6 @@ func (p *ProductSteps) iHaveProductDataWithoutCategory() error {
 	return nil
 }
 
-func (p *ProductSteps) iHaveProductDataWithInvalidShopID() error {
-	ctx := GetTestContext()
-
-	ctx.requestBody = models.Product{
-		Name:         "Test Product",
-		Description:  "Test Description",
-		Price:        99.99,
-		Stock:        10,
-		MinimumStock: 5,
-		Category:     &models.Category{ID: 1},
-	}
-
-	ctx.productImages = [][]byte{createTestImage()}
-	if ctx.pathParams == nil {
-		ctx.pathParams = make(map[string]string)
-	}
-	ctx.pathParams["shop_id"] = "0" // Invalid shop ID
-
-	return nil
-}
-
 func (p *ProductSteps) iHaveProductDataWithOversizedImage() error {
 	ctx := GetTestContext()
 
@@ -384,6 +363,11 @@ func (p *ProductSteps) executeHTTPRequest(ctx *TestContext, body *bytes.Buffer, 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", contentType)
+
+	// Add Authorization header with JWT token
+	if ctx.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+ctx.authToken)
+	}
 
 	client := &http.Client{}
 	return client.Do(req)
@@ -541,7 +525,6 @@ func (p *ProductSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^I have product data with empty name$`, p.iHaveProductDataWithEmptyName)
 	sc.Step(`^I have product data with empty description$`, p.iHaveProductDataWithEmptyDescription)
 	sc.Step(`^I have product data without category$`, p.iHaveProductDataWithoutCategory)
-	sc.Step(`^I have product data with invalid shop_id$`, p.iHaveProductDataWithInvalidShopID)
 	sc.Step(`^I have product data with oversized image$`, p.iHaveProductDataWithOversizedImage)
 	sc.Step(`^I have product data with invalid image type$`, p.iHaveProductDataWithInvalidImageType)
 

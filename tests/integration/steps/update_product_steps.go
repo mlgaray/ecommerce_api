@@ -217,31 +217,6 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNoCategory(productID int) err
 	return nil
 }
 
-func (u *UpdateProductSteps) iHaveAProductWithIDAndInvalidShopID(productID int) error {
-	ctx := GetTestContext()
-
-	ctx.requestBody = models.Product{
-		ID:           productID,
-		Name:         "Updated Product",
-		Description:  "Updated Description",
-		Price:        149.99,
-		Stock:        20,
-		MinimumStock: 5,
-		Category:     &models.Category{ID: 1},
-		Images: []*models.Image{
-			{ID: 1, URL: "https://existing.com/image1.jpg"},
-		},
-	}
-
-	if ctx.pathParams == nil {
-		ctx.pathParams = make(map[string]string)
-	}
-	ctx.pathParams["product_id"] = fmt.Sprintf("%d", productID)
-	ctx.pathParams["shop_id"] = "0" // Invalid shop_id
-
-	return nil
-}
-
 func (u *UpdateProductSteps) iHaveAProductWithIDAndOversizedNewImage(productID int) error {
 	ctx := GetTestContext()
 
@@ -617,6 +592,11 @@ func (u *UpdateProductSteps) executeHTTPRequest(ctx *TestContext, body *bytes.Bu
 	}
 	req.Header.Set("Content-Type", contentType)
 
+	// Add Authorization header with JWT token
+	if ctx.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+ctx.authToken)
+	}
+
 	client := &http.Client{}
 	return client.Do(req)
 }
@@ -654,7 +634,6 @@ func (u *UpdateProductSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^I have a product with id (\d+) and empty name$`, u.iHaveAProductWithIDAndEmptyName)
 	sc.Step(`^I have a product with id (\d+) and empty description$`, u.iHaveAProductWithIDAndEmptyDescription)
 	sc.Step(`^I have a product with id (\d+) and no category$`, u.iHaveAProductWithIDAndNoCategory)
-	sc.Step(`^I have a product with id (\d+) and invalid shop_id$`, u.iHaveAProductWithIDAndInvalidShopID)
 	sc.Step(`^I have a product with id (\d+) and oversized new image$`, u.iHaveAProductWithIDAndOversizedNewImage)
 	sc.Step(`^I have a product with id (\d+) and invalid new image type$`, u.iHaveAProductWithIDAndInvalidNewImageType)
 	sc.Step(`^I have an invalid product_id "([^"]*)"$`, u.iHaveAnInvalidProductID)

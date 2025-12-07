@@ -46,12 +46,6 @@ Feature: Product Update
     Then the response status should be 400
     And the user should receive an error message "category_id_is_required"
 
-  Scenario: Update product with invalid shop_id
-    Given I have a product with id 1 and invalid shop_id
-    When I send an update product request
-    Then the response status should be 400
-    And the user should receive an error message "shop_id_is_required"
-
   Scenario: Update product with oversized new image
     Given I have a product with id 1 and oversized new image
     When I send an update product request

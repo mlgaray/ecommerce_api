@@ -8,8 +8,15 @@ DROP FUNCTION IF EXISTS update_product(
     JSONB, JSONB
 );
 
+DROP FUNCTION IF EXISTS update_product(
+    INTEGER, INTEGER, VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
+    BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL, INTEGER,
+    JSONB, JSONB
+);
+
 CREATE OR REPLACE FUNCTION update_product(
     p_product_id INTEGER,
+    p_shop_id INTEGER,       -- Shop ID for ownership validation
     p_name VARCHAR(255),
     p_description TEXT,
     p_price DECIMAL(10,2),
@@ -28,7 +35,14 @@ DECLARE
     v_variant_id INTEGER;
     v_deleted_refs text[];
 BEGIN
-    -- 1. UPDATE basic product fields
+    -- 0. Validate category exists before updating
+    PERFORM 1 FROM categories WHERE id = p_category_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Category not found: %', p_category_id
+        USING ERRCODE = 'P0003';  -- Category not found
+    END IF;
+
+    -- 1. UPDATE basic product fields (with shop_id validation)
     UPDATE products
     SET name = p_name,
         description = p_description,
@@ -40,36 +54,45 @@ BEGIN
         is_promotional = p_is_promotional,
         promotional_price = p_promotional_price,
         category_id = p_category_id
-    WHERE id = p_product_id;
+    WHERE id = p_product_id AND shop_id = p_shop_id;
 
-    -- 2. UPSERT images (optimized with != ALL for better index usage)
+    -- Check if product was found and belongs to shop
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Product not found or does not belong to shop: product_id=%, shop_id=%', p_product_id, p_shop_id
+        USING ERRCODE = 'P0002';  -- no_data_found
+    END IF;
+
+    -- 2. UPSERT images
     IF COALESCE(jsonb_array_length(p_images), 0) = 0 THEN
         -- Capture refs before deletion for Cloudinary cleanup
-        SELECT array_agg(storage_ref) INTO v_deleted_refs
+        -- Using array_remove to filter out NULL values
+        SELECT array_remove(array_agg(storage_ref), NULL) INTO v_deleted_refs
         FROM images
-        WHERE product_id = p_product_id AND storage_ref != '';
+        WHERE product_id = p_product_id AND storage_ref <> '';
 
         DELETE FROM images WHERE product_id = p_product_id;
     ELSE
         -- Capture refs of images to be deleted (not in incoming list)
-        SELECT array_agg(storage_ref) INTO v_deleted_refs
+        -- Using NOT (id = ANY(...)) to handle empty arrays correctly
+        -- Using array_remove to filter out NULL values
+        SELECT array_remove(array_agg(storage_ref), NULL) INTO v_deleted_refs
         FROM images
         WHERE product_id = p_product_id
-          AND storage_ref != ''
-          AND id != ALL (
+          AND storage_ref <> ''
+          AND NOT (id = ANY(ARRAY(
             SELECT (img->>'id')::INTEGER
             FROM jsonb_array_elements(p_images) img
-            WHERE img->>'id' IS NOT NULL AND img->>'id' != ''
-          );
+            WHERE img->>'id' IS NOT NULL AND img->>'id' <> ''
+          )));
 
-        -- Delete images NOT in the incoming list (using != ALL for performance)
+        -- Delete images NOT in the incoming list
         DELETE FROM images
         WHERE product_id = p_product_id
-          AND id != ALL (
+          AND NOT (id = ANY(ARRAY(
             SELECT (img->>'id')::INTEGER
             FROM jsonb_array_elements(p_images) img
-            WHERE img->>'id' IS NOT NULL AND img->>'id' != ''
-          );
+            WHERE img->>'id' IS NOT NULL AND img->>'id' <> ''
+          )));
 
         -- Insert new images (batch)
         INSERT INTO images (url, storage_ref, product_id)
@@ -88,11 +111,11 @@ BEGIN
         -- 3a. Delete variants NOT in the incoming list (cascade deletes options)
         DELETE FROM product_variants
         WHERE product_id = p_product_id
-          AND id != ALL (
+          AND NOT (id = ANY(ARRAY(
             SELECT (v->>'id')::INTEGER
             FROM jsonb_array_elements(p_variants) v
-            WHERE v->>'id' IS NOT NULL AND v->>'id' != ''
-          );
+            WHERE v->>'id' IS NOT NULL AND v->>'id' <> ''
+          )));
 
         -- 3b. Update or insert each variant (loop needed - typically 2-5 variants)
         FOR v_variant IN SELECT * FROM jsonb_array_elements(p_variants)
@@ -131,10 +154,10 @@ BEGIN
                     FROM jsonb_array_elements(v_variant->'options') opt
                 ),
                 deleted AS (
-                    -- Delete options NOT in the incoming list (using != ALL for performance)
+                    -- Delete options NOT in the incoming list
                     DELETE FROM variant_options
                     WHERE variant_id = v_variant_id
-                      AND id != ALL (SELECT id FROM option_data WHERE id IS NOT NULL)
+                      AND NOT (id = ANY(ARRAY(SELECT id FROM option_data WHERE id IS NOT NULL)))
                 ),
                 updated AS (
                     -- Batch UPDATE existing options
@@ -161,25 +184,33 @@ BEGIN
     RETURN COALESCE(v_deleted_refs, '{}');
 
 EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error updating product (ID: %): %', p_product_id, SQLERRM;
+    WHEN unique_violation THEN
+        RAISE;  -- Re-raise with original code 23505 for Go to handle
+    -- Other errors propagate naturally with original SQLSTATE
 END;
 $$ LANGUAGE plpgsql;
 
 -- Function documentation
 COMMENT ON FUNCTION update_product IS
 'Updates a product with images, variants and options in a single database call.
+Parameters:
+- p_product_id: ID of the product to update
+- p_shop_id: Shop ID for ownership validation (product must belong to this shop)
+- p_name, p_description, etc.: Product fields to update
+- p_images: JSONB array of images
+- p_variants: JSONB array of variants with options
 Returns text[] with storage_refs of deleted images for Cloudinary cleanup.
 Strategy:
-- Product: 1 UPDATE
+- Product: 1 UPDATE with shop_id validation
 - Images: Capture refs + DELETE + batch INSERT (uses unified images table)
 - Variants: DELETE + loop for UPDATE/INSERT (N queries for N variants)
 - Options: CTE with DELETE + batch UPDATE + batch INSERT per variant (1 query × N variants)
 Optimizations applied:
-- != ALL() instead of NOT IN for better index usage and NULL handling
+- NOT (id = ANY(ARRAY(...))) instead of != ALL() to handle empty arrays correctly
 - CTE for option_data to parse JSONB once (avoids 3x parsing overhead)
 - COALESCE() for NULL safety
 - Returns deleted storage_refs for async Cloudinary cleanup
+Security: Validates product belongs to shop_id before allowing update.
 Clean approach: Loop variants (few items), batch options per variant (many items).
 Reduces ~10+ Go round trips to 1 stored procedure call.
-Exception handling included for validation errors.';
+Exception handling: only captures unique_violation, others propagate with original SQLSTATE.';

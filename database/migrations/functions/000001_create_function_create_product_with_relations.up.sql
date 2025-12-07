@@ -36,6 +36,19 @@ DECLARE
     v_variant JSONB;
     v_variant_id INTEGER;
 BEGIN
+    -- 0. Validate foreign keys exist before inserting
+    PERFORM 1 FROM categories WHERE id = p_category_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Category not found: %', p_category_id
+        USING ERRCODE = 'P0003';  -- Category not found
+    END IF;
+
+    PERFORM 1 FROM shops WHERE id = p_shop_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Shop not found: %', p_shop_id
+        USING ERRCODE = 'P0004';  -- Shop not found
+    END IF;
+
     -- 1. Insert product
     INSERT INTO products (
         name, description, price, stock, minimum_stock,
@@ -48,13 +61,16 @@ BEGIN
     ) RETURNING id INTO v_product_id;
 
     -- 2. Insert images (batch with jsonb_array_elements)
+    -- Validates: jsonb_typeof = 'object' and url is not empty
     IF p_images IS NOT NULL AND COALESCE(jsonb_array_length(p_images), 0) > 0 THEN
         INSERT INTO images (url, storage_ref, product_id)
         SELECT
             img->>'url',
             COALESCE(img->>'storage_ref', ''),
             v_product_id
-        FROM jsonb_array_elements(p_images) img;
+        FROM jsonb_array_elements(p_images) img
+        WHERE jsonb_typeof(img) = 'object'
+          AND trim(COALESCE(img->>'url', '')) <> '';
     END IF;
 
     -- 3. Insert variants and their options (avoid O(n²) array concatenation)
@@ -65,27 +81,30 @@ BEGIN
         FOR v_variant IN SELECT * FROM jsonb_array_elements(p_variants)
         LOOP
             -- Insert variant and get ID
+            -- Using NULLIF for safe-cast of empty strings
             INSERT INTO product_variants (
                 name, "order", selection_type, max_selections, product_id
             ) VALUES (
                 v_variant->>'name',
-                (v_variant->>'order')::INTEGER,
+                COALESCE(NULLIF(v_variant->>'order', '')::INTEGER, 0),
                 v_variant->>'selection_type',
-                (v_variant->>'max_selections')::INTEGER,
+                COALESCE(NULLIF(v_variant->>'max_selections', '')::INTEGER, 0),
                 v_product_id
             ) RETURNING id INTO v_variant_id;
 
             -- Batch insert options for THIS variant immediately (avoids array accumulation)
-            IF COALESCE(jsonb_array_length(v_variant->'options'), 0) > 0 THEN
+            -- Validates: jsonb_typeof = 'array' for options
+            IF jsonb_typeof(v_variant->'options') = 'array'
+               AND jsonb_array_length(v_variant->'options') > 0 THEN
                 INSERT INTO variant_options (name, price, "order", variant_id)
                 SELECT
                     opt->>'name',
-                    COALESCE((opt->>'price')::DECIMAL, 0),  -- Default to 0 if price not provided
-                    COALESCE((opt->>'order')::INTEGER, 0),
+                    COALESCE(NULLIF(opt->>'price', '')::DECIMAL, 0),
+                    COALESCE(NULLIF(opt->>'order', '')::INTEGER, 0),
                     v_variant_id
                 FROM jsonb_array_elements(v_variant->'options') opt
-                WHERE opt->>'name' IS NOT NULL  -- Validation: skip options without name
-                  AND jsonb_typeof(opt) = 'object';
+                WHERE jsonb_typeof(opt) = 'object'
+                  AND trim(COALESCE(opt->>'name', '')) <> '';
             END IF;
         END LOOP;
     END IF;
@@ -93,22 +112,25 @@ BEGIN
     RETURN v_product_id;
 
 EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error creating product: %', SQLERRM;
+    WHEN unique_violation THEN
+        RAISE;  -- Re-raise with original code 23505 for Go to handle
+    -- Other errors propagate naturally with original SQLSTATE
 END;
 $$ LANGUAGE plpgsql;
 
 -- Function documentation
 COMMENT ON FUNCTION create_product IS
 'Creates a product with images, variants and options in a single call.
+Validations:
+- Category and Shop existence (P0002 if not found)
+- Images: jsonb_typeof = object, url not empty
+- Options: jsonb_typeof = object, name not empty
+- Safe-cast with NULLIF for empty strings (order, price, max_selections)
 Performance optimizations:
 - Product: 1 INSERT
 - Images: 1 batch INSERT (all at once) into unified images table
 - Variants: N INSERTs (loop - typically 2-5 items)
 - Options: N batch INSERTs (one per variant, avoids O(n²) array concatenation)
-- COALESCE() for NULL safety on all length checks and default values
-- Data validation: skips options without name (price defaults to 0 if not provided)
-- Exception handling for validation errors
 Example: 3 variants + 15 options = 6 total INSERTs (3 variants + 3 batch option INSERTs)
-Avoids O(n²) array_cat() overhead with 100+ options.
-Reduces 5+ Go round trips to 1 stored procedure call.';
+Reduces 5+ Go round trips to 1 stored procedure call.
+Exception handling: only captures unique_violation, others propagate with original SQLSTATE.';

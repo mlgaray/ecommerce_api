@@ -108,7 +108,7 @@ func (s *ProductService) Update(ctx context.Context, productID int, product *mod
 	}
 
 	// 3. Persist to database - returns refs of deleted images
-	deletedRefs, err := s.productRepository.Update(ctx, productID, product)
+	deletedRefs, err := s.productRepository.Update(ctx, productID, product, shopID)
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,11 @@ type CategoryService interface {
 	// Handles rollback if persistence fails after image upload.
 	Create(ctx context.Context, category *models.Category, imageBuffer []byte, shopID int) (*models.Category, error)
 
+	// Update updates an existing category with optional new image.
+	// If newImageBuffer is provided, uploads new image and replaces the existing one.
+	// Handles cleanup of old image from storage after successful update.
+	Update(ctx context.Context, categoryID int, category *models.Category, newImageBuffer []byte, shopID int) error
+
 	// GetAllByShopIDWithFilters retrieves categories with filters.
 	// Assumes filters are already validated by the Use Case.
 	// Returns categories with LIMIT+1 strategy for pagination.
@@ -21,4 +26,8 @@ type CategoryService interface {
 
 	// CountByShopIDWithFilters returns total count of categories matching filters.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)
+
+	// GetByID retrieves a category by ID.
+	// Returns RecordNotFoundError if category doesn't exist.
+	GetByID(ctx context.Context, categoryID int) (*models.Category, error)
 }

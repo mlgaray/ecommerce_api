@@ -32,19 +32,21 @@ func TestSignInUseCase_Execute(t *testing.T) {
 			Password: hashedPassword,
 		}
 
-		authenticatedUser := &models.User{
-			ID:    1,
-			Email: email,
+		userShops := []*models.Shop{
+			{ID: 10, Name: "Test Shop"},
 		}
+		expectedShopIDs := []int{10}
 
 		userServiceMock := new(mocks.UserService)
 		tokenServiceMock := new(mocks.TokenService)
+		shopRepositoryMock := new(mocks.ShopRepository)
 
 		userServiceMock.EXPECT().GetByEmail(ctx, email).Return(storedUser, nil)
-		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(authenticatedUser, nil)
-		tokenServiceMock.EXPECT().Generate(ctx, authenticatedUser).Return(expectedToken, nil)
+		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(inputUser, nil)
+		shopRepositoryMock.EXPECT().GetShopsByUserID(ctx, storedUser.ID).Return(userShops, nil)
+		tokenServiceMock.EXPECT().Generate(ctx, storedUser, expectedShopIDs).Return(expectedToken, nil)
 
-		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock)
+		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock, shopRepositoryMock)
 
 		// Act
 		token, err := useCase.Execute(ctx, inputUser)
@@ -67,10 +69,11 @@ func TestSignInUseCase_Execute(t *testing.T) {
 
 		userServiceMock := new(mocks.UserService)
 		tokenServiceMock := new(mocks.TokenService)
+		shopRepositoryMock := new(mocks.ShopRepository)
 
 		userServiceMock.EXPECT().GetByEmail(ctx, email).Return(nil, expectedError)
 
-		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock)
+		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock, shopRepositoryMock)
 
 		// Act
 		token, err := useCase.Execute(ctx, inputUser)
@@ -102,11 +105,12 @@ func TestSignInUseCase_Execute(t *testing.T) {
 
 		userServiceMock := new(mocks.UserService)
 		tokenServiceMock := new(mocks.TokenService)
+		shopRepositoryMock := new(mocks.ShopRepository)
 
 		userServiceMock.EXPECT().GetByEmail(ctx, email).Return(storedUser, nil)
 		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(nil, expectedError)
 
-		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock)
+		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock, shopRepositoryMock)
 
 		// Act
 		token, err := useCase.Execute(ctx, inputUser)
@@ -136,19 +140,59 @@ func TestSignInUseCase_Execute(t *testing.T) {
 			Password: hashedPassword,
 		}
 
-		authenticatedUser := &models.User{
-			ID:    1,
-			Email: email,
+		userShops := []*models.Shop{
+			{ID: 10, Name: "Test Shop"},
+		}
+		expectedShopIDs := []int{10}
+
+		userServiceMock := new(mocks.UserService)
+		tokenServiceMock := new(mocks.TokenService)
+		shopRepositoryMock := new(mocks.ShopRepository)
+
+		userServiceMock.EXPECT().GetByEmail(ctx, email).Return(storedUser, nil)
+		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(inputUser, nil)
+		shopRepositoryMock.EXPECT().GetShopsByUserID(ctx, storedUser.ID).Return(userShops, nil)
+		tokenServiceMock.EXPECT().Generate(ctx, storedUser, expectedShopIDs).Return("", expectedError)
+
+		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock, shopRepositoryMock)
+
+		// Act
+		token, err := useCase.Execute(ctx, inputUser)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+		assert.Empty(t, token)
+	})
+
+	t.Run("when get shops fails then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		email := "user@example.com"
+		password := "password123"
+		hashedPassword := "hashedpassword"
+		expectedError := errors.New("database error")
+
+		inputUser := &models.User{
+			Email:    email,
+			Password: password,
+		}
+
+		storedUser := &models.User{
+			ID:       1,
+			Email:    email,
+			Password: hashedPassword,
 		}
 
 		userServiceMock := new(mocks.UserService)
 		tokenServiceMock := new(mocks.TokenService)
+		shopRepositoryMock := new(mocks.ShopRepository)
 
 		userServiceMock.EXPECT().GetByEmail(ctx, email).Return(storedUser, nil)
-		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(authenticatedUser, nil)
-		tokenServiceMock.EXPECT().Generate(ctx, authenticatedUser).Return("", expectedError)
+		userServiceMock.EXPECT().ValidateCredentials(ctx, inputUser, hashedPassword).Return(inputUser, nil)
+		shopRepositoryMock.EXPECT().GetShopsByUserID(ctx, storedUser.ID).Return(nil, expectedError)
 
-		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock)
+		useCase := NewSignInUseCase(userServiceMock, tokenServiceMock, shopRepositoryMock)
 
 		// Act
 		token, err := useCase.Execute(ctx, inputUser)

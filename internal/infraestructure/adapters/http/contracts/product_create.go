@@ -2,9 +2,11 @@ package contracts
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
@@ -15,6 +17,43 @@ type ProductCreateRequest struct {
 	Product models.Product          `json:"product"`
 	ShopID  int                     `json:"shop_id"`
 	Images  []*multipart.FileHeader `json:"-"` // Not part of JSON, set manually
+}
+
+// NewProductCreateRequest creates a ProductCreateRequest from an HTTP request.
+// shopID comes from the JWT token context (injected by auth middleware).
+func NewProductCreateRequest(r *http.Request, shopID int) (*ProductCreateRequest, error) {
+	// Parse product JSON from form data
+	productJSON := r.FormValue("product")
+	if strings.TrimSpace(productJSON) == "" {
+		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
+	}
+
+	var product models.Product
+	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
+		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
+	}
+
+	// Parse images from form
+	var images []*multipart.FileHeader
+	if r.MultipartForm != nil && r.MultipartForm.File != nil {
+		for i := 0; ; i++ {
+			key := "images[" + strconv.Itoa(i) + "]"
+			files, exists := r.MultipartForm.File[key]
+			if !exists || len(files) == 0 {
+				break
+			}
+			images = append(images, files[0])
+		}
+	}
+	if len(images) == 0 {
+		return nil, &httpErrors.BadRequestError{Message: "product_image_required"}
+	}
+
+	return &ProductCreateRequest{
+		Product: product,
+		ShopID:  shopID,
+		Images:  images,
+	}, nil
 }
 
 func (r *ProductCreateRequest) Validate() error {

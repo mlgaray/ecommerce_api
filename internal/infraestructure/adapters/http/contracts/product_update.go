@@ -2,9 +2,11 @@ package contracts
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
@@ -13,19 +15,46 @@ import (
 
 type ProductUpdateRequest struct {
 	Product   models.Product          `json:"product"`
-	ShopID    int                     `json:"shop_id"`
 	NewImages []*multipart.FileHeader `json:"-"` // Optional new images to upload
+}
+
+// NewProductUpdateRequest creates a ProductUpdateRequest from an HTTP request.
+func NewProductUpdateRequest(r *http.Request) (*ProductUpdateRequest, error) {
+	// Extract product JSON from form data
+	productJSON := r.FormValue("product")
+	if strings.TrimSpace(productJSON) == "" {
+		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
+	}
+
+	// Parse product JSON (includes existing images with IDs)
+	var product models.Product
+	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
+		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
+	}
+
+	// Get new images from multipart form (optional for update)
+	var newImages []*multipart.FileHeader
+	if r.MultipartForm != nil && r.MultipartForm.File != nil {
+		for i := 0; ; i++ {
+			key := "images[" + strconv.Itoa(i) + "]"
+			if files, exists := r.MultipartForm.File[key]; exists && len(files) > 0 {
+				newImages = append(newImages, files[0])
+			} else {
+				break
+			}
+		}
+	}
+
+	return &ProductUpdateRequest{
+		Product:   product,
+		NewImages: newImages,
+	}, nil
 }
 
 func (r *ProductUpdateRequest) Validate() error {
 	// Validate product data
 	if err := r.validateProduct(); err != nil {
 		return err
-	}
-
-	// Validate shop ID (optional for security checks)
-	if r.ShopID <= 0 {
-		return &httpErrors.BadRequestError{Message: "shop_id_is_required"}
 	}
 
 	// CRITICAL: Validate that at least one image exists (existing OR new)

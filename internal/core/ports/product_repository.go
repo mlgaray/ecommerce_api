@@ -15,6 +15,8 @@ type ProductRepository interface {
 	// ShopID is a context parameter (not a filter), passed separately.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error)
 	GetByID(ctx context.Context, productID int) (*models.Product, error)
-	// Update updates product and returns storage_refs of deleted images for cleanup
-	Update(ctx context.Context, productID int, product *models.Product) (deletedRefs []string, err error)
+	// Update updates product and returns storage_refs of deleted images for cleanup.
+	// Validates that the product belongs to the specified shop.
+	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+	Update(ctx context.Context, productID int, product *models.Product, shopID int) (deletedRefs []string, err error)
 }

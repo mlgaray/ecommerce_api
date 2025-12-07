@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -16,6 +17,39 @@ type CategoryCreateRequest struct {
 	Category models.Category       `json:"category"`
 	ShopID   int                   `json:"shop_id"`
 	Image    *multipart.FileHeader `json:"-"`
+}
+
+// NewCategoryCreateRequest creates a CategoryCreateRequest from an HTTP request.
+// shopID comes from the JWT token context (injected by auth middleware).
+func NewCategoryCreateRequest(r *http.Request, shopID int) (*CategoryCreateRequest, error) {
+	// Extract category JSON from form data
+	categoryJSON := r.FormValue("category")
+	if strings.TrimSpace(categoryJSON) == "" {
+		return nil, &httpErrors.BadRequestError{Message: "category_json_required"}
+	}
+
+	// Parse category JSON
+	var category models.Category
+	if err := json.Unmarshal([]byte(categoryJSON), &category); err != nil {
+		return nil, &httpErrors.BadRequestError{Message: "invalid_category_json_format"}
+	}
+
+	// Get image from form (single image, required)
+	var imageHeader *multipart.FileHeader
+	if r.MultipartForm != nil && r.MultipartForm.File != nil {
+		if files, exists := r.MultipartForm.File["image"]; exists && len(files) > 0 {
+			imageHeader = files[0]
+		}
+	}
+	if imageHeader == nil {
+		return nil, &httpErrors.BadRequestError{Message: "category_image_required"}
+	}
+
+	return &CategoryCreateRequest{
+		Category: category,
+		ShopID:   shopID,
+		Image:    imageHeader,
+	}, nil
 }
 
 // Validate validates the HTTP request for creating a category.

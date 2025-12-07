@@ -19,6 +19,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/assets"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/server"
@@ -28,6 +29,10 @@ var Module = fx.Options(
 	fx.Provide(
 		// TOKEN
 		fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
+
+		// AUTH MIDDLEWARE
+		middleware.NewAuthMiddleware,
+
 		// AUTH
 		fx.Annotate(http.NewAuthHandler, fx.As(new(ports.AuthHandler))),
 		fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),
@@ -81,6 +86,8 @@ var Module = fx.Options(
 		fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
 		// Use Cases depend on Services
 		fx.Annotate(category.NewCreateCategoryUseCase, fx.As(new(ports.CreateCategoryUseCase))),
+		fx.Annotate(category.NewUpdateCategoryUseCase, fx.As(new(ports.UpdateCategoryUseCase))),
+		fx.Annotate(category.NewGetByIDUseCase, fx.As(new(ports.GetCategoryByIDUseCase))),
 		fx.Annotate(category.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllCategoriesByShopIDWithFiltersUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewCategoryHandler, fx.As(new(ports.CategoryHandler))),

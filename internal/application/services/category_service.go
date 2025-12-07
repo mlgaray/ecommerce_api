@@ -64,3 +64,46 @@ func (s *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID 
 func (s *CategoryService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error) {
 	return s.categoryRepository.CountByShopIDWithFilters(ctx, shopID, filters)
 }
+
+// GetByID retrieves a category by ID.
+// Delegates to repository - service layer can add business logic if needed.
+func (s *CategoryService) GetByID(ctx context.Context, categoryID int) (*models.Category, error) {
+	return s.categoryRepository.GetByID(ctx, categoryID)
+}
+
+// Update updates an existing category with optional new image.
+// If newImageBuffer is provided, uploads new image and replaces the existing one.
+// Handles cleanup of old image from storage after successful update.
+func (s *CategoryService) Update(ctx context.Context, categoryID int, category *models.Category, newImageBuffer []byte, shopID int) error {
+	// 1. Upload new image to storage (if provided)
+	if len(newImageBuffer) > 0 {
+		folder := fmt.Sprintf("shop_%d/categories", shopID)
+		uploadResult, err := s.assetService.Upload(ctx, newImageBuffer, folder)
+		if err != nil {
+			return err
+		}
+		// Set new image (ID = 0 indicates it's a new upload)
+		category.Image = &models.Image{
+			ID:         0,
+			URL:        uploadResult.URL,
+			StorageRef: uploadResult.StorageRef,
+		}
+	}
+
+	// 2. Update category in database - returns old storage_ref if image was replaced
+	deletedRef, err := s.categoryRepository.Update(ctx, categoryID, category, shopID)
+	if err != nil {
+		// Rollback: delete new image from storage if upload succeeded but DB failed
+		if category.Image != nil && category.Image.ID == 0 && category.Image.StorageRef != "" {
+			_ = s.assetService.Delete(ctx, category.Image.StorageRef)
+		}
+		return err
+	}
+
+	// 3. Cleanup: delete old image from storage (fire-and-forget)
+	if deletedRef != "" {
+		_ = s.assetService.Delete(ctx, deletedRef)
+	}
+
+	return nil
+}

@@ -2,15 +2,14 @@ package http
 
 import (
 	"encoding/json"
-	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
@@ -20,26 +19,36 @@ import (
 const (
 	CategoryHandlerField                = "category_handler"
 	CreateCategoryFunctionField         = "create"
+	UpdateCategoryFunctionField         = "update"
+	GetByIDCategoryFunctionField        = "get_by_id"
 	GetAllByShopIDCategoryFunctionField = "get_all_by_shop_id_with_filters"
 	BuildCategoryRequestSubFunc         = "build_category_request"
+	BuildCategoryUpdateRequestSubFunc   = "build_category_update_request"
 	ConvertImageToBufferSubFunc         = "convert_image_to_buffer"
 	ParseCategoryShopIDSubFunc          = "parse_shop_id"
+	ParseCategoryIDSubFunc              = "parse_category_id"
 	ParseCategoryQueryParamsSubFunc     = "parse_query_params"
 )
 
 // CategoryHandler handles HTTP requests for category endpoints.
 type CategoryHandler struct {
 	createCategory            ports.CreateCategoryUseCase
+	updateCategory            ports.UpdateCategoryUseCase
+	getByID                   ports.GetCategoryByIDUseCase
 	getAllByShopIDWithFilters ports.GetAllCategoriesByShopIDWithFiltersUseCase
 }
 
 // NewCategoryHandler creates a new CategoryHandler instance.
 func NewCategoryHandler(
 	createCategoryUseCase ports.CreateCategoryUseCase,
+	updateCategoryUseCase ports.UpdateCategoryUseCase,
+	getByIDUseCase ports.GetCategoryByIDUseCase,
 	getAllByShopIDWithFiltersUseCase ports.GetAllCategoriesByShopIDWithFiltersUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
 		createCategory:            createCategoryUseCase,
+		updateCategory:            updateCategoryUseCase,
+		getByID:                   getByIDUseCase,
 		getAllByShopIDWithFilters: getAllByShopIDWithFiltersUseCase,
 	}
 }
@@ -47,6 +56,18 @@ func NewCategoryHandler(
 // Create handles POST /categories requests.
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": CreateCategoryFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
 
 	// Parse multipart form (4MB limit - 1 image of 3MB + category data)
 	err := r.ParseMultipartForm(4 << 20)
@@ -62,7 +83,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build CategoryCreateRequest
-	request, err := h.buildCategoryCreateRequest(r)
+	request, err := contracts.NewCategoryCreateRequest(r, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
@@ -131,49 +152,6 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
-}
-
-// buildCategoryCreateRequest builds a CategoryCreateRequest from the HTTP request.
-func (h *CategoryHandler) buildCategoryCreateRequest(r *http.Request) (*contracts.CategoryCreateRequest, error) {
-	// Extract category JSON from form data
-	categoryJSON := r.FormValue("category")
-	if strings.TrimSpace(categoryJSON) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "category_json_required"}
-	}
-
-	// Parse category JSON
-	var category models.Category
-	if err := json.Unmarshal([]byte(categoryJSON), &category); err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_category_json_format"}
-	}
-
-	// Get shop ID from form
-	shopIDStr := r.FormValue("shop_id")
-	if strings.TrimSpace(shopIDStr) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "shop_id_required"}
-	}
-
-	shopID, err := strconv.Atoi(shopIDStr)
-	if err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
-	}
-
-	// Get image from form (single image, required)
-	var imageHeader *multipart.FileHeader
-	if r.MultipartForm != nil && r.MultipartForm.File != nil {
-		if files, exists := r.MultipartForm.File["image"]; exists && len(files) > 0 {
-			imageHeader = files[0]
-		}
-	}
-	if imageHeader == nil {
-		return nil, &httpErrors.BadRequestError{Message: "category_image_required"}
-	}
-
-	return &contracts.CategoryCreateRequest{
-		Category: category,
-		ShopID:   shopID,
-		Image:    imageHeader,
-	}, nil
 }
 
 // GetAllByShopIDWithFilters handles GET /shops/{shop_id}/categories requests.
@@ -258,6 +236,189 @@ func (h *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *ht
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
+}
+
+// GetByID handles GET /categories/{category_id} requests.
+func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse and validate category_id from URL
+	categoryID, err := h.parseCategoryID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Execute use case
+	category, err := h.getByID.Execute(ctx, categoryID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryHandlerField,
+			"function":    GetByIDCategoryFunctionField,
+			"category_id": categoryID,
+			"error":       err.Error(),
+		}).Error("Error retrieving category")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Return category directly (no DTO wrapper needed for single category)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(category); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": GetByIDCategoryFunctionField,
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
+}
+
+// Update handles PUT /categories/{category_id} requests.
+func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": UpdateCategoryFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
+
+	// Parse and validate category_id from URL
+	categoryID, err := h.parseCategoryID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Parse multipart form (4MB limit - 1 image of 3MB + category data)
+	err = r.ParseMultipartForm(4 << 20)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": UpdateCategoryFunctionField,
+			"sub_func": "r.ParseMultipartForm",
+			"error":    err.Error(),
+		}).Error("Error parsing multipart form")
+		httpErrors.HandleError(w, &httpErrors.BadRequestError{Message: "error_parsing_multipart_form"})
+		return
+	}
+
+	// Build CategoryUpdateRequest
+	request, err := contracts.NewCategoryUpdateRequest(r)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": UpdateCategoryFunctionField,
+			"sub_func": BuildCategoryUpdateRequestSubFunc,
+			"error":    err.Error(),
+		}).Error("Error building category update request")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Set category ID from path param (override any ID in JSON)
+	request.Category.ID = categoryID
+
+	// Validate request (HTTP validation: required fields, image format)
+	if err := request.Validate(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":          CategoryHandlerField,
+			"function":      UpdateCategoryFunctionField,
+			"sub_func":      "request.Validate",
+			"category_id":   categoryID,
+			"category_name": request.Category.Name,
+			"error":         err.Error(),
+		}).Error("Category update validation failed")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Convert new image to buffer for upload service (optional)
+	imageBuffer, err := request.ToImageBuffer()
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": UpdateCategoryFunctionField,
+			"sub_func": ConvertImageToBufferSubFunc,
+			"error":    err.Error(),
+		}).Error("Error converting image to buffer")
+		httpErrors.HandleError(w, &httpErrors.BadRequestError{Message: err.Error()})
+		return
+	}
+
+	// Update category via use case
+	err = h.updateCategory.Execute(ctx, categoryID, &request.Category, imageBuffer, shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":          CategoryHandlerField,
+			"function":      UpdateCategoryFunctionField,
+			"category_id":   categoryID,
+			"category_name": request.Category.Name,
+			"shop_id":       shopID,
+			"error":         err.Error(),
+		}).Error("Error updating category")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":        CategoryHandlerField,
+		"function":    UpdateCategoryFunctionField,
+		"category_id": categoryID,
+		"shop_id":     shopID,
+	}).Info("Category updated successfully")
+
+	// Return success message
+	type UpdateSuccessResponse struct {
+		Message string `json:"message"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(UpdateSuccessResponse{Message: "category_updated_successfully"}); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": UpdateCategoryFunctionField,
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
+}
+
+// parseCategoryID extracts and validates category_id from URL path.
+func (h *CategoryHandler) parseCategoryID(r *http.Request) (int, error) {
+	vars := mux.Vars(r)
+	categoryIDStr := vars["category_id"]
+	if strings.TrimSpace(categoryIDStr) == "" {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": ParseCategoryIDSubFunc,
+			"error":    "category_id_parameter_required",
+		}).Error("Missing category_id parameter")
+		return 0, &httpErrors.BadRequestError{Message: "category_id_parameter_required"}
+	}
+
+	categoryID, err := strconv.Atoi(categoryIDStr)
+	if err != nil || categoryID <= 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryHandlerField,
+			"function":    ParseCategoryIDSubFunc,
+			"sub_func":    "strconv.Atoi",
+			"category_id": categoryIDStr,
+			"error":       err,
+		}).Error("Invalid category_id parameter")
+		return 0, &httpErrors.BadRequestError{Message: "invalid_category_id_format"}
+	}
+
+	return categoryID, nil
 }
 
 // parseShopID extracts and validates shop_id from URL path.
