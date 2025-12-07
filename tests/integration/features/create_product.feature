@@ -34,12 +34,6 @@ Feature: Product Creation
     Then the response status should be 400
     And the user should receive an error message "category_id_is_required"
 
-  Scenario: Create product with invalid shop_id
-    Given I have product data with invalid shop_id
-    When I send a create product request
-    Then the response status should be 400
-    And the user should receive an error message "shop_id_is_required"
-
   Scenario: Create product with image size too large
     Given I have product data with oversized image
     When I send a create product request

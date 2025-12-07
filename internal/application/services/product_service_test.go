@@ -500,7 +500,7 @@ func TestProductService_Update(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
+			Update(ctx, productID, mock.AnythingOfType("*models.Product"), shopID).
 			Return([]string{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
@@ -534,7 +534,7 @@ func TestProductService_Update(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
+			Update(ctx, productID, mock.AnythingOfType("*models.Product"), shopID).
 			Return([]string{}, nil)
 
 		service := NewProductService(repoMock, assetMock)
@@ -624,7 +624,7 @@ func TestProductService_Update(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
+			Update(ctx, productID, mock.AnythingOfType("*models.Product"), shopID).
 			Return([]string{}, expectedError)
 
 		assetMock := mocks.NewAssetService(t)
@@ -651,7 +651,7 @@ func TestProductService_Update(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
+			Update(ctx, productID, mock.AnythingOfType("*models.Product"), shopID).
 			Return([]string{}, nil)
 
 		assetMock := mocks.NewAssetService(t)
@@ -923,7 +923,7 @@ func TestProductService_prepareImagesForUpdate(t *testing.T) {
 
 		repoMock := mocks.NewProductRepository(t)
 		repoMock.EXPECT().
-			Update(ctx, productID, mock.AnythingOfType("*models.Product")).
+			Update(ctx, productID, mock.AnythingOfType("*models.Product"), shopID).
 			Return([]string{}, nil)
 
 		service := NewProductService(repoMock, assetMock)

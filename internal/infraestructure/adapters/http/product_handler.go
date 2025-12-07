@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,8 +9,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
@@ -41,6 +40,18 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	startTime := time.Now()
 
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": CreateProductFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
+
 	// Parse multipart form (13MB limit - allows 4 images of 3MB each + product data)
 	stepStart := time.Now()
 	err := r.ParseMultipartForm(13 << 20)
@@ -61,7 +72,7 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Create ProductCreateRequest
 	stepStart = time.Now()
-	request, err := p.buildProductCreateRequest(r)
+	request, err := contracts.NewProductCreateRequest(r, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -148,78 +159,6 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
-}
-
-func (p *ProductHandler) buildProductCreateRequest(r *http.Request) (*contracts.ProductCreateRequest, error) {
-	product, err := p.parseProductJSON(r)
-	if err != nil {
-		return nil, err
-	}
-
-	shopID, err := p.parseShopIDFromForm(r)
-	if err != nil {
-		return nil, err
-	}
-
-	images, err := p.parseImagesFromForm(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &contracts.ProductCreateRequest{
-		Product: *product,
-		ShopID:  shopID,
-		Images:  images,
-	}, nil
-}
-
-func (p *ProductHandler) parseProductJSON(r *http.Request) (*models.Product, error) {
-	productJSON := r.FormValue("product")
-	if strings.TrimSpace(productJSON) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
-	}
-
-	var product models.Product
-	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
-	}
-
-	return &product, nil
-}
-
-func (p *ProductHandler) parseShopIDFromForm(r *http.Request) (int, error) {
-	shopIDStr := r.FormValue("shop_id")
-	if strings.TrimSpace(shopIDStr) == "" {
-		return 0, &httpErrors.BadRequestError{Message: "shop_id_required"}
-	}
-
-	shopID, err := strconv.Atoi(shopIDStr)
-	if err != nil {
-		return 0, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
-	}
-
-	return shopID, nil
-}
-
-func (p *ProductHandler) parseImagesFromForm(r *http.Request) ([]*multipart.FileHeader, error) {
-	var images []*multipart.FileHeader
-
-	if r.MultipartForm != nil && r.MultipartForm.File != nil {
-		for i := 0; ; i++ {
-			key := "images[" + strconv.Itoa(i) + "]"
-			files, exists := r.MultipartForm.File[key]
-			if !exists || len(files) == 0 {
-				break
-			}
-			images = append(images, files[0])
-		}
-	}
-
-	if len(images) == 0 {
-		return nil, &httpErrors.BadRequestError{Message: "product_image_required"}
-	}
-
-	return images, nil
 }
 
 func NewProductHandler(
@@ -420,6 +359,18 @@ func (p *ProductHandler) parseProductID(r *http.Request) (int, error) {
 func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": UpdateProductFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
+
 	// Parse and validate product_id
 	productID, err := p.parseProductID(r)
 	if err != nil {
@@ -441,7 +392,7 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build product update request (different from create)
-	request, err := p.buildProductUpdateRequest(r)
+	request, err := contracts.NewProductUpdateRequest(r)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -483,9 +434,6 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Extract shopID from context (JWT middleware)
-	shopID := 1 // Hardcoded for now
-
 	// Update product via use case
 	err = p.updateProduct.Execute(ctx, productID, &request.Product, imageBuffers, shopID)
 	if err != nil {
@@ -515,48 +463,4 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
-}
-
-func (p *ProductHandler) buildProductUpdateRequest(r *http.Request) (*contracts.ProductUpdateRequest, error) {
-	// Extract product JSON from form data
-	productJSON := r.FormValue("product")
-	if strings.TrimSpace(productJSON) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
-	}
-
-	// Parse product JSON (includes existing images with IDs)
-	var product models.Product
-	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
-	}
-
-	// Get shop ID from form
-	shopIDStr := r.FormValue("shop_id")
-	if strings.TrimSpace(shopIDStr) == "" {
-		return nil, &httpErrors.BadRequestError{Message: "shop_id_required"}
-	}
-
-	shopID, err := strconv.Atoi(shopIDStr)
-	if err != nil {
-		return nil, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
-	}
-
-	// Get new images from multipart form (optional for update)
-	var newImages []*multipart.FileHeader
-	if r.MultipartForm != nil && r.MultipartForm.File != nil {
-		for i := 0; ; i++ {
-			key := "images[" + strconv.Itoa(i) + "]"
-			if files, exists := r.MultipartForm.File[key]; exists && len(files) > 0 {
-				newImages = append(newImages, files[0])
-			} else {
-				break
-			}
-		}
-	}
-
-	return &contracts.ProductUpdateRequest{
-		Product:   product,
-		ShopID:    shopID,
-		NewImages: newImages,
-	}, nil
 }

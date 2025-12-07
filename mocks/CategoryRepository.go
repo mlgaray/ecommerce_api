@@ -257,3 +257,149 @@ func (_c *CategoryRepository_GetAllByShopIDWithFilters_Call) RunAndReturn(run fu
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetByID provides a mock function for the type CategoryRepository
+func (_mock *CategoryRepository) GetByID(ctx context.Context, categoryID int) (*models.Category, error) {
+	ret := _mock.Called(ctx, categoryID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByID")
+	}
+
+	var r0 *models.Category
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (*models.Category, error)); ok {
+		return returnFunc(ctx, categoryID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) *models.Category); ok {
+		r0 = returnFunc(ctx, categoryID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Category)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, categoryID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CategoryRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type CategoryRepository_GetByID_Call struct {
+	*mock.Call
+}
+
+// GetByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID int
+func (_e *CategoryRepository_Expecter) GetByID(ctx interface{}, categoryID interface{}) *CategoryRepository_GetByID_Call {
+	return &CategoryRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, categoryID)}
+}
+
+func (_c *CategoryRepository_GetByID_Call) Run(run func(ctx context.Context, categoryID int)) *CategoryRepository_GetByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryRepository_GetByID_Call) Return(category *models.Category, err error) *CategoryRepository_GetByID_Call {
+	_c.Call.Return(category, err)
+	return _c
+}
+
+func (_c *CategoryRepository_GetByID_Call) RunAndReturn(run func(ctx context.Context, categoryID int) (*models.Category, error)) *CategoryRepository_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type CategoryRepository
+func (_mock *CategoryRepository) Update(ctx context.Context, categoryID int, category *models.Category, shopID int) (string, error) {
+	ret := _mock.Called(ctx, categoryID, category, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Category, int) (string, error)); ok {
+		return returnFunc(ctx, categoryID, category, shopID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Category, int) string); ok {
+		r0 = returnFunc(ctx, categoryID, category, shopID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.Category, int) error); ok {
+		r1 = returnFunc(ctx, categoryID, category, shopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CategoryRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type CategoryRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID int
+//   - category *models.Category
+//   - shopID int
+func (_e *CategoryRepository_Expecter) Update(ctx interface{}, categoryID interface{}, category interface{}, shopID interface{}) *CategoryRepository_Update_Call {
+	return &CategoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, categoryID, category, shopID)}
+}
+
+func (_c *CategoryRepository_Update_Call) Run(run func(ctx context.Context, categoryID int, category *models.Category, shopID int)) *CategoryRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Category
+		if args[2] != nil {
+			arg2 = args[2].(*models.Category)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryRepository_Update_Call) Return(s string, err error) *CategoryRepository_Update_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *CategoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, categoryID int, category *models.Category, shopID int) (string, error)) *CategoryRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}

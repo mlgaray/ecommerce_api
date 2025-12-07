@@ -8,29 +8,43 @@ import (
 )
 
 type SignInUseCase struct {
-	userService  ports.UserService
-	tokenService ports.TokenService
+	userService    ports.UserService
+	tokenService   ports.TokenService
+	shopRepository ports.ShopRepository
 }
 
-func NewSignInUseCase(userService ports.UserService, tokenService ports.TokenService) ports.SignInUseCase {
+func NewSignInUseCase(userService ports.UserService, tokenService ports.TokenService, shopRepository ports.ShopRepository) ports.SignInUseCase {
 	return &SignInUseCase{
-		userService:  userService,
-		tokenService: tokenService,
+		userService:    userService,
+		tokenService:   tokenService,
+		shopRepository: shopRepository,
 	}
 }
 
 func (uc *SignInUseCase) Execute(ctx context.Context, user *models.User) (string, error) {
-	_user, err := uc.userService.GetByEmail(ctx, user.Email)
+	storedUser, err := uc.userService.GetByEmail(ctx, user.Email)
 	if err != nil {
 		return "", err
 	}
 
-	authenticatedUser, err := uc.userService.ValidateCredentials(ctx, user, _user.Password)
+	_, err = uc.userService.ValidateCredentials(ctx, user, storedUser.Password)
 	if err != nil {
 		return "", err
 	}
 
-	token, err := uc.tokenService.Generate(ctx, authenticatedUser)
+	// Get user's shops to include in token (use storedUser.ID, not input user)
+	shops, err := uc.shopRepository.GetShopsByUserID(ctx, storedUser.ID)
+	if err != nil {
+		return "", err
+	}
+
+	// Extract shop IDs for token payload
+	shopIDs := make([]int, len(shops))
+	for i, shop := range shops {
+		shopIDs[i] = shop.ID
+	}
+
+	token, err := uc.tokenService.Generate(ctx, storedUser, shopIDs)
 	if err != nil {
 		return "", err
 	}

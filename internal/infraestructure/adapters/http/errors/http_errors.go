@@ -9,3 +9,12 @@ type BadRequestError struct {
 func (e *BadRequestError) Error() string {
 	return e.Message
 }
+
+// UnauthorizedError represents HTTP 401 errors (missing or invalid authentication)
+type UnauthorizedError struct {
+	Message string
+}
+
+func (e *UnauthorizedError) Error() string {
+	return e.Message
+}

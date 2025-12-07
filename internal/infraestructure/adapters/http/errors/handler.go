@@ -23,6 +23,11 @@ func HandleError(w http.ResponseWriter, err error) {
 		statusCode = http.StatusBadRequest
 		message = e.Message
 
+	// HTTP Layer errors (401 Unauthorized)
+	case *UnauthorizedError:
+		statusCode = http.StatusUnauthorized
+		message = e.Message
+
 	// Domain errors mapped to HTTP status codes
 	case *domainErrors.RecordNotFoundError:
 		statusCode = http.StatusNotFound // 404

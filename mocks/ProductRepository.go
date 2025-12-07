@@ -327,8 +327,8 @@ func (_c *ProductRepository_GetByID_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // Update provides a mock function for the type ProductRepository
-func (_mock *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) ([]string, error) {
-	ret := _mock.Called(ctx, productID, product)
+func (_mock *ProductRepository) Update(ctx context.Context, productID int, product *models.Product, shopID int) ([]string, error) {
+	ret := _mock.Called(ctx, productID, product, shopID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
@@ -336,18 +336,18 @@ func (_mock *ProductRepository) Update(ctx context.Context, productID int, produ
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product) ([]string, error)); ok {
-		return returnFunc(ctx, productID, product)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product, int) ([]string, error)); ok {
+		return returnFunc(ctx, productID, product, shopID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product) []string); ok {
-		r0 = returnFunc(ctx, productID, product)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Product, int) []string); ok {
+		r0 = returnFunc(ctx, productID, product, shopID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.Product) error); ok {
-		r1 = returnFunc(ctx, productID, product)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *models.Product, int) error); ok {
+		r1 = returnFunc(ctx, productID, product, shopID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -363,11 +363,12 @@ type ProductRepository_Update_Call struct {
 //   - ctx context.Context
 //   - productID int
 //   - product *models.Product
-func (_e *ProductRepository_Expecter) Update(ctx interface{}, productID interface{}, product interface{}) *ProductRepository_Update_Call {
-	return &ProductRepository_Update_Call{Call: _e.mock.On("Update", ctx, productID, product)}
+//   - shopID int
+func (_e *ProductRepository_Expecter) Update(ctx interface{}, productID interface{}, product interface{}, shopID interface{}) *ProductRepository_Update_Call {
+	return &ProductRepository_Update_Call{Call: _e.mock.On("Update", ctx, productID, product, shopID)}
 }
 
-func (_c *ProductRepository_Update_Call) Run(run func(ctx context.Context, productID int, product *models.Product)) *ProductRepository_Update_Call {
+func (_c *ProductRepository_Update_Call) Run(run func(ctx context.Context, productID int, product *models.Product, shopID int)) *ProductRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -381,10 +382,15 @@ func (_c *ProductRepository_Update_Call) Run(run func(ctx context.Context, produ
 		if args[2] != nil {
 			arg2 = args[2].(*models.Product)
 		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -395,7 +401,7 @@ func (_c *ProductRepository_Update_Call) Return(deletedRefs []string, err error)
 	return _c
 }
 
-func (_c *ProductRepository_Update_Call) RunAndReturn(run func(ctx context.Context, productID int, product *models.Product) ([]string, error)) *ProductRepository_Update_Call {
+func (_c *ProductRepository_Update_Call) RunAndReturn(run func(ctx context.Context, productID int, product *models.Product, shopID int) ([]string, error)) *ProductRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -29,8 +29,7 @@ BEGIN
 EXCEPTION
     WHEN unique_violation THEN
         RAISE;  -- Re-raise with original code 23505 for Go to handle
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error creating category: %', SQLERRM;
+    -- Other errors propagate naturally with original SQLSTATE
 END;
 $$ LANGUAGE plpgsql;
 

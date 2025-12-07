@@ -18,6 +18,8 @@ import (
 const (
 	CategoryRepositoryField             = "category_repository"
 	CategoryCreateFunctionField         = "create"
+	CategoryUpdateFunctionField         = "update"
+	CategoryGetByIDFunctionField        = "get_by_id"
 	CategoryGetAllByShopIDFunctionField = "get_all_by_shop_id_with_filters"
 	CategoryCountByShopIDFunctionField  = "count_by_shop_id_with_filters"
 )
@@ -25,7 +27,10 @@ const (
 // Category repository log message constants
 const (
 	LogCategoryAlreadyExists = "Category with name already exists in shop"
+	LogCategoryNotFound      = "Category not found"
 	LogFailedCreateCategory  = "Failed to create category"
+	LogFailedUpdateCategory  = "Failed to update category"
+	LogFailedGetCategory     = "Failed to get category"
 	LogFailedQueryCategories = "Failed to query categories"
 	LogFailedCountCategories = "Failed to count categories"
 	LogFailedScanCategory    = "Failed to scan category row"
@@ -48,7 +53,7 @@ func NewCategoryRepository(dataBaseConnection DataBaseConnection) *CategoryRepos
 func (r *CategoryRepository) handlePostgreSQLError(err error, categoryName string, shopID int) error {
 	if pqErr, ok := err.(*pq.Error); ok {
 		// Unique constraint violation (name + shop_id)
-		if pqErr.Code == "23505" && pqErr.Constraint == "categories_name_shop_id_unique" {
+		if pqErr.Code == PqErrCodeUniqueViolation && pqErr.Constraint == ConstraintCategoryNameShopIDUnique {
 			logs.WithFields(map[string]interface{}{
 				"file":          CategoryRepositoryField,
 				"function":      CategoryCreateFunctionField,
@@ -102,6 +107,140 @@ func (r *CategoryRepository) Create(ctx context.Context, category *models.Catego
 	}
 
 	category.ID = categoryID
+
+	return category, nil
+}
+
+// Update updates an existing category with optional new image.
+// Uses stored procedure to update category + replace image atomically.
+// Validates that the category belongs to the specified shop.
+// Returns the storage_ref of the deleted image (if any) for cleanup.
+func (r *CategoryRepository) Update(ctx context.Context, categoryID int, category *models.Category, shopID int) (string, error) {
+	const query = `SELECT update_category($1, $2, $3, $4, $5, $6)`
+
+	// Extract image data if present (new image to replace existing)
+	var imageURL, storageRef string
+	if category.Image != nil && category.Image.ID == 0 {
+		// New image (ID = 0 means it's a new upload, not existing)
+		imageURL = category.Image.URL
+		storageRef = category.Image.StorageRef
+	}
+
+	var deletedRef string
+	err := r.db.QueryRowContext(ctx, query,
+		categoryID,
+		shopID,
+		category.Name,
+		category.Description,
+		imageURL,
+		storageRef,
+	).Scan(&deletedRef)
+
+	if err != nil {
+		// Check if it's a PostgreSQL error
+		if pqErr, ok := err.(*pq.Error); ok {
+			// Check for "Category not found" (P0003)
+			if pqErr.Code == PqErrCodeRaiseException {
+				logs.WithFields(map[string]interface{}{
+					"file":        CategoryRepositoryField,
+					"function":    CategoryUpdateFunctionField,
+					"category_id": categoryID,
+				}).Warn(LogCategoryNotFound)
+				return "", &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+			}
+
+			// Unique constraint violation (name + shop_id)
+			if pqErr.Code == PqErrCodeUniqueViolation && pqErr.Constraint == ConstraintCategoryNameShopIDUnique {
+				logs.WithFields(map[string]interface{}{
+					"file":          CategoryRepositoryField,
+					"function":      CategoryUpdateFunctionField,
+					"constraint":    pqErr.Constraint,
+					"category_name": category.Name,
+					"category_id":   categoryID,
+				}).Error(LogCategoryAlreadyExists)
+				return "", &errors.DuplicateRecordError{Message: errors.CategoryAlreadyExistsInShop}
+			}
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryRepositoryField,
+			"function":    CategoryUpdateFunctionField,
+			"category_id": categoryID,
+			"error":       err.Error(),
+		}).Error(LogFailedUpdateCategory)
+		return "", fmt.Errorf("database operation failed")
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":           CategoryRepositoryField,
+		"function":       CategoryUpdateFunctionField,
+		"category_id":    categoryID,
+		"image_replaced": deletedRef != "",
+	}).Info("Category updated successfully")
+
+	return deletedRef, nil
+}
+
+// GetByID retrieves a category by its ID.
+// Returns RecordNotFoundError if category doesn't exist.
+func (r *CategoryRepository) GetByID(ctx context.Context, categoryID int) (*models.Category, error) {
+	query := `
+		SELECT
+			c.id, c.name, COALESCE(c.description, ''), c.created_at,
+			COALESCE(
+				(SELECT jsonb_build_object('id', img.id, 'url', img.url, 'storage_ref', img.storage_ref)
+				FROM images img
+				WHERE img.category_id = c.id
+				LIMIT 1),
+				'null'::jsonb
+			) AS image
+		FROM categories c
+		WHERE c.id = $1`
+
+	category := &models.Category{}
+	var imageJSON []byte
+
+	err := r.db.QueryRowContext(ctx, query, categoryID).Scan(
+		&category.ID,
+		&category.Name,
+		&category.Description,
+		&category.CreatedAt,
+		&imageJSON,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logs.WithFields(map[string]interface{}{
+				"file":        CategoryRepositoryField,
+				"function":    CategoryGetByIDFunctionField,
+				"category_id": categoryID,
+			}).Warn(LogCategoryNotFound)
+			return nil, &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryRepositoryField,
+			"function":    CategoryGetByIDFunctionField,
+			"category_id": categoryID,
+			"error":       err.Error(),
+		}).Error(LogFailedGetCategory)
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Parse image JSON (can be null)
+	if string(imageJSON) != JSONNull {
+		var image models.Image
+		if err := json.Unmarshal(imageJSON, &image); err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":        CategoryRepositoryField,
+				"function":    CategoryGetByIDFunctionField,
+				"category_id": categoryID,
+				"error":       err.Error(),
+			}).Error(LogFailedUnmarshalImage)
+			return nil, fmt.Errorf("database operation failed")
+		}
+		category.Image = &image
+	}
 
 	return category, nil
 }
@@ -233,7 +372,7 @@ func (r *CategoryRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 		}
 
 		// Parse image JSON (can be null)
-		if string(imageJSON) != "null" {
+		if string(imageJSON) != JSONNull {
 			var image models.Image
 			if err := json.Unmarshal(imageJSON, &image); err != nil {
 				logs.WithFields(map[string]interface{}{

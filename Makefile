@@ -99,7 +99,7 @@ migrate-down-seeds:
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 7
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 5
 
 .PHONY: migrate-force-seeds
 
@@ -154,7 +154,7 @@ lint-fix:
 # Combined code quality target
 code-quality: fmt lint
 
-.PHONY: fmt lint lint-fix code-quality
+.PHONY: lint-fix fmt lint code-quality
 
 # Database reset: Drop everything and recreate from scratch
 # Order matters:

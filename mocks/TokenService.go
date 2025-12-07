@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,8 +40,8 @@ func (_m *TokenService) EXPECT() *TokenService_Expecter {
 }
 
 // Generate provides a mock function for the type TokenService
-func (_mock *TokenService) Generate(ctx context.Context, user *models.User) (string, error) {
-	ret := _mock.Called(ctx, user)
+func (_mock *TokenService) Generate(ctx context.Context, user *models.User, shopIDs []int) (string, error) {
+	ret := _mock.Called(ctx, user, shopIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Generate")
@@ -48,16 +49,16 @@ func (_mock *TokenService) Generate(ctx context.Context, user *models.User) (str
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User) (string, error)); ok {
-		return returnFunc(ctx, user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []int) (string, error)); ok {
+		return returnFunc(ctx, user, shopIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User) string); ok {
-		r0 = returnFunc(ctx, user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []int) string); ok {
+		r0 = returnFunc(ctx, user, shopIDs)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.User) error); ok {
-		r1 = returnFunc(ctx, user)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.User, []int) error); ok {
+		r1 = returnFunc(ctx, user, shopIDs)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,11 +73,12 @@ type TokenService_Generate_Call struct {
 // Generate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - user *models.User
-func (_e *TokenService_Expecter) Generate(ctx interface{}, user interface{}) *TokenService_Generate_Call {
-	return &TokenService_Generate_Call{Call: _e.mock.On("Generate", ctx, user)}
+//   - shopIDs []int
+func (_e *TokenService_Expecter) Generate(ctx interface{}, user interface{}, shopIDs interface{}) *TokenService_Generate_Call {
+	return &TokenService_Generate_Call{Call: _e.mock.On("Generate", ctx, user, shopIDs)}
 }
 
-func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *models.User)) *TokenService_Generate_Call {
+func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *models.User, shopIDs []int)) *TokenService_Generate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -86,9 +88,14 @@ func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *mo
 		if args[1] != nil {
 			arg1 = args[1].(*models.User)
 		}
+		var arg2 []int
+		if args[2] != nil {
+			arg2 = args[2].([]int)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -99,7 +106,69 @@ func (_c *TokenService_Generate_Call) Return(s string, err error) *TokenService_
 	return _c
 }
 
-func (_c *TokenService_Generate_Call) RunAndReturn(run func(ctx context.Context, user *models.User) (string, error)) *TokenService_Generate_Call {
+func (_c *TokenService_Generate_Call) RunAndReturn(run func(ctx context.Context, user *models.User, shopIDs []int) (string, error)) *TokenService_Generate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateAndParseClaims provides a mock function for the type TokenService
+func (_mock *TokenService) ValidateAndParseClaims(token string) (*claims.TokenClaims, error) {
+	ret := _mock.Called(token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateAndParseClaims")
+	}
+
+	var r0 *claims.TokenClaims
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (*claims.TokenClaims, error)); ok {
+		return returnFunc(token)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) *claims.TokenClaims); ok {
+		r0 = returnFunc(token)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*claims.TokenClaims)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(token)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// TokenService_ValidateAndParseClaims_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateAndParseClaims'
+type TokenService_ValidateAndParseClaims_Call struct {
+	*mock.Call
+}
+
+// ValidateAndParseClaims is a helper method to define mock.On call
+//   - token string
+func (_e *TokenService_Expecter) ValidateAndParseClaims(token interface{}) *TokenService_ValidateAndParseClaims_Call {
+	return &TokenService_ValidateAndParseClaims_Call{Call: _e.mock.On("ValidateAndParseClaims", token)}
+}
+
+func (_c *TokenService_ValidateAndParseClaims_Call) Run(run func(token string)) *TokenService_ValidateAndParseClaims_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *TokenService_ValidateAndParseClaims_Call) Return(tokenClaims *claims.TokenClaims, err error) *TokenService_ValidateAndParseClaims_Call {
+	_c.Call.Return(tokenClaims, err)
+	return _c
+}
+
+func (_c *TokenService_ValidateAndParseClaims_Call) RunAndReturn(run func(token string) (*claims.TokenClaims, error)) *TokenService_ValidateAndParseClaims_Call {
 	_c.Call.Return(run)
 	return _c
 }

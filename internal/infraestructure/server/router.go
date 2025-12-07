@@ -19,9 +19,16 @@ type router struct {
 	healthHandler   ports.HealthHandler
 	productHandler  ports.ProductHandler
 	categoryHandler ports.CategoryHandler
+	authMiddleware  *middleware.AuthMiddleware
 }
 
-func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler, productHandler ports.ProductHandler, categoryHandler ports.CategoryHandler) *router {
+func NewRouter(
+	authHandler ports.AuthHandler,
+	healthHandler ports.HealthHandler,
+	productHandler ports.ProductHandler,
+	categoryHandler ports.CategoryHandler,
+	authMiddleware *middleware.AuthMiddleware,
+) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 	r.Use(middleware.PrometheusMiddleware)
@@ -31,6 +38,7 @@ func NewRouter(authHandler ports.AuthHandler, healthHandler ports.HealthHandler,
 		healthHandler:   healthHandler,
 		productHandler:  productHandler,
 		categoryHandler: categoryHandler,
+		authMiddleware:  authMiddleware,
 	}
 }
 
@@ -56,6 +64,8 @@ func (r *router) authRoutes() {
 
 func (r *router) productRoutes() {
 	sub := r.router.PathPrefix("/products").Subrouter()
+	// Apply auth middleware to all product mutation routes
+	sub.Use(r.authMiddleware.Authenticate)
 	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
 	sub.HandleFunc("/{product_id}", r.productHandler.GetByID).Methods(http.MethodGet)
 	sub.HandleFunc("/{product_id}", r.productHandler.Update).Methods(http.MethodPut)
@@ -63,7 +73,11 @@ func (r *router) productRoutes() {
 
 func (r *router) categoryRoutes() {
 	sub := r.router.PathPrefix("/categories").Subrouter()
+	// Apply auth middleware to all category routes
+	sub.Use(r.authMiddleware.Authenticate)
 	sub.HandleFunc("", r.categoryHandler.Create).Methods(http.MethodPost)
+	sub.HandleFunc("/{category_id}", r.categoryHandler.GetByID).Methods(http.MethodGet)
+	sub.HandleFunc("/{category_id}", r.categoryHandler.Update).Methods(http.MethodPut)
 }
 
 func (r *router) shopRoutes() {

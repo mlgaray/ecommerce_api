@@ -346,6 +346,121 @@ func TestCategoryService_EdgeCases(t *testing.T) {
 }
 
 // =============================================================================
+// GetByID Tests
+// =============================================================================
+
+func TestCategoryService_GetByID(t *testing.T) {
+	t.Run("when category exists then returns category", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		expectedCategory := &models.Category{
+			ID:          categoryID,
+			Name:        "Electronics",
+			Description: "Electronic products",
+			Image: &models.Image{
+				ID:  1,
+				URL: "https://cloudinary.com/image.jpg",
+			},
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetByID(ctx, categoryID).
+			Return(expectedCategory, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByID(ctx, categoryID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, expectedCategory.ID, result.ID)
+		assert.Equal(t, expectedCategory.Name, result.Name)
+		assert.NotNil(t, result.Image)
+	})
+
+	t.Run("when category not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 999
+		notFoundError := &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetByID(ctx, categoryID).
+			Return(nil, notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByID(ctx, categoryID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+		assert.Equal(t, errors.CategoryNotFound, notFound.Message)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		expectedError := stdErrors.New("database error")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetByID(ctx, categoryID).
+			Return(nil, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByID(ctx, categoryID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, expectedError, err)
+	})
+
+	t.Run("when category has no image then returns category without image", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		expectedCategory := &models.Category{
+			ID:          categoryID,
+			Name:        "Electronics",
+			Description: "Electronic products",
+			Image:       nil, // No image
+		}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			GetByID(ctx, categoryID).
+			Return(expectedCategory, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByID(ctx, categoryID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.Image)
+	})
+}
+
+// =============================================================================
 // GetAllByShopIDWithFilters Tests
 // =============================================================================
 // Note: Validation and normalization tests have been moved to the Use Case layer.
@@ -565,5 +680,358 @@ func TestCategoryService_CountByShopIDWithFilters(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, 5, result)
+	})
+}
+
+// =============================================================================
+// Update Tests
+// =============================================================================
+
+func TestCategoryService_Update(t *testing.T) {
+	t.Run("when updating with new image then uploads and replaces old image", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+		oldStorageRef := "shop_1/categories/old_ref"
+
+		uploadResult := &models.Image{
+			URL:        "https://cloudinary.com/new_image.jpg",
+			StorageRef: "shop_1/categories/new_ref",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_1/categories").
+			Return(uploadResult, nil)
+		assetMock.EXPECT().
+			Delete(ctx, oldStorageRef).
+			Return(nil) // Cleanup old image
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, mock.AnythingOfType("*models.Category"), shopID).
+			Return(oldStorageRef, nil)
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when updating without new image then does not upload", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+			Image: &models.Image{
+				ID:  5,
+				URL: "https://cloudinary.com/existing.jpg",
+			},
+		}
+		var newImageBuffer []byte // No new image
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, category, shopID).
+			Return("", nil) // No old image to delete
+
+		assetMock := mocks.NewAssetService(t)
+		// AssetService should NOT be called when no new image
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when upload fails then returns error without calling repository", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+		uploadError := stdErrors.New("upload failed")
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_1/categories").
+			Return(nil, uploadError)
+
+		repoMock := mocks.NewCategoryRepository(t)
+		// Repository should NOT be called when upload fails
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, uploadError, err)
+	})
+
+	t.Run("when repository fails then rolls back new image upload", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+		repoError := stdErrors.New("database error")
+
+		uploadResult := &models.Image{
+			URL:        "https://cloudinary.com/new_image.jpg",
+			StorageRef: "shop_1/categories/new_ref",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_1/categories").
+			Return(uploadResult, nil)
+		assetMock.EXPECT().
+			Delete(ctx, uploadResult.StorageRef).
+			Return(nil) // Rollback new image
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, mock.AnythingOfType("*models.Category"), shopID).
+			Return("", repoError)
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, repoError, err)
+	})
+
+	t.Run("when repository fails and rollback fails then returns repository error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+		repoError := stdErrors.New("database error")
+		deleteError := stdErrors.New("delete failed")
+
+		uploadResult := &models.Image{
+			URL:        "https://cloudinary.com/new_image.jpg",
+			StorageRef: "shop_1/categories/new_ref",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_1/categories").
+			Return(uploadResult, nil)
+		assetMock.EXPECT().
+			Delete(ctx, uploadResult.StorageRef).
+			Return(deleteError) // Rollback fails but we ignore it
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, mock.AnythingOfType("*models.Category"), shopID).
+			Return("", repoError)
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, repoError, err) // Original error, not delete error
+	})
+
+	t.Run("when category not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 999
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		var newImageBuffer []byte
+		notFoundError := &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, category, shopID).
+			Return("", notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+		assert.Equal(t, errors.CategoryNotFound, notFound.Message)
+	})
+
+	t.Run("when duplicate name then returns DuplicateRecordError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Existing Name",
+			Description: "Updated Description",
+		}
+		var newImageBuffer []byte
+		duplicateError := &errors.DuplicateRecordError{Message: errors.CategoryAlreadyExistsInShop}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, category, shopID).
+			Return("", duplicateError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var dupErr *errors.DuplicateRecordError
+		assert.True(t, stdErrors.As(err, &dupErr))
+		assert.Equal(t, errors.CategoryAlreadyExistsInShop, dupErr.Message)
+	})
+
+	t.Run("when no old image to cleanup then does not call delete", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+
+		uploadResult := &models.Image{
+			URL:        "https://cloudinary.com/new_image.jpg",
+			StorageRef: "shop_1/categories/new_ref",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_1/categories").
+			Return(uploadResult, nil)
+		// Delete should NOT be called for old image cleanup (empty deletedRef)
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, mock.AnythingOfType("*models.Category"), shopID).
+			Return("", nil) // Empty string = no old image to delete
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when different shop_id then uses correct folder path", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 42
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+		}
+		newImageBuffer := []byte("new_image_data")
+
+		uploadResult := &models.Image{
+			URL:        "https://cloudinary.com/new_image.jpg",
+			StorageRef: "shop_42/categories/new_ref",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, newImageBuffer, "shop_42/categories"). // Correct folder
+			Return(uploadResult, nil)
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, mock.AnythingOfType("*models.Category"), shopID).
+			Return("", nil)
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when repository fails without new image then no rollback needed", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		category := &models.Category{
+			Name:        "Updated Category",
+			Description: "Updated Description",
+			Image: &models.Image{
+				ID:  5,
+				URL: "https://cloudinary.com/existing.jpg",
+			},
+		}
+		var newImageBuffer []byte
+		repoError := stdErrors.New("database error")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, categoryID, category, shopID).
+			Return("", repoError)
+
+		assetMock := mocks.NewAssetService(t)
+		// Delete should NOT be called - no new image was uploaded
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, categoryID, category, newImageBuffer, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, repoError, err)
 	})
 }

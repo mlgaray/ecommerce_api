@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
@@ -275,6 +276,47 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //
 //		return products, nil
 //	}
+//
+// GetShopsByUserID returns all shops owned by a user.
+func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error) {
+	const query = `
+		SELECT id, name, slug, email, phone, instagram, image
+		FROM shops
+		WHERE user_id = $1
+		ORDER BY id
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("database operation failed")
+	}
+	defer rows.Close()
+
+	shops := make([]*models.Shop, 0)
+	for rows.Next() {
+		shop := &models.Shop{UserID: userID}
+		err := rows.Scan(
+			&shop.ID,
+			&shop.Name,
+			&shop.Slug,
+			&shop.Email,
+			&shop.Phone,
+			&shop.Instagram,
+			&shop.Image,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("database operation failed")
+		}
+		shops = append(shops, shop)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	return shops, nil
+}
+
 func NewShopRepository(dataBaseConnection DataBaseConnection) ports.ShopRepository {
 	return &ShopSQLRepository{
 		db: dataBaseConnection.Connect(),
