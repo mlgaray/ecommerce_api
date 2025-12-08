@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [ main, develop ]
 
-# Avoid duplicate runs: cancel push run if PR is open
+# Prevent duplicate CI runs:
+# When a PR is open, both push and pull_request events fire.
+# This groups them together so only one runs at a time.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
