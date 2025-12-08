@@ -1,10 +1,10 @@
 name: CI
 
 on:
-  # Run on pushes directly to main/develop (after merge)
+  # Run on pushes directly to main only (after merge)
   push:
-    branches: [ main, develop ]
-  # Run on PRs targeting main/develop (during review)
+    branches: [ main ]
+  # Run on PRs targeting any branch (during review)
   pull_request:
 
 # Cancel in-progress runs when a new commit is pushed to the same PR/branch
