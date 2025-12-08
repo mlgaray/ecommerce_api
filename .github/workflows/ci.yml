@@ -1,14 +1,13 @@
 name: CI
 
 on:
+  # Run on pushes directly to main/develop (after merge)
   push:
     branches: [ main, develop ]
+  # Run on PRs targeting main/develop (during review)
   pull_request:
-    branches: [ main, develop ]
 
-# Prevent duplicate CI runs:
-# When a PR is open, both push and pull_request events fire.
-# This groups them together so only one runs at a time.
+# Cancel in-progress runs when a new commit is pushed to the same PR/branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
