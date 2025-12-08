@@ -293,6 +293,7 @@ func TestProductRepository_Update(t *testing.T) {
 
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := &models.Product{
 			Name:             "Updated Product",
 			Description:      "Updated Description",
@@ -330,6 +331,7 @@ func TestProductRepository_Update(t *testing.T) {
 		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
+				shopID,
 				product.Name,
 				product.Description,
 				product.Price,
@@ -348,7 +350,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		_, err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product, shopID)
 
 		// Assert
 		assert.NoError(t, err)
@@ -363,6 +365,7 @@ func TestProductRepository_Update(t *testing.T) {
 
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 
 		// Note: Similar to Create test, json.Marshal rarely fails with valid Go types
 		// This test structure is kept for completeness
@@ -384,7 +387,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		_, err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product, shopID)
 
 		// Assert
 		// In practice, marshaling valid structs succeeds
@@ -400,6 +403,7 @@ func TestProductRepository_Update(t *testing.T) {
 
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 
 		variant := &models.Variant{
 			Name:          "Size",
@@ -425,7 +429,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		_, err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product, shopID)
 
 		// Assert
 		// Similar to other marshaling tests - kept for structure
@@ -440,6 +444,7 @@ func TestProductRepository_Update(t *testing.T) {
 
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := &models.Product{
 			Name:             "Updated Product",
 			Description:      "Updated Description",
@@ -463,6 +468,7 @@ func TestProductRepository_Update(t *testing.T) {
 		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
+				shopID,
 				product.Name,
 				product.Description,
 				product.Price,
@@ -481,7 +487,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		_, err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product, shopID)
 
 		// Assert
 		assert.Error(t, err)
@@ -498,6 +504,7 @@ func TestProductRepository_Update(t *testing.T) {
 
 		ctx := context.Background()
 		productID := 1
+		shopID := 1
 		product := &models.Product{
 			Name:             "Updated Product",
 			Description:      "Updated Description",
@@ -518,6 +525,7 @@ func TestProductRepository_Update(t *testing.T) {
 		mock.ExpectQuery(`SELECT update_product`).
 			WithArgs(
 				productID,
+				shopID,
 				product.Name,
 				product.Description,
 				product.Price,
@@ -536,7 +544,7 @@ func TestProductRepository_Update(t *testing.T) {
 		repo := &ProductRepository{db: db}
 
 		// Act
-		_, err = repo.Update(ctx, productID, product)
+		_, err = repo.Update(ctx, productID, product, shopID)
 
 		// Assert
 		assert.Error(t, err)

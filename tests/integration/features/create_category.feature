@@ -28,12 +28,6 @@ Feature: Category Creation
     Then the response status should be 400
     And the user should receive an error message "category_description_is_required"
 
-  Scenario: Create category with invalid shop_id
-    Given I have category data with invalid shop_id
-    When I send a create category request
-    Then the response status should be 400
-    And the user should receive an error message "shop_id_is_required"
-
   Scenario: Create category with image size too large
     Given I have category data with oversized image
     When I send a create category request

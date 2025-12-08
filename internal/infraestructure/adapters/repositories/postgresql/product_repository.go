@@ -236,6 +236,28 @@ func (r *ProductRepository) Create(ctx context.Context, product *models.Product,
 
 		// Check if it's a PostgreSQL error from the stored procedure
 		if pqErr, ok := err.(*pq.Error); ok {
+			// Check for "Category not found" (P0003)
+			if pqErr.Code == PqErrCodeRaiseException {
+				logs.WithFields(map[string]interface{}{
+					"file":         ProductRepositoryField,
+					"function":     ProductCreateFunctionField,
+					"product_name": product.Name,
+					"category_id":  product.Category.ID,
+				}).Warn("Category not found for product creation")
+				return nil, &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+			}
+
+			// Check for "Shop not found" (P0004)
+			if pqErr.Code == "P0004" {
+				logs.WithFields(map[string]interface{}{
+					"file":         ProductRepositoryField,
+					"function":     ProductCreateFunctionField,
+					"product_name": product.Name,
+					"shop_id":      shopID,
+				}).Warn("Shop not found for product creation")
+				return nil, &errors.RecordNotFoundError{Message: errors.ShopNotFound}
+			}
+
 			// RAISE EXCEPTION from stored procedure comes as pq.Error
 			// Extract meaningful error message for better debugging
 			logs.WithFields(map[string]interface{}{
@@ -662,7 +684,7 @@ func (r *ProductRepository) CountByShopIDWithFilters(ctx context.Context, shopID
 	return totalCount, nil
 }
 
-func (r *ProductRepository) Update(ctx context.Context, productID int, product *models.Product) ([]string, error) {
+func (r *ProductRepository) Update(ctx context.Context, productID int, product *models.Product, shopID int) ([]string, error) {
 	startTime := time.Now()
 
 	// Serialize images to JSONB
@@ -706,8 +728,9 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 	spStart := time.Now()
 	var deletedRefs []string
 	err = r.db.QueryRowContext(ctx, `
-		SELECT update_product($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		SELECT update_product($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		productID,
+		shopID,
 		product.Name,
 		product.Description,
 		product.Price,
@@ -733,6 +756,26 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 
 		// Check if it's a PostgreSQL error from the stored procedure
 		if pqErr, ok := err.(*pq.Error); ok {
+			// Check for "Product not found" (P0002)
+			if pqErr.Code == "P0002" {
+				logs.WithFields(map[string]interface{}{
+					"file":       ProductRepositoryField,
+					"function":   ProductUpdateFunctionField,
+					"product_id": productID,
+				}).Warn(productNotFoundMessage)
+				return nil, &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+			}
+
+			// Check for "Category not found" (P0003)
+			if pqErr.Code == PqErrCodeRaiseException {
+				logs.WithFields(map[string]interface{}{
+					"file":       ProductRepositoryField,
+					"function":   ProductUpdateFunctionField,
+					"product_id": productID,
+				}).Warn("Category not found for product update")
+				return nil, &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+			}
+
 			logs.WithFields(map[string]interface{}{
 				"file":       ProductRepositoryField,
 				"function":   ProductUpdateFunctionField,

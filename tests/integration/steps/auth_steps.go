@@ -37,6 +37,13 @@ func (a *AuthSteps) setupSQLExpectations() {
 			WithArgs("user@example.com").
 			WillReturnRows(rows)
 
+		// Mock GetShopsByUserID - returns user's shops for JWT token
+		shopRows := sqlmock.NewRows([]string{"id", "name", "slug", "email", "phone", "instagram", "image"}).
+			AddRow(1, "Test Shop", "test-shop", "shop@example.com", "+1234567890", "@testshop", "image.jpg")
+		ctx.mockSQLMock.ExpectQuery("FROM shops").
+			WithArgs(1).
+			WillReturnRows(shopRows)
+
 	case nonExistentUserScenario:
 		// Mock user not found (using direct DB query, not transaction)
 		// Return empty rows instead of sql.ErrNoRows to trigger the !rows.Next() condition

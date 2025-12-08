@@ -263,3 +263,146 @@ func (_c *CategoryService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetByID provides a mock function for the type CategoryService
+func (_mock *CategoryService) GetByID(ctx context.Context, categoryID int) (*models.Category, error) {
+	ret := _mock.Called(ctx, categoryID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByID")
+	}
+
+	var r0 *models.Category
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (*models.Category, error)); ok {
+		return returnFunc(ctx, categoryID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) *models.Category); ok {
+		r0 = returnFunc(ctx, categoryID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Category)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, categoryID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CategoryService_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type CategoryService_GetByID_Call struct {
+	*mock.Call
+}
+
+// GetByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID int
+func (_e *CategoryService_Expecter) GetByID(ctx interface{}, categoryID interface{}) *CategoryService_GetByID_Call {
+	return &CategoryService_GetByID_Call{Call: _e.mock.On("GetByID", ctx, categoryID)}
+}
+
+func (_c *CategoryService_GetByID_Call) Run(run func(ctx context.Context, categoryID int)) *CategoryService_GetByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryService_GetByID_Call) Return(category *models.Category, err error) *CategoryService_GetByID_Call {
+	_c.Call.Return(category, err)
+	return _c
+}
+
+func (_c *CategoryService_GetByID_Call) RunAndReturn(run func(ctx context.Context, categoryID int) (*models.Category, error)) *CategoryService_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type CategoryService
+func (_mock *CategoryService) Update(ctx context.Context, categoryID int, category *models.Category, newImageBuffer []byte, shopID int) error {
+	ret := _mock.Called(ctx, categoryID, category, newImageBuffer, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Category, []byte, int) error); ok {
+		r0 = returnFunc(ctx, categoryID, category, newImageBuffer, shopID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CategoryService_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type CategoryService_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID int
+//   - category *models.Category
+//   - newImageBuffer []byte
+//   - shopID int
+func (_e *CategoryService_Expecter) Update(ctx interface{}, categoryID interface{}, category interface{}, newImageBuffer interface{}, shopID interface{}) *CategoryService_Update_Call {
+	return &CategoryService_Update_Call{Call: _e.mock.On("Update", ctx, categoryID, category, newImageBuffer, shopID)}
+}
+
+func (_c *CategoryService_Update_Call) Run(run func(ctx context.Context, categoryID int, category *models.Category, newImageBuffer []byte, shopID int)) *CategoryService_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Category
+		if args[2] != nil {
+			arg2 = args[2].(*models.Category)
+		}
+		var arg3 []byte
+		if args[3] != nil {
+			arg3 = args[3].([]byte)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryService_Update_Call) Return(err error) *CategoryService_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CategoryService_Update_Call) RunAndReturn(run func(ctx context.Context, categoryID int, category *models.Category, newImageBuffer []byte, shopID int) error) *CategoryService_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}

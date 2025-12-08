@@ -159,23 +159,6 @@ func (c *CategorySteps) iHaveCategoryDataWithEmptyDescription() error {
 	return nil
 }
 
-func (c *CategorySteps) iHaveCategoryDataWithInvalidShopID() error {
-	ctx := GetTestContext()
-
-	ctx.requestBody = models.Category{
-		Name:        "Test Category",
-		Description: "Test Description",
-	}
-
-	ctx.productImages = [][]byte{createTestImage()}
-	if ctx.pathParams == nil {
-		ctx.pathParams = make(map[string]string)
-	}
-	ctx.pathParams["shop_id"] = "0" // Invalid
-
-	return nil
-}
-
 func (c *CategorySteps) iHaveCategoryDataWithOversizedImage() error {
 	ctx := GetTestContext()
 
@@ -306,6 +289,11 @@ func (c *CategorySteps) executeHTTPRequest(ctx *TestContext, body *bytes.Buffer,
 	}
 	req.Header.Set("Content-Type", contentType)
 
+	// Add Authorization header with JWT token
+	if ctx.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+ctx.authToken)
+	}
+
 	client := &http.Client{}
 	return client.Do(req)
 }
@@ -352,7 +340,6 @@ func (c *CategorySteps) RegisterSteps(sc *godog.ScenarioContext) {
 	// HTTP validation scenarios
 	sc.Step(`^I have category data with empty name$`, c.iHaveCategoryDataWithEmptyName)
 	sc.Step(`^I have category data with empty description$`, c.iHaveCategoryDataWithEmptyDescription)
-	sc.Step(`^I have category data with invalid shop_id$`, c.iHaveCategoryDataWithInvalidShopID)
 	sc.Step(`^I have category data with oversized image$`, c.iHaveCategoryDataWithOversizedImage)
 	sc.Step(`^I have category data with invalid image type$`, c.iHaveCategoryDataWithInvalidImageType)
 

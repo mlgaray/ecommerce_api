@@ -21,3 +21,19 @@ const (
 const (
 	SortOrderDesc = "desc"
 )
+
+// PostgreSQL error codes
+const (
+	PqErrCodeUniqueViolation = "23505"
+	PqErrCodeRaiseException  = "P0003"
+)
+
+// Database constraint names
+const (
+	ConstraintCategoryNameShopIDUnique = "categories_name_shop_id_unique"
+)
+
+// JSON values
+const (
+	JSONNull = "null"
+)
