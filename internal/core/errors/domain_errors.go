@@ -55,3 +55,14 @@ type BusinessRuleError struct {
 func (e *BusinessRuleError) Error() string {
 	return e.Message
 }
+
+// ReferentialIntegrityError represents a foreign key constraint violation.
+// Used when attempting to delete a resource that has dependent records.
+// Maps to HTTP 409 Conflict.
+type ReferentialIntegrityError struct {
+	Message string
+}
+
+func (e *ReferentialIntegrityError) Error() string {
+	return e.Message
+}

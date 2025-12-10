@@ -19,6 +19,7 @@ const (
 	CategoryRepositoryField             = "category_repository"
 	CategoryCreateFunctionField         = "create"
 	CategoryUpdateFunctionField         = "update"
+	CategoryDeleteFunctionField         = "delete"
 	CategoryGetByIDFunctionField        = "get_by_id"
 	CategoryGetAllByShopIDFunctionField = "get_all_by_shop_id_with_filters"
 	CategoryCountByShopIDFunctionField  = "count_by_shop_id_with_filters"
@@ -28,8 +29,10 @@ const (
 const (
 	LogCategoryAlreadyExists = "Category with name already exists in shop"
 	LogCategoryNotFound      = "Category not found"
+	LogCategoryHasProducts   = "Category has products assigned"
 	LogFailedCreateCategory  = "Failed to create category"
 	LogFailedUpdateCategory  = "Failed to update category"
+	LogFailedDeleteCategory  = "Failed to delete category"
 	LogFailedGetCategory     = "Failed to get category"
 	LogFailedQueryCategories = "Failed to query categories"
 	LogFailedCountCategories = "Failed to count categories"
@@ -450,4 +453,74 @@ func (r *CategoryRepository) CountByShopIDWithFilters(ctx context.Context, shopI
 	}).Debug("COUNT query completed")
 
 	return totalCount, nil
+}
+
+// Delete deletes a category by ID.
+// Validates that the category belongs to the specified shop.
+// Returns the storage_ref of the deleted image (if any) for cleanup in external storage.
+// Returns RecordNotFoundError if category doesn't exist or doesn't belong to shop.
+// Returns ReferentialIntegrityError if category has products assigned.
+func (r *CategoryRepository) Delete(ctx context.Context, categoryID, shopID int) (string, error) {
+	// Single transaction CTE: get image storage_ref, then delete category
+	// Images are deleted by CASCADE, but we need storage_ref for external cleanup
+	const query = `
+		WITH deleted_image AS (
+			SELECT storage_ref FROM images WHERE category_id = $1
+		),
+		deleted_category AS (
+			DELETE FROM categories WHERE id = $1 AND shop_id = $2
+			RETURNING id
+		)
+		SELECT
+			(SELECT COUNT(*) FROM deleted_category) as deleted,
+			COALESCE((SELECT storage_ref FROM deleted_image), '') as storage_ref`
+
+	var deletedCount int
+	var storageRef string
+	err := r.db.QueryRowContext(ctx, query, categoryID, shopID).Scan(&deletedCount, &storageRef)
+
+	if err != nil {
+		// Check for FK constraint violation (category has products)
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == PqErrCodeForeignKeyViolation {
+				logs.WithFields(map[string]interface{}{
+					"file":        CategoryRepositoryField,
+					"function":    CategoryDeleteFunctionField,
+					"category_id": categoryID,
+					"shop_id":     shopID,
+				}).Warn(LogCategoryHasProducts)
+				return "", &errors.ReferentialIntegrityError{Message: errors.CategoryHasProducts}
+			}
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryRepositoryField,
+			"function":    CategoryDeleteFunctionField,
+			"category_id": categoryID,
+			"shop_id":     shopID,
+			"error":       err.Error(),
+		}).Error(LogFailedDeleteCategory)
+		return "", fmt.Errorf("database operation failed")
+	}
+
+	// No rows deleted = category not found or doesn't belong to shop
+	if deletedCount == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryRepositoryField,
+			"function":    CategoryDeleteFunctionField,
+			"category_id": categoryID,
+			"shop_id":     shopID,
+		}).Warn(LogCategoryNotFound)
+		return "", &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":        CategoryRepositoryField,
+		"function":    CategoryDeleteFunctionField,
+		"category_id": categoryID,
+		"shop_id":     shopID,
+		"had_image":   storageRef != "",
+	}).Info("Category deleted successfully")
+
+	return storageRef, nil
 }

@@ -352,6 +352,7 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			fx.Annotate(category.NewGetByIDUseCase, fx.As(new(ports.GetCategoryByIDUseCase))),
 			fx.Annotate(category.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllCategoriesByShopIDWithFiltersUseCase))),
 			fx.Annotate(category.NewUpdateCategoryUseCase, fx.As(new(ports.UpdateCategoryUseCase))),
+			fx.Annotate(category.NewDeleteCategoryUseCase, fx.As(new(ports.DeleteCategoryUseCase))),
 
 			// Provide handler
 			authhttp.NewCategoryHandler,
@@ -366,6 +367,7 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 			protectedCategories.HandleFunc("", handler.Create).Methods("POST")
 			protectedCategories.HandleFunc("/{category_id}", handler.GetByID).Methods("GET")
 			protectedCategories.HandleFunc("/{category_id}", handler.Update).Methods("PUT")
+			protectedCategories.HandleFunc("/{category_id}", handler.Delete).Methods("DELETE")
 
 			// Public routes (no auth required)
 			router.HandleFunc("/shops/{shop_id}/categories", handler.GetAllByShopIDWithFilters).Methods("GET")

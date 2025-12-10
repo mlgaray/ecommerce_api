@@ -78,6 +78,7 @@ func (r *router) categoryRoutes() {
 	sub.HandleFunc("", r.categoryHandler.Create).Methods(http.MethodPost)
 	sub.HandleFunc("/{category_id}", r.categoryHandler.GetByID).Methods(http.MethodGet)
 	sub.HandleFunc("/{category_id}", r.categoryHandler.Update).Methods(http.MethodPut)
+	sub.HandleFunc("/{category_id}", r.categoryHandler.Delete).Methods(http.MethodDelete)
 }
 
 func (r *router) shopRoutes() {
