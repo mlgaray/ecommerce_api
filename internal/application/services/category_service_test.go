@@ -1035,3 +1035,179 @@ func TestCategoryService_Update(t *testing.T) {
 		assert.Equal(t, repoError, err)
 	})
 }
+
+// =============================================================================
+// Delete Tests
+// =============================================================================
+
+func TestCategoryService_Delete(t *testing.T) {
+	t.Run("when delete is successful with image then cleans up storage", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		storageRef := "shop_1/categories/abc123"
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return(storageRef, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Delete(ctx, storageRef).
+			Return(nil) // Cleanup succeeds
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when delete is successful without image then does not call asset delete", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return("", nil) // No storage_ref
+
+		assetMock := mocks.NewAssetService(t)
+		// Delete should NOT be called when no storage_ref
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when category not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 999
+		shopID := 1
+		notFoundError := &errors.RecordNotFoundError{Message: errors.CategoryNotFound}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return("", notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+		assert.Equal(t, errors.CategoryNotFound, notFound.Message)
+	})
+
+	t.Run("when category has products then returns ReferentialIntegrityError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		fkError := &errors.ReferentialIntegrityError{Message: errors.CategoryHasProducts}
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return("", fkError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var refErr *errors.ReferentialIntegrityError
+		assert.True(t, stdErrors.As(err, &refErr))
+		assert.Equal(t, errors.CategoryHasProducts, refErr.Message)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		expectedError := stdErrors.New("database error")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return("", expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+	})
+
+	t.Run("when storage cleanup fails then still returns success", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 1
+		storageRef := "shop_1/categories/abc123"
+		deleteError := stdErrors.New("storage delete failed")
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return(storageRef, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Delete(ctx, storageRef).
+			Return(deleteError) // Cleanup fails but we ignore it (fire-and-forget)
+
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.NoError(t, err) // Success despite storage cleanup failure
+	})
+
+	t.Run("when different shop_id then validates correctly", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		categoryID := 1
+		shopID := 42
+
+		repoMock := mocks.NewCategoryRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, categoryID, shopID).
+			Return("", nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewCategoryService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, categoryID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+}

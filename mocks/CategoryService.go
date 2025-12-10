@@ -190,6 +190,69 @@ func (_c *CategoryService_Create_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// Delete provides a mock function for the type CategoryService
+func (_mock *CategoryService) Delete(ctx context.Context, categoryID int, shopID int) error {
+	ret := _mock.Called(ctx, categoryID, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = returnFunc(ctx, categoryID, shopID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CategoryService_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type CategoryService_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID int
+//   - shopID int
+func (_e *CategoryService_Expecter) Delete(ctx interface{}, categoryID interface{}, shopID interface{}) *CategoryService_Delete_Call {
+	return &CategoryService_Delete_Call{Call: _e.mock.On("Delete", ctx, categoryID, shopID)}
+}
+
+func (_c *CategoryService_Delete_Call) Run(run func(ctx context.Context, categoryID int, shopID int)) *CategoryService_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryService_Delete_Call) Return(err error) *CategoryService_Delete_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CategoryService_Delete_Call) RunAndReturn(run func(ctx context.Context, categoryID int, shopID int) error) *CategoryService_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllByShopIDWithFilters provides a mock function for the type CategoryService
 func (_mock *CategoryService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) ([]*models.Category, error) {
 	ret := _mock.Called(ctx, shopID, filters)

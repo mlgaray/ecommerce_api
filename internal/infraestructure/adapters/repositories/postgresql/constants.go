@@ -24,8 +24,9 @@ const (
 
 // PostgreSQL error codes
 const (
-	PqErrCodeUniqueViolation = "23505"
-	PqErrCodeRaiseException  = "P0003"
+	PqErrCodeUniqueViolation     = "23505"
+	PqErrCodeForeignKeyViolation = "23503"
+	PqErrCodeRaiseException      = "P0003"
 )
 
 // Database constraint names
