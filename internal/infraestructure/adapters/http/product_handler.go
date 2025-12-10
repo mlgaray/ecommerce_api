@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -175,26 +174,19 @@ func NewProductHandler(
 	}
 }
 
+// parseShopID extracts and validates shop_id from URL path.
+// Note: Empty path params are handled by Gorilla Mux (returns 404).
 func (p *ProductHandler) parseShopID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	shopIDStr := vars["shop_id"]
-	if strings.TrimSpace(shopIDStr) == "" {
-		logs.WithFields(map[string]interface{}{
-			"file":     ProductHandlerField,
-			"function": ParseShopIDSubFuncField,
-			"error":    "shop_id_parameter_required",
-		}).Error("Missing shop_id parameter")
-		return 0, &httpErrors.BadRequestError{Message: "shop_id_parameter_required"}
-	}
 
 	shopID, err := strconv.Atoi(shopIDStr)
-	if err != nil {
+	if err != nil || shopID <= 0 {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": ParseShopIDSubFuncField,
-			"sub_func": "strconv.Atoi",
 			"shop_id":  shopIDStr,
-			"error":    err.Error(),
+			"error":    err,
 		}).Error("Invalid shop_id parameter")
 		return 0, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
 	}
@@ -329,24 +321,17 @@ func (p *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// parseProductID extracts and validates product_id from URL path.
+// Note: Empty path params are handled by Gorilla Mux (returns 404).
 func (p *ProductHandler) parseProductID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	productIDStr := vars["product_id"]
-	if strings.TrimSpace(productIDStr) == "" {
-		logs.WithFields(map[string]interface{}{
-			"file":     ProductHandlerField,
-			"function": ParseProductIDSubFuncField,
-			"error":    "product_id_parameter_required",
-		}).Error("Missing product_id parameter")
-		return 0, &httpErrors.BadRequestError{Message: "product_id_parameter_required"}
-	}
 
 	productID, err := strconv.Atoi(productIDStr)
 	if err != nil || productID <= 0 {
 		logs.WithFields(map[string]interface{}{
 			"file":       ProductHandlerField,
 			"function":   ParseProductIDSubFuncField,
-			"sub_func":   "strconv.Atoi",
 			"product_id": productIDStr,
 			"error":      err,
 		}).Error("Invalid product_id parameter")

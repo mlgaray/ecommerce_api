@@ -30,4 +30,10 @@ type CategoryService interface {
 	// GetByID retrieves a category by ID.
 	// Returns RecordNotFoundError if category doesn't exist.
 	GetByID(ctx context.Context, categoryID int) (*models.Category, error)
+
+	// Delete deletes a category by ID.
+	// Validates shop ownership and handles image cleanup from external storage.
+	// Returns RecordNotFoundError if category doesn't exist or doesn't belong to shop.
+	// Returns ReferentialIntegrityError if category has products assigned.
+	Delete(ctx context.Context, categoryID, shopID int) error
 }

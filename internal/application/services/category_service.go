@@ -107,3 +107,22 @@ func (s *CategoryService) Update(ctx context.Context, categoryID int, category *
 
 	return nil
 }
+
+// Delete deletes a category by ID.
+// Validates shop ownership via repository and handles image cleanup from external storage.
+// Returns RecordNotFoundError if category doesn't exist or doesn't belong to shop.
+// Returns ReferentialIntegrityError if category has products assigned.
+func (s *CategoryService) Delete(ctx context.Context, categoryID, shopID int) error {
+	// 1. Delete category from database - returns storage_ref for cleanup
+	storageRef, err := s.categoryRepository.Delete(ctx, categoryID, shopID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Cleanup: delete image from external storage (fire-and-forget)
+	if storageRef != "" {
+		_ = s.assetService.Delete(ctx, storageRef)
+	}
+
+	return nil
+}

@@ -18,3 +18,12 @@ type UnauthorizedError struct {
 func (e *UnauthorizedError) Error() string {
 	return e.Message
 }
+
+// ForbiddenError represents HTTP 403 errors (authenticated but not authorized)
+type ForbiddenError struct {
+	Message string
+}
+
+func (e *ForbiddenError) Error() string {
+	return e.Message
+}

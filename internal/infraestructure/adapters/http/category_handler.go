@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -20,6 +19,7 @@ const (
 	CategoryHandlerField                = "category_handler"
 	CreateCategoryFunctionField         = "create"
 	UpdateCategoryFunctionField         = "update"
+	DeleteCategoryFunctionField         = "delete"
 	GetByIDCategoryFunctionField        = "get_by_id"
 	GetAllByShopIDCategoryFunctionField = "get_all_by_shop_id_with_filters"
 	BuildCategoryRequestSubFunc         = "build_category_request"
@@ -34,6 +34,7 @@ const (
 type CategoryHandler struct {
 	createCategory            ports.CreateCategoryUseCase
 	updateCategory            ports.UpdateCategoryUseCase
+	deleteCategory            ports.DeleteCategoryUseCase
 	getByID                   ports.GetCategoryByIDUseCase
 	getAllByShopIDWithFilters ports.GetAllCategoriesByShopIDWithFiltersUseCase
 }
@@ -42,12 +43,14 @@ type CategoryHandler struct {
 func NewCategoryHandler(
 	createCategoryUseCase ports.CreateCategoryUseCase,
 	updateCategoryUseCase ports.UpdateCategoryUseCase,
+	deleteCategoryUseCase ports.DeleteCategoryUseCase,
 	getByIDUseCase ports.GetCategoryByIDUseCase,
 	getAllByShopIDWithFiltersUseCase ports.GetAllCategoriesByShopIDWithFiltersUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
 		createCategory:            createCategoryUseCase,
 		updateCategory:            updateCategoryUseCase,
+		deleteCategory:            deleteCategoryUseCase,
 		getByID:                   getByIDUseCase,
 		getAllByShopIDWithFilters: getAllByShopIDWithFiltersUseCase,
 	}
@@ -394,24 +397,16 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseCategoryID extracts and validates category_id from URL path.
+// Note: Empty path params are handled by Gorilla Mux (returns 404).
 func (h *CategoryHandler) parseCategoryID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	categoryIDStr := vars["category_id"]
-	if strings.TrimSpace(categoryIDStr) == "" {
-		logs.WithFields(map[string]interface{}{
-			"file":     CategoryHandlerField,
-			"function": ParseCategoryIDSubFunc,
-			"error":    "category_id_parameter_required",
-		}).Error("Missing category_id parameter")
-		return 0, &httpErrors.BadRequestError{Message: "category_id_parameter_required"}
-	}
 
 	categoryID, err := strconv.Atoi(categoryIDStr)
 	if err != nil || categoryID <= 0 {
 		logs.WithFields(map[string]interface{}{
 			"file":        CategoryHandlerField,
 			"function":    ParseCategoryIDSubFunc,
-			"sub_func":    "strconv.Atoi",
 			"category_id": categoryIDStr,
 			"error":       err,
 		}).Error("Invalid category_id parameter")
@@ -422,29 +417,62 @@ func (h *CategoryHandler) parseCategoryID(r *http.Request) (int, error) {
 }
 
 // parseShopID extracts and validates shop_id from URL path.
+// Note: Empty path params are handled by Gorilla Mux (returns 404).
 func (h *CategoryHandler) parseShopID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	shopIDStr := vars["shop_id"]
-	if strings.TrimSpace(shopIDStr) == "" {
-		logs.WithFields(map[string]interface{}{
-			"file":     CategoryHandlerField,
-			"function": ParseCategoryShopIDSubFunc,
-			"error":    "shop_id_parameter_required",
-		}).Error("Missing shop_id parameter")
-		return 0, &httpErrors.BadRequestError{Message: "shop_id_parameter_required"}
-	}
 
 	shopID, err := strconv.Atoi(shopIDStr)
-	if err != nil {
+	if err != nil || shopID <= 0 {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": ParseCategoryShopIDSubFunc,
-			"sub_func": "strconv.Atoi",
 			"shop_id":  shopIDStr,
-			"error":    err.Error(),
+			"error":    err,
 		}).Error("Invalid shop_id parameter")
 		return 0, &httpErrors.BadRequestError{Message: "invalid_shop_id_format"}
 	}
 
 	return shopID, nil
+}
+
+// Delete handles DELETE /categories/{category_id} requests.
+func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     CategoryHandlerField,
+			"function": DeleteCategoryFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
+
+	// Parse and validate category_id from URL
+	categoryID, err := h.parseCategoryID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Delete category via use case
+	err = h.deleteCategory.Execute(ctx, categoryID, shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryHandlerField,
+			"function":    DeleteCategoryFunctionField,
+			"category_id": categoryID,
+			"shop_id":     shopID,
+			"error":       err.Error(),
+		}).Error("Error deleting category")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Return 204 No Content on success
+	w.WriteHeader(http.StatusNoContent)
 }

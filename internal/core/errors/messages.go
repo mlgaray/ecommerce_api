@@ -29,6 +29,7 @@ const (
 	CategoryNameIsRequired      = "category_name_is_required"
 	CategoryAlreadyExistsInShop = "category_already_exists_in_shop"
 	CategoryImageIsRequired     = "category_image_is_required"
+	CategoryHasProducts         = "category_has_products"
 
 	// Authentication related error messages
 	TokenExpired            = "token_expired"

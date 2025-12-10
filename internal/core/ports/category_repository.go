@@ -32,4 +32,11 @@ type CategoryRepository interface {
 	// CountByShopIDWithFilters returns total count of categories matching filters.
 	// Used for first page to show "X of Y" in frontend.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.CategoryFilters) (int, error)
+
+	// Delete deletes a category by ID.
+	// Validates that the category belongs to the specified shop.
+	// Returns the storage_ref of the deleted image (if any) for cleanup in external storage.
+	// Returns RecordNotFoundError if category doesn't exist or doesn't belong to shop.
+	// Returns ReferentialIntegrityError if category has products assigned.
+	Delete(ctx context.Context, categoryID, shopID int) (string, error)
 }
