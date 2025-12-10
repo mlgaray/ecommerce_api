@@ -9,7 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
+
+func init() {
+	logs.Init()
+}
 
 func TestHandleError(t *testing.T) {
 	tests := []struct {
