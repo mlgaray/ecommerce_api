@@ -1014,9 +1014,10 @@ func TestProductService_Delete(t *testing.T) {
 			Delete(ctx, productID, shopID).
 			Return(storageRefs, nil)
 
+		// AssetService.Delete is called in fire-and-forget goroutines with a new context
+		// Use Maybe() to allow calls without requiring them (async behavior)
 		assetMock := mocks.NewAssetService(t)
-		// Note: AssetService.Delete is called in fire-and-forget goroutines
-		// We can't easily test async behavior, but we verify repo was called
+		assetMock.On("Delete", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 		service := NewProductService(repoMock, assetMock)
 
@@ -1135,8 +1136,11 @@ func TestProductService_Delete(t *testing.T) {
 			Delete(ctx, productID, shopID).
 			Return(storageRefs, nil)
 
-		assetMock := mocks.NewAssetService(t)
 		// Only non-empty refs should trigger cleanup (fire-and-forget)
+		// Use Maybe() to allow async calls without requiring them
+		assetMock := mocks.NewAssetService(t)
+		assetMock.On("Delete", mock.Anything, mock.Anything).Return(nil).Maybe()
+
 		service := NewProductService(repoMock, assetMock)
 
 		// Act
