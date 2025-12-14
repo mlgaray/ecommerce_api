@@ -69,6 +69,7 @@ func (r *router) productRoutes() {
 	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
 	sub.HandleFunc("/{product_id}", r.productHandler.GetByID).Methods(http.MethodGet)
 	sub.HandleFunc("/{product_id}", r.productHandler.Update).Methods(http.MethodPut)
+	sub.HandleFunc("/{product_id}", r.productHandler.Delete).Methods(http.MethodDelete)
 }
 
 func (r *router) categoryRoutes() {

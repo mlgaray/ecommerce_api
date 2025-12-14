@@ -265,6 +265,7 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			fx.Annotate(product.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllByShopIDWithFiltersUseCase))),
 			fx.Annotate(product.NewGetByIDUseCase, fx.As(new(ports.GetByIDUseCase))),
 			fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
+			fx.Annotate(product.NewDeleteProductUseCase, fx.As(new(ports.DeleteProductUseCase))),
 
 			// Provide handler
 			authhttp.NewProductHandler,
@@ -279,6 +280,7 @@ func (ctx *TestContext) SetupProductTestApp() error {
 			protectedProducts.HandleFunc("", handler.Create).Methods("POST")
 			protectedProducts.HandleFunc("/{product_id}", handler.GetByID).Methods("GET")
 			protectedProducts.HandleFunc("/{product_id}", handler.Update).Methods("PUT")
+			protectedProducts.HandleFunc("/{product_id}", handler.Delete).Methods("DELETE")
 
 			// Public routes (no auth required)
 			router.HandleFunc("/shops/{shop_id}/products", handler.GetAllByShopIDWithFilters).Methods("GET")
