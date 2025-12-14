@@ -83,6 +83,52 @@ func (_c *ProductHandler_Create_Call) RunAndReturn(run func(responseWriter http.
 	return _c
 }
 
+// Delete provides a mock function for the type ProductHandler
+func (_mock *ProductHandler) Delete(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// ProductHandler_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type ProductHandler_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *ProductHandler_Expecter) Delete(responseWriter interface{}, request interface{}) *ProductHandler_Delete_Call {
+	return &ProductHandler_Delete_Call{Call: _e.mock.On("Delete", responseWriter, request)}
+}
+
+func (_c *ProductHandler_Delete_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *ProductHandler_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProductHandler_Delete_Call) Return() *ProductHandler_Delete_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *ProductHandler_Delete_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *ProductHandler_Delete_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetAllByShopIDWithFilters provides a mock function for the type ProductHandler
 func (_mock *ProductHandler) GetAllByShopIDWithFilters(responseWriter http.ResponseWriter, request *http.Request) {
 	_mock.Called(responseWriter, request)

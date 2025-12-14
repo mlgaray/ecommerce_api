@@ -19,4 +19,11 @@ type ProductRepository interface {
 	// Validates that the product belongs to the specified shop.
 	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
 	Update(ctx context.Context, productID int, product *models.Product, shopID int) (deletedRefs []string, err error)
+
+	// Delete deletes a product by ID.
+	// Validates that the product belongs to the specified shop via WHERE clause.
+	// Returns array of storage_refs of deleted images for cleanup in external storage.
+	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+	// Related entities (images, variants, variant_options) are cascade-deleted automatically.
+	Delete(ctx context.Context, productID, shopID int) (deletedRefs []string, err error)
 }

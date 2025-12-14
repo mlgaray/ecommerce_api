@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports" // Used for interface types in struct
@@ -117,6 +118,31 @@ func (s *ProductService) Update(ctx context.Context, productID int, product *mod
 	for _, ref := range deletedRefs {
 		if ref != "" {
 			_ = s.assetService.Delete(ctx, ref)
+		}
+	}
+
+	return nil
+}
+
+// Delete deletes a product by ID.
+// Validates shop ownership via repository and handles cleanup of multiple images from external storage.
+// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+func (s *ProductService) Delete(ctx context.Context, productID, shopID int) error {
+	// 1. Delete product from database - returns array of storage_refs for cleanup
+	storageRefs, err := s.productRepository.Delete(ctx, productID, shopID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Fire-and-forget: cleanup images in parallel (goroutine per image)
+	// User receives 204 immediately, cleanup runs in background
+	for _, ref := range storageRefs {
+		if ref != "" {
+			go func(storageRef string) {
+				bgCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				defer cancel()
+				_ = s.assetService.Delete(bgCtx, storageRef)
+			}(ref)
 		}
 	}
 

@@ -54,6 +54,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getCategoryByIDSteps := steps.NewGetCategoryByIDSteps()
 	updateCategorySteps := steps.NewUpdateCategorySteps()
 	deleteCategorySteps := steps.NewDeleteCategorySteps()
+	deleteProductSteps := steps.NewDeleteProductSteps()
 	commonSteps := steps.NewCommonSteps()
 
 	// Register steps
@@ -62,6 +63,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	productSteps.RegisterSteps(sc)
 	getProductsByShopIDSteps.RegisterSteps(sc)
 	updateProductSteps.RegisterSteps(sc)
+	deleteProductSteps.RegisterSteps(sc)
 	categorySteps.RegisterSteps(sc)
 	getCategoriesByShopIDSteps.RegisterSteps(sc)
 	getCategoryByIDSteps.RegisterSteps(sc)

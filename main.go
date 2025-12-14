@@ -72,6 +72,7 @@ var Module = fx.Options(
 		fx.Annotate(product.NewGetAllByShopIDWithFiltersUseCase, fx.As(new(ports.GetAllByShopIDWithFiltersUseCase))),
 		fx.Annotate(product.NewGetByIDUseCase, fx.As(new(ports.GetByIDUseCase))),
 		fx.Annotate(product.NewUpdateProductUseCase, fx.As(new(ports.UpdateProductUseCase))),
+		fx.Annotate(product.NewDeleteProductUseCase, fx.As(new(ports.DeleteProductUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewProductHandler, fx.As(new(ports.ProductHandler))),
 
