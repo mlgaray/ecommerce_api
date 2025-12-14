@@ -184,6 +184,80 @@ func (_c *ProductRepository_Create_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// Delete provides a mock function for the type ProductRepository
+func (_mock *ProductRepository) Delete(ctx context.Context, productID int, shopID int) ([]string, error) {
+	ret := _mock.Called(ctx, productID, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) ([]string, error)); ok {
+		return returnFunc(ctx, productID, shopID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) []string); ok {
+		r0 = returnFunc(ctx, productID, shopID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = returnFunc(ctx, productID, shopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProductRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type ProductRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - productID int
+//   - shopID int
+func (_e *ProductRepository_Expecter) Delete(ctx interface{}, productID interface{}, shopID interface{}) *ProductRepository_Delete_Call {
+	return &ProductRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, productID, shopID)}
+}
+
+func (_c *ProductRepository_Delete_Call) Run(run func(ctx context.Context, productID int, shopID int)) *ProductRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ProductRepository_Delete_Call) Return(deletedRefs []string, err error) *ProductRepository_Delete_Call {
+	_c.Call.Return(deletedRefs, err)
+	return _c
+}
+
+func (_c *ProductRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, productID int, shopID int) ([]string, error)) *ProductRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllByShopIDWithFilters provides a mock function for the type ProductRepository
 func (_mock *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) ([]*models.Product, error) {
 	ret := _mock.Called(ctx, shopID, filters)

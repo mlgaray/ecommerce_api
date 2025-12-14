@@ -29,4 +29,9 @@ type ProductService interface {
 
 	// CountByShopIDWithFilters returns total count of products matching filters.
 	CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.ProductFilters) (int, error)
+
+	// Delete deletes a product by ID.
+	// Validates shop ownership via repository and handles cleanup of multiple images from external storage.
+	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+	Delete(ctx context.Context, productID, shopID int) error
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 
+	coreErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/mocks"
@@ -548,6 +549,158 @@ func TestProductRepository_Update(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "database operation failed")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestProductRepository_Delete(t *testing.T) {
+	t.Run("when product exists with images then deletes and returns storage refs", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		// Mock CTE query that returns deleted count and storage_refs
+		rows := sqlmock.NewRows([]string{"deleted", "storage_refs"}).
+			AddRow(1, pq.Array([]string{"shop_1/products/img1", "shop_1/products/img2"}))
+
+		mock.ExpectQuery(`WITH deleted_images AS`).
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		storageRefs, err := repo.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, storageRefs, 2)
+		assert.Equal(t, "shop_1/products/img1", storageRefs[0])
+		assert.Equal(t, "shop_1/products/img2", storageRefs[1])
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product exists without images then deletes and returns empty refs", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 2
+		shopID := 1
+
+		rows := sqlmock.NewRows([]string{"deleted", "storage_refs"}).
+			AddRow(1, pq.Array([]string{}))
+
+		mock.ExpectQuery(`WITH deleted_images AS`).
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		storageRefs, err := repo.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Empty(t, storageRefs)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 999
+		shopID := 1
+
+		// Product doesn't exist - deleted count is 0
+		rows := sqlmock.NewRows([]string{"deleted", "storage_refs"}).
+			AddRow(0, pq.Array([]string{}))
+
+		mock.ExpectQuery(`WITH deleted_images AS`).
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		storageRefs, err := repo.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, storageRefs)
+		var notFoundErr *coreErrors.RecordNotFoundError
+		assert.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, coreErrors.ProductNotFound, notFoundErr.Message)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product belongs to different shop then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 2 // Different shop
+
+		// Product exists but belongs to different shop - deleted count is 0
+		rows := sqlmock.NewRows([]string{"deleted", "storage_refs"}).
+			AddRow(0, pq.Array([]string{}))
+
+		mock.ExpectQuery(`WITH deleted_images AS`).
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		storageRefs, err := repo.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, storageRefs)
+		var notFoundErr *coreErrors.RecordNotFoundError
+		assert.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, coreErrors.ProductNotFound, notFoundErr.Message)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when database connection fails then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		expectedError := errors.New("connection refused")
+		mock.ExpectQuery(`WITH deleted_images AS`).
+			WithArgs(productID, shopID).
+			WillReturnError(expectedError)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		storageRefs, err := repo.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, storageRefs)
 		assert.Contains(t, err.Error(), "database operation failed")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})

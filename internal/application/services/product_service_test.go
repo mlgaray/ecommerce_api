@@ -996,3 +996,153 @@ func TestProductService_EdgeCases(t *testing.T) {
 		assert.NotNil(t, result)
 	})
 }
+
+// =============================================================================
+// Delete Tests
+// =============================================================================
+
+func TestProductService_Delete(t *testing.T) {
+	t.Run("when product exists and has images then deletes and returns storage refs", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+		storageRefs := []string{"shop_1/products/img1", "shop_1/products/img2"}
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(storageRefs, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		// Note: AssetService.Delete is called in fire-and-forget goroutines
+		// We can't easily test async behavior, but we verify repo was called
+
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when product exists without images then deletes successfully", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 2
+		shopID := 1
+		var emptyRefs []string
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(emptyRefs, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when product not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 999
+		shopID := 1
+		notFoundError := &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(nil, notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+		assert.Equal(t, errors.ProductNotFound, notFound.Message)
+	})
+
+	t.Run("when product belongs to different shop then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 2 // Different shop than product's actual shop
+		notFoundError := &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(nil, notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+		assert.Equal(t, errors.ProductNotFound, notFound.Message)
+	})
+
+	t.Run("when repository returns database error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+		expectedError := stdErrors.New("database operation failed")
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(nil, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+	})
+
+	t.Run("when product has empty storage refs then skips cleanup", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+		// Some refs are empty strings (should be skipped)
+		storageRefs := []string{"", "shop_1/products/img1", ""}
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			Delete(ctx, productID, shopID).
+			Return(storageRefs, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		// Only non-empty refs should trigger cleanup (fire-and-forget)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		err := service.Delete(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+}

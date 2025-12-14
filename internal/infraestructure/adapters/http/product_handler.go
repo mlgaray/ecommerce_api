@@ -21,6 +21,7 @@ const (
 	GetByIDFunctionField          = "get_by_id"
 	CreateProductFunctionField    = "create"
 	UpdateProductFunctionField    = "update"
+	DeleteProductFunctionField    = "delete"
 	ParseShopIDSubFuncField       = "parse_shop_id"
 	ParseProductIDSubFuncField    = "parse_product_id"
 	ParsePaginationSubFuncField   = "parse_pagination_params"
@@ -33,6 +34,7 @@ type ProductHandler struct {
 	getAllByShopIDWithFilters ports.GetAllByShopIDWithFiltersUseCase
 	getByID                   ports.GetByIDUseCase
 	updateProduct             ports.UpdateProductUseCase
+	deleteProduct             ports.DeleteProductUseCase
 }
 
 func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -165,12 +167,14 @@ func NewProductHandler(
 	getAllByShopIDWithFiltersUseCase ports.GetAllByShopIDWithFiltersUseCase,
 	getByIDUseCase ports.GetByIDUseCase,
 	updateProductUseCase ports.UpdateProductUseCase,
+	deleteProductUseCase ports.DeleteProductUseCase,
 ) *ProductHandler {
 	return &ProductHandler{
 		createProduct:             createProductUseCase,
 		getAllByShopIDWithFilters: getAllByShopIDWithFiltersUseCase,
 		getByID:                   getByIDUseCase,
 		updateProduct:             updateProductUseCase,
+		deleteProduct:             deleteProductUseCase,
 	}
 }
 
@@ -448,4 +452,45 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
+}
+
+// Delete handles DELETE /products/{product_id} requests.
+func (p *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get shop_id from context (injected by auth middleware from JWT token)
+	shopID := claims.GetFirstShopIDFromContext(ctx)
+	if shopID == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductHandlerField,
+			"function": DeleteProductFunctionField,
+			"error":    "shop_id_not_found_in_context",
+		}).Error("Shop ID not found in context")
+		httpErrors.HandleError(w, &httpErrors.UnauthorizedError{Message: "shop_id_not_found_in_token"})
+		return
+	}
+
+	// Parse and validate product_id from URL
+	productID, err := p.parseProductID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Delete product via use case
+	err = p.deleteProduct.Execute(ctx, productID, shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductHandlerField,
+			"function":   DeleteProductFunctionField,
+			"product_id": productID,
+			"shop_id":    shopID,
+			"error":      err.Error(),
+		}).Error("Error deleting product")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Return 204 No Content on success
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -27,6 +27,7 @@ const (
 	ProductCreateFunctionField      = "create"
 	ProductGetByIDFunctionField     = "get_by_id"
 	ProductUpdateFunctionField      = "update"
+	ProductDeleteFunctionField      = "delete"
 	ProductUnmarshallSubFuncField   = "unmarshall"
 	MarshalVariantsSubFuncField     = "marshal_variants"
 	MarshalImagesSubFuncField       = "marshal_images"
@@ -41,6 +42,7 @@ const (
 	LogFailedInsertVariantOption = "Failed to insert variant option"
 	LogFailedCreateProductSP     = "Failed to create product via stored procedure"
 	LogFailedUpdateProductSP     = "Failed to update product via stored procedure"
+	LogFailedDeleteProduct       = "Failed to delete product"
 	LogFailedMarshalVariants     = "Failed to marshal variants for stored procedure"
 	LogFailedMarshalImages       = "Failed to marshal images for stored procedure"
 	failedReadProductsByShop     = "Failed to read products by shop"
@@ -809,4 +811,62 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 	}).Info("Product update completed (stored procedure)")
 
 	return deletedRefs, nil
+}
+
+// Delete deletes a product by ID.
+// Validates that the product belongs to the specified shop via WHERE clause.
+// Returns array of storage_refs of deleted images for cleanup in external storage.
+// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+// Related entities (images, variants, variant_options) are cascade-deleted automatically.
+func (r *ProductRepository) Delete(ctx context.Context, productID, shopID int) ([]string, error) {
+	// Single transaction CTE: get all image storage_refs, then delete product
+	// Images/variants/variant_options are deleted by CASCADE, but we need storage_refs for external cleanup
+	const query = `
+		WITH deleted_images AS (
+			SELECT storage_ref FROM images WHERE product_id = $1 AND storage_ref IS NOT NULL
+		),
+		deleted_product AS (
+			DELETE FROM products WHERE id = $1 AND shop_id = $2
+			RETURNING id
+		)
+		SELECT
+			(SELECT COUNT(*) FROM deleted_product) as deleted,
+			COALESCE(array_agg(storage_ref) FILTER (WHERE storage_ref IS NOT NULL), ARRAY[]::text[]) as storage_refs
+		FROM deleted_images`
+
+	var deletedCount int
+	var storageRefs []string
+	err := r.db.QueryRowContext(ctx, query, productID, shopID).Scan(&deletedCount, pq.Array(&storageRefs))
+
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductRepositoryField,
+			"function":   ProductDeleteFunctionField,
+			"product_id": productID,
+			"shop_id":    shopID,
+			"error":      err.Error(),
+		}).Error(LogFailedDeleteProduct)
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// No rows deleted = product not found or doesn't belong to shop
+	if deletedCount == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductRepositoryField,
+			"function":   ProductDeleteFunctionField,
+			"product_id": productID,
+			"shop_id":    shopID,
+		}).Warn(productNotFoundMessage)
+		return nil, &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":        ProductRepositoryField,
+		"function":    ProductDeleteFunctionField,
+		"product_id":  productID,
+		"shop_id":     shopID,
+		"image_count": len(storageRefs),
+	}).Info("Product deleted successfully")
+
+	return storageRefs, nil
 }
