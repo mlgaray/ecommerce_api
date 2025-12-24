@@ -18,6 +18,5 @@ func NewSignupService(signupRepo ports.SignupRepository) ports.SignUpService {
 }
 
 func (s *SignupService) SignUp(ctx context.Context, user *models.User, shop *models.Shop) (*models.User, error) {
-	user.IsActive = true
 	return s.signupRepo.CreateUserWithShop(ctx, user, shop)
 }

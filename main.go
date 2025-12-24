@@ -44,12 +44,17 @@ var Module = fx.Options(
 		fx.Annotate(services.NewUserService, fx.As(new(ports.UserService))),
 		fx.Annotate(postgresql.NewUserRepository, fx.As(new(ports.UserRepository))),
 
-		// SHOP
-		// fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
-		fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
-
 		// ROLE
 		fx.Annotate(postgresql.NewRoleRepository, fx.As(new(ports.RoleRepository))),
+
+		// PAYMENT METHODS (needed by ShopRepository)
+		fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+
+		// DELIVERY METHODS (needed by ShopRepository)
+		fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
+
+		// SHOP (depends on PaymentMethodRepository and DeliveryMethodRepository)
+		fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 
 		// Sign UP
 		fx.Annotate(services.NewSignupService, fx.As(new(ports.SignUpService))),
