@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
 
 type ShopSQLRepository struct {
-	db *sql.DB
+	db                 *sql.DB
+	paymentMethodRepo  ports.PaymentMethodRepository
+	deliveryMethodRepo ports.DeliveryMethodRepository
 }
 
 func (s *ShopSQLRepository) Create(ctx context.Context, shop *models.Shop) (*models.Shop, error) {
@@ -35,8 +38,28 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, shop *
 	if err != nil {
 		return nil, err
 	}
-
 	shop.ID = shopID
+
+	// Crear payment methods para el shop (is_active = false)
+	paymentMethods, err := s.paymentMethodRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.createPaymentMethodsWithTx(ctx, tx, shop.ID, paymentMethods)
+	if err != nil {
+		return nil, err
+	}
+
+	// Crear delivery methods para el shop (is_active = false)
+	deliveryMethods, err := s.deliveryMethodRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.createDeliveryMethodsWithTx(ctx, tx, shop.ID, deliveryMethods)
+	if err != nil {
+		return nil, err
+	}
+
 	return shop, nil
 }
 
@@ -52,8 +75,28 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 	if err != nil {
 		return nil, err
 	}
-
 	shop.ID = shopID
+
+	// Crear payment methods para el shop (is_active = false)
+	paymentMethods, err := s.paymentMethodRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.createPaymentMethodsWithDB(ctx, shop.ID, paymentMethods)
+	if err != nil {
+		return nil, err
+	}
+
+	// Crear delivery methods para el shop (is_active = false)
+	deliveryMethods, err := s.deliveryMethodRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.createDeliveryMethodsWithDB(ctx, shop.ID, deliveryMethods)
+	if err != nil {
+		return nil, err
+	}
+
 	return shop, nil
 }
 
@@ -317,8 +360,343 @@ func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([
 	return shops, nil
 }
 
-func NewShopRepository(dataBaseConnection DataBaseConnection) ports.ShopRepository {
+// ==================== Payment Methods (internal) ====================
+
+func (s *ShopSQLRepository) createPaymentMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int, methods []*models.PaymentMethod) error {
+	const query = `INSERT INTO shop_payment_methods (shop_id, payment_method_id, is_active) VALUES ($1, $2, false)`
+
+	for _, method := range methods {
+		_, err := tx.ExecContext(ctx, query, shopID, method.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopSQLRepository) createPaymentMethodsWithDB(ctx context.Context, shopID int, methods []*models.PaymentMethod) error {
+	const query = `INSERT INTO shop_payment_methods (shop_id, payment_method_id, is_active) VALUES ($1, $2, false)`
+
+	for _, method := range methods {
+		_, err := s.db.ExecContext(ctx, query, shopID, method.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopSQLRepository) GetPaymentMethods(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error) {
+	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
+		return s.getPaymentMethodsWithTx(ctx, tx, shopID)
+	}
+	return s.getPaymentMethodsWithDB(ctx, shopID)
+}
+
+func (s *ShopSQLRepository) getPaymentMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int) ([]*models.ShopPaymentMethod, error) {
+	const query = `
+		SELECT
+			spm.id, spm.shop_id, spm.payment_method_id, spm.is_active,
+			pm.id, pm.name, pm.code, pm.description, pm.is_active
+		FROM shop_payment_methods spm
+		JOIN payment_methods pm ON spm.payment_method_id = pm.id
+		WHERE spm.shop_id = $1
+		ORDER BY pm.id
+	`
+
+	rows, err := tx.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanShopPaymentMethods(rows)
+}
+
+func (s *ShopSQLRepository) getPaymentMethodsWithDB(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error) {
+	const query = `
+		SELECT
+			spm.id, spm.shop_id, spm.payment_method_id, spm.is_active,
+			pm.id, pm.name, pm.code, pm.description, pm.is_active
+		FROM shop_payment_methods spm
+		JOIN payment_methods pm ON spm.payment_method_id = pm.id
+		WHERE spm.shop_id = $1
+		ORDER BY pm.id
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanShopPaymentMethods(rows)
+}
+
+func (s *ShopSQLRepository) scanShopPaymentMethods(rows *sql.Rows) ([]*models.ShopPaymentMethod, error) {
+	var methods []*models.ShopPaymentMethod
+	for rows.Next() {
+		var spm models.ShopPaymentMethod
+		var pm models.PaymentMethod
+		var pmDescription sql.NullString
+
+		err := rows.Scan(
+			&spm.ID, &spm.ShopID, &spm.PaymentMethodID, &spm.IsActive,
+			&pm.ID, &pm.Name, &pm.Code, &pmDescription, &pm.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if pmDescription.Valid {
+			pm.Description = pmDescription.String
+		}
+		spm.PaymentMethod = &pm
+		methods = append(methods, &spm)
+	}
+	return methods, rows.Err()
+}
+
+// ==================== Delivery Methods (internal) ====================
+
+func (s *ShopSQLRepository) createDeliveryMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int, methods []*models.DeliveryMethod) error {
+	const query = `INSERT INTO shop_delivery_methods (shop_id, delivery_method_id, is_active) VALUES ($1, $2, false)`
+
+	for _, method := range methods {
+		_, err := tx.ExecContext(ctx, query, shopID, method.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopSQLRepository) createDeliveryMethodsWithDB(ctx context.Context, shopID int, methods []*models.DeliveryMethod) error {
+	const query = `INSERT INTO shop_delivery_methods (shop_id, delivery_method_id, is_active) VALUES ($1, $2, false)`
+
+	for _, method := range methods {
+		_, err := s.db.ExecContext(ctx, query, shopID, method.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopSQLRepository) GetDeliveryMethods(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error) {
+	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
+		return s.getDeliveryMethodsWithTx(ctx, tx, shopID)
+	}
+	return s.getDeliveryMethodsWithDB(ctx, shopID)
+}
+
+func (s *ShopSQLRepository) getDeliveryMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int) ([]*models.ShopDeliveryMethod, error) {
+	const query = `
+		SELECT
+			sdm.id, sdm.shop_id, sdm.delivery_method_id, sdm.is_active,
+			dm.id, dm.name, dm.code, dm.description, dm.is_active
+		FROM shop_delivery_methods sdm
+		JOIN delivery_methods dm ON sdm.delivery_method_id = dm.id
+		WHERE sdm.shop_id = $1
+		ORDER BY dm.id
+	`
+
+	rows, err := tx.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanShopDeliveryMethods(rows)
+}
+
+func (s *ShopSQLRepository) getDeliveryMethodsWithDB(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error) {
+	const query = `
+		SELECT
+			sdm.id, sdm.shop_id, sdm.delivery_method_id, sdm.is_active,
+			dm.id, dm.name, dm.code, dm.description, dm.is_active
+		FROM shop_delivery_methods sdm
+		JOIN delivery_methods dm ON sdm.delivery_method_id = dm.id
+		WHERE sdm.shop_id = $1
+		ORDER BY dm.id
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanShopDeliveryMethods(rows)
+}
+
+func (s *ShopSQLRepository) scanShopDeliveryMethods(rows *sql.Rows) ([]*models.ShopDeliveryMethod, error) {
+	var methods []*models.ShopDeliveryMethod
+	for rows.Next() {
+		var sdm models.ShopDeliveryMethod
+		var dm models.DeliveryMethod
+		var dmDescription sql.NullString
+
+		err := rows.Scan(
+			&sdm.ID, &sdm.ShopID, &sdm.DeliveryMethodID, &sdm.IsActive,
+			&dm.ID, &dm.Name, &dm.Code, &dmDescription, &dm.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if dmDescription.Valid {
+			dm.Description = dmDescription.String
+		}
+		sdm.DeliveryMethod = &dm
+		methods = append(methods, &sdm)
+	}
+	return methods, rows.Err()
+}
+
+// ==================== Operating Schedules ====================
+
+// GetOperatingSchedules returns all operating schedules for a shop, ordered by day_of_week and open_time.
+func (s *ShopSQLRepository) GetOperatingSchedules(ctx context.Context, shopID int) ([]*models.OperatingSchedule, error) {
+	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
+		return s.getOperatingSchedulesWithTx(ctx, tx, shopID)
+	}
+	return s.getOperatingSchedulesWithDB(ctx, shopID)
+}
+
+func (s *ShopSQLRepository) getOperatingSchedulesWithTx(ctx context.Context, tx *sql.Tx, shopID int) ([]*models.OperatingSchedule, error) {
+	const query = `
+		SELECT id, shop_id, day_of_week, open_time, close_time, created_at
+		FROM operating_schedules
+		WHERE shop_id = $1
+		ORDER BY day_of_week, open_time
+	`
+
+	rows, err := tx.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanOperatingSchedules(rows)
+}
+
+func (s *ShopSQLRepository) getOperatingSchedulesWithDB(ctx context.Context, shopID int) ([]*models.OperatingSchedule, error) {
+	const query = `
+		SELECT id, shop_id, day_of_week, open_time, close_time, created_at
+		FROM operating_schedules
+		WHERE shop_id = $1
+		ORDER BY day_of_week, open_time
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, shopID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return s.scanOperatingSchedules(rows)
+}
+
+func (s *ShopSQLRepository) scanOperatingSchedules(rows *sql.Rows) ([]*models.OperatingSchedule, error) {
+	var schedules []*models.OperatingSchedule
+	for rows.Next() {
+		var os models.OperatingSchedule
+		var openTime, closeTime time.Time
+
+		err := rows.Scan(
+			&os.ID, &os.ShopID, &os.DayOfWeek,
+			&openTime, &closeTime, &os.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert TIME fields to "HH:MM" string format
+		os.OpenTime = openTime.Format("15:04")
+		os.CloseTime = closeTime.Format("15:04")
+
+		schedules = append(schedules, &os)
+	}
+	return schedules, rows.Err()
+}
+
+// SetOperatingSchedules replaces all operating schedules for a shop.
+// Deletes existing schedules and inserts new ones in a transaction.
+func (s *ShopSQLRepository) SetOperatingSchedules(ctx context.Context, shopID int, schedules []*models.OperatingSchedule) error {
+	// Start a transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Delete existing schedules
+	const deleteQuery = `DELETE FROM operating_schedules WHERE shop_id = $1`
+	_, err = tx.ExecContext(ctx, deleteQuery, shopID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing schedules: %w", err)
+	}
+
+	// Insert new schedules
+	const insertQuery = `
+		INSERT INTO operating_schedules (shop_id, day_of_week, open_time, close_time)
+		VALUES ($1, $2, $3, $4)
+	`
+	for _, schedule := range schedules {
+		_, err = tx.ExecContext(ctx, insertQuery, shopID, schedule.DayOfWeek, schedule.OpenTime, schedule.CloseTime)
+		if err != nil {
+			return fmt.Errorf("failed to insert schedule: %w", err)
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// IsShopOpen checks if the shop is open at the given time.
+// Returns true if there is an operating schedule that covers the given time.
+func (s *ShopSQLRepository) IsShopOpen(ctx context.Context, shopID int, checkTime time.Time) (bool, error) {
+	// Get day of week (0=Sunday, 6=Saturday)
+	dayOfWeek := int(checkTime.Weekday())
+	timeStr := checkTime.Format("15:04")
+
+	const query = `
+		SELECT EXISTS (
+			SELECT 1 FROM operating_schedules
+			WHERE shop_id = $1
+			  AND day_of_week = $2
+			  AND open_time <= $3::TIME
+			  AND close_time >= $3::TIME
+		)
+	`
+
+	var isOpen bool
+	err := s.db.QueryRowContext(ctx, query, shopID, dayOfWeek, timeStr).Scan(&isOpen)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if shop is open: %w", err)
+	}
+
+	return isOpen, nil
+}
+
+func NewShopRepository(
+	dataBaseConnection DataBaseConnection,
+	paymentMethodRepo ports.PaymentMethodRepository,
+	deliveryMethodRepo ports.DeliveryMethodRepository,
+) ports.ShopRepository {
 	return &ShopSQLRepository{
-		db: dataBaseConnection.Connect(),
+		db:                 dataBaseConnection.Connect(),
+		paymentMethodRepo:  paymentMethodRepo,
+		deliveryMethodRepo: deliveryMethodRepo,
 	}
 }

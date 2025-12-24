@@ -64,13 +64,13 @@ func (s *UserSQLRepository) Create(ctx context.Context, user *models.User) (*mod
 
 func (s *UserSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, user *models.User) (*models.User, error) {
 	const query = `
-		INSERT INTO users (name, last_name, email, password, phone)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (name, last_name, email, password, phone, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var userID int
-	err := tx.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone).Scan(&userID)
+	err := tx.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone, user.IsActive).Scan(&userID)
 	if err != nil {
 		return nil, s.handlePostgreSQLError(err, user.Email)
 	}
@@ -81,13 +81,13 @@ func (s *UserSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, user *
 
 func (s *UserSQLRepository) createWithDB(ctx context.Context, user *models.User) (*models.User, error) {
 	const query = `
-		INSERT INTO users (name, last_name, email, password, phone)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (name, last_name, email, password, phone, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var userID int
-	err := s.db.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone).Scan(&userID)
+	err := s.db.QueryRowContext(ctx, query, user.Name, user.LastName, user.Email, user.Password, user.Phone, user.IsActive).Scan(&userID)
 	if err != nil {
 		return nil, s.handlePostgreSQLError(err, user.Email)
 	}

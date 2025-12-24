@@ -15,7 +15,12 @@ type SignupSQLRepository struct {
 	roleRepo ports.RoleRepository
 }
 
-func NewSignupRepository(dataBaseConnection DataBaseConnection, userRepo ports.UserRepository, shopRepo ports.ShopRepository, roleRepo ports.RoleRepository) ports.SignupRepository {
+func NewSignupRepository(
+	dataBaseConnection DataBaseConnection,
+	userRepo ports.UserRepository,
+	shopRepo ports.ShopRepository,
+	roleRepo ports.RoleRepository,
+) ports.SignupRepository {
 	return &SignupSQLRepository{
 		db:       dataBaseConnection.Connect(),
 		userRepo: userRepo,
@@ -62,6 +67,7 @@ func (r *SignupSQLRepository) CreateUserWithShop(ctx context.Context, user *mode
 	createdUser.Roles = append(createdUser.Roles, adminRole)
 
 	// 3. Asignar UserID al shop y crearlo usando ShopRepository
+	// ShopRepository.Create() internamente crea los payment/delivery methods
 	shop.UserID = createdUser.ID
 	_, err = r.shopRepo.Create(txCtx, shop)
 	if err != nil {
