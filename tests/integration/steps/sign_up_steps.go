@@ -35,8 +35,8 @@ func (s *SignUpSteps) setupSQLExpectations() {
 		ctx.mockSQLMock.ExpectBegin()
 
 		// 2. User creation (UserRepo.Create)
-		ctx.mockSQLMock.ExpectQuery("INSERT INTO users \\(name, last_name, email, password, phone\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
-			WithArgs("John", "Doe", "newuser@example.com", sqlmock.AnyArg(), "+1234567890").
+		ctx.mockSQLMock.ExpectQuery("INSERT INTO users \\(name, last_name, email, password, phone, is_active\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\) RETURNING id").
+			WithArgs("John", "Doe", "newuser@example.com", sqlmock.AnyArg(), "+1234567890", false).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 		// 3. Get admin role (RoleRepo.GetByName)
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM roles WHERE name = \\$1").
@@ -53,7 +53,39 @@ func (s *SignUpSteps) setupSQLExpectations() {
 			WithArgs(1, "John's Shop", sqlmock.AnyArg(), "shop@example.com", "+1234567890", sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-		// 6. Commit transaction
+		// 6. Get all payment methods (PaymentMethodRepo.GetAll)
+		// Query: SELECT id, name, code, description, is_active FROM payment_methods WHERE is_active = true
+		ctx.mockSQLMock.ExpectQuery("SELECT .+ FROM payment_methods WHERE is_active \\= true").
+			WillReturnRows(sqlmock.NewRows([]string{"id", "name", "code", "description", "is_active"}).
+				AddRow(1, "Transferencia", "transfer", "Transferencia bancaria", true).
+				AddRow(2, "MercadoPago", "mercadopago", "Pago con MercadoPago", true))
+
+		// 7. Create shop_payment_methods for each payment method
+		// Query: INSERT INTO shop_payment_methods (shop_id, payment_method_id, is_active) VALUES ($1, $2, false)
+		ctx.mockSQLMock.ExpectExec("INSERT INTO shop_payment_methods").
+			WithArgs(1, 1).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		ctx.mockSQLMock.ExpectExec("INSERT INTO shop_payment_methods").
+			WithArgs(1, 2).
+			WillReturnResult(sqlmock.NewResult(2, 1))
+
+		// 8. Get all delivery methods (DeliveryMethodRepo.GetAll)
+		// Query: SELECT id, name, code, description, is_active FROM delivery_methods WHERE is_active = true
+		ctx.mockSQLMock.ExpectQuery("SELECT .+ FROM delivery_methods WHERE is_active \\= true").
+			WillReturnRows(sqlmock.NewRows([]string{"id", "name", "code", "description", "is_active"}).
+				AddRow(1, "Envío a domicilio", "delivery", "Envío a domicilio", true).
+				AddRow(2, "Retiro en local", "pickup", "Retiro en local", true))
+
+		// 9. Create shop_delivery_methods for each delivery method
+		// Query: INSERT INTO shop_delivery_methods (shop_id, delivery_method_id, is_active) VALUES ($1, $2, false)
+		ctx.mockSQLMock.ExpectExec("INSERT INTO shop_delivery_methods").
+			WithArgs(1, 1).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		ctx.mockSQLMock.ExpectExec("INSERT INTO shop_delivery_methods").
+			WithArgs(1, 2).
+			WillReturnResult(sqlmock.NewResult(2, 1))
+
+		// 10. Commit transaction
 		ctx.mockSQLMock.ExpectCommit()
 
 	case existingUserScenario:
@@ -61,8 +93,8 @@ func (s *SignUpSteps) setupSQLExpectations() {
 		ctx.mockSQLMock.ExpectBegin()
 
 		// User creation will fail with duplicate key error
-		ctx.mockSQLMock.ExpectQuery("INSERT INTO users \\(name, last_name, email, password, phone\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
-			WithArgs("John", "Doe", "existing@example.com", sqlmock.AnyArg(), "+1234567890").
+		ctx.mockSQLMock.ExpectQuery("INSERT INTO users \\(name, last_name, email, password, phone, is_active\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6\\) RETURNING id").
+			WithArgs("John", "Doe", "existing@example.com", sqlmock.AnyArg(), "+1234567890", false).
 			WillReturnError(&pq.Error{
 				Code:       "23505",
 				Constraint: "users_email_key",
