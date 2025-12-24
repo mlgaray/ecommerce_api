@@ -54,4 +54,46 @@ const (
 
 	// Authorization error messages
 	Forbidden = "forbidden"
+
+	// Payment Method related error messages
+	PaymentMethodNotFound          = "payment_method_not_found"
+	PaymentMethodIDIsRequired      = "payment_method_id_is_required"
+	ShopPaymentMethodNotFound      = "shop_payment_method_not_found"
+	ShopPaymentMethodAlreadyExists = "shop_payment_method_already_exists"
+
+	// Transfer config error messages
+	TransferConfigurationRequired       = "transfer_configuration_required"
+	TransferCBUIsRequired               = "transfer_cbu_is_required"
+	TransferCBUInvalidLength            = "transfer_cbu_invalid_length"
+	TransferCUILIsRequired              = "transfer_cuil_is_required"
+	TransferAccountHolderNameIsRequired = "transfer_account_holder_name_is_required"
+
+	// MercadoPago config error messages
+	MercadoPagoConfigurationRequired = "mercadopago_configuration_required"
+	MercadoPagoAccessTokenIsRequired = "mercadopago_access_token_is_required"
+	MercadoPagoPublicKeyIsRequired   = "mercadopago_public_key_is_required"
+
+	// Delivery Method related error messages
+	DeliveryMethodNotFound          = "delivery_method_not_found"
+	DeliveryMethodIDIsRequired      = "delivery_method_id_is_required"
+	ShopDeliveryMethodNotFound      = "shop_delivery_method_not_found"
+	ShopDeliveryMethodAlreadyExists = "shop_delivery_method_already_exists"
+
+	// Delivery zone error messages
+	DeliveryZoneNameIsRequired       = "delivery_zone_name_is_required"
+	DeliveryZoneCostCannotBeNegative = "delivery_zone_cost_cannot_be_negative"
+
+	// Pickup config error messages
+	PickupConfigurationRequired = "pickup_configuration_required"
+	PickupAddressIsRequired     = "pickup_address_is_required"
+	PickupCityIsRequired        = "pickup_city_is_required"
+
+	// Operating schedule error messages
+	InvalidDayOfWeek   = "invalid_day_of_week"
+	OpenTimeRequired   = "open_time_required"
+	CloseTimeRequired  = "close_time_required"
+	InvalidTimeFormat  = "invalid_time_format"
+	InvalidTimeRange   = "close_time_must_be_after_open_time"
+	ShopClosed         = "shop_is_closed"
+	ShopHasNoSchedules = "shop_has_no_operating_schedules_configured"
 )

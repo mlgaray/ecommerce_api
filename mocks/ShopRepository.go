@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	mock "github.com/stretchr/testify/mock"
@@ -106,6 +107,210 @@ func (_c *ShopRepository_Create_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// GetDeliveryMethods provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) GetDeliveryMethods(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error) {
+	ret := _mock.Called(ctx, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDeliveryMethods")
+	}
+
+	var r0 []*models.ShopDeliveryMethod
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*models.ShopDeliveryMethod, error)); ok {
+		return returnFunc(ctx, shopID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*models.ShopDeliveryMethod); ok {
+		r0 = returnFunc(ctx, shopID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.ShopDeliveryMethod)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, shopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopRepository_GetDeliveryMethods_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDeliveryMethods'
+type ShopRepository_GetDeliveryMethods_Call struct {
+	*mock.Call
+}
+
+// GetDeliveryMethods is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+func (_e *ShopRepository_Expecter) GetDeliveryMethods(ctx interface{}, shopID interface{}) *ShopRepository_GetDeliveryMethods_Call {
+	return &ShopRepository_GetDeliveryMethods_Call{Call: _e.mock.On("GetDeliveryMethods", ctx, shopID)}
+}
+
+func (_c *ShopRepository_GetDeliveryMethods_Call) Run(run func(ctx context.Context, shopID int)) *ShopRepository_GetDeliveryMethods_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_GetDeliveryMethods_Call) Return(shopDeliveryMethods []*models.ShopDeliveryMethod, err error) *ShopRepository_GetDeliveryMethods_Call {
+	_c.Call.Return(shopDeliveryMethods, err)
+	return _c
+}
+
+func (_c *ShopRepository_GetDeliveryMethods_Call) RunAndReturn(run func(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error)) *ShopRepository_GetDeliveryMethods_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOperatingSchedules provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) GetOperatingSchedules(ctx context.Context, shopID int) ([]*models.OperatingSchedule, error) {
+	ret := _mock.Called(ctx, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOperatingSchedules")
+	}
+
+	var r0 []*models.OperatingSchedule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*models.OperatingSchedule, error)); ok {
+		return returnFunc(ctx, shopID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*models.OperatingSchedule); ok {
+		r0 = returnFunc(ctx, shopID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.OperatingSchedule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, shopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopRepository_GetOperatingSchedules_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOperatingSchedules'
+type ShopRepository_GetOperatingSchedules_Call struct {
+	*mock.Call
+}
+
+// GetOperatingSchedules is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+func (_e *ShopRepository_Expecter) GetOperatingSchedules(ctx interface{}, shopID interface{}) *ShopRepository_GetOperatingSchedules_Call {
+	return &ShopRepository_GetOperatingSchedules_Call{Call: _e.mock.On("GetOperatingSchedules", ctx, shopID)}
+}
+
+func (_c *ShopRepository_GetOperatingSchedules_Call) Run(run func(ctx context.Context, shopID int)) *ShopRepository_GetOperatingSchedules_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_GetOperatingSchedules_Call) Return(operatingSchedules []*models.OperatingSchedule, err error) *ShopRepository_GetOperatingSchedules_Call {
+	_c.Call.Return(operatingSchedules, err)
+	return _c
+}
+
+func (_c *ShopRepository_GetOperatingSchedules_Call) RunAndReturn(run func(ctx context.Context, shopID int) ([]*models.OperatingSchedule, error)) *ShopRepository_GetOperatingSchedules_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetPaymentMethods provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) GetPaymentMethods(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error) {
+	ret := _mock.Called(ctx, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPaymentMethods")
+	}
+
+	var r0 []*models.ShopPaymentMethod
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*models.ShopPaymentMethod, error)); ok {
+		return returnFunc(ctx, shopID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*models.ShopPaymentMethod); ok {
+		r0 = returnFunc(ctx, shopID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.ShopPaymentMethod)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, shopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopRepository_GetPaymentMethods_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPaymentMethods'
+type ShopRepository_GetPaymentMethods_Call struct {
+	*mock.Call
+}
+
+// GetPaymentMethods is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+func (_e *ShopRepository_Expecter) GetPaymentMethods(ctx interface{}, shopID interface{}) *ShopRepository_GetPaymentMethods_Call {
+	return &ShopRepository_GetPaymentMethods_Call{Call: _e.mock.On("GetPaymentMethods", ctx, shopID)}
+}
+
+func (_c *ShopRepository_GetPaymentMethods_Call) Run(run func(ctx context.Context, shopID int)) *ShopRepository_GetPaymentMethods_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_GetPaymentMethods_Call) Return(shopPaymentMethods []*models.ShopPaymentMethod, err error) *ShopRepository_GetPaymentMethods_Call {
+	_c.Call.Return(shopPaymentMethods, err)
+	return _c
+}
+
+func (_c *ShopRepository_GetPaymentMethods_Call) RunAndReturn(run func(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error)) *ShopRepository_GetPaymentMethods_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetShopsByUserID provides a mock function for the type ShopRepository
 func (_mock *ShopRepository) GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error) {
 	ret := _mock.Called(ctx, userID)
@@ -170,6 +375,141 @@ func (_c *ShopRepository_GetShopsByUserID_Call) Return(shops []*models.Shop, err
 }
 
 func (_c *ShopRepository_GetShopsByUserID_Call) RunAndReturn(run func(ctx context.Context, userID int) ([]*models.Shop, error)) *ShopRepository_GetShopsByUserID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsShopOpen provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) IsShopOpen(ctx context.Context, shopID int, checkTime time.Time) (bool, error) {
+	ret := _mock.Called(ctx, shopID, checkTime)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsShopOpen")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time) (bool, error)); ok {
+		return returnFunc(ctx, shopID, checkTime)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time) bool); ok {
+		r0 = returnFunc(ctx, shopID, checkTime)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, time.Time) error); ok {
+		r1 = returnFunc(ctx, shopID, checkTime)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopRepository_IsShopOpen_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsShopOpen'
+type ShopRepository_IsShopOpen_Call struct {
+	*mock.Call
+}
+
+// IsShopOpen is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - checkTime time.Time
+func (_e *ShopRepository_Expecter) IsShopOpen(ctx interface{}, shopID interface{}, checkTime interface{}) *ShopRepository_IsShopOpen_Call {
+	return &ShopRepository_IsShopOpen_Call{Call: _e.mock.On("IsShopOpen", ctx, shopID, checkTime)}
+}
+
+func (_c *ShopRepository_IsShopOpen_Call) Run(run func(ctx context.Context, shopID int, checkTime time.Time)) *ShopRepository_IsShopOpen_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_IsShopOpen_Call) Return(b bool, err error) *ShopRepository_IsShopOpen_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *ShopRepository_IsShopOpen_Call) RunAndReturn(run func(ctx context.Context, shopID int, checkTime time.Time) (bool, error)) *ShopRepository_IsShopOpen_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetOperatingSchedules provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) SetOperatingSchedules(ctx context.Context, shopID int, schedules []*models.OperatingSchedule) error {
+	ret := _mock.Called(ctx, shopID, schedules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetOperatingSchedules")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, []*models.OperatingSchedule) error); ok {
+		r0 = returnFunc(ctx, shopID, schedules)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ShopRepository_SetOperatingSchedules_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOperatingSchedules'
+type ShopRepository_SetOperatingSchedules_Call struct {
+	*mock.Call
+}
+
+// SetOperatingSchedules is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - schedules []*models.OperatingSchedule
+func (_e *ShopRepository_Expecter) SetOperatingSchedules(ctx interface{}, shopID interface{}, schedules interface{}) *ShopRepository_SetOperatingSchedules_Call {
+	return &ShopRepository_SetOperatingSchedules_Call{Call: _e.mock.On("SetOperatingSchedules", ctx, shopID, schedules)}
+}
+
+func (_c *ShopRepository_SetOperatingSchedules_Call) Run(run func(ctx context.Context, shopID int, schedules []*models.OperatingSchedule)) *ShopRepository_SetOperatingSchedules_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 []*models.OperatingSchedule
+		if args[2] != nil {
+			arg2 = args[2].([]*models.OperatingSchedule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_SetOperatingSchedules_Call) Return(err error) *ShopRepository_SetOperatingSchedules_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ShopRepository_SetOperatingSchedules_Call) RunAndReturn(run func(ctx context.Context, shopID int, schedules []*models.OperatingSchedule) error) *ShopRepository_SetOperatingSchedules_Call {
 	_c.Call.Return(run)
 	return _c
 }

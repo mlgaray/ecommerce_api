@@ -99,7 +99,7 @@ migrate-down-seeds:
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 5
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 6
 
 .PHONY: migrate-force-seeds
 
@@ -107,7 +107,7 @@ migrate-force-seeds:
 
 migrate-force:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 10
+	migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 7
 
 .PHONY: migrate-force
 
@@ -156,13 +156,35 @@ code-quality: fmt lint
 
 .PHONY: lint-fix fmt lint code-quality
 
-# Database reset: Drop everything and recreate from scratch
+# Database drop: Drop everything (seeds, functions, tables)
+# Order matters: seeds -> functions -> tables (respect dependencies)
+drop-db:
+	@echo "=========================================="
+	@echo "🗑️  DROPPING DATABASE (All Objects)"
+	@echo "=========================================="
+	@echo ""
+	@echo "Step 1/3: Dropping seeds..."
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" down -all || echo "⚠️  No seeds to drop or already dropped"
+	@echo ""
+	@echo "Step 2/3: Dropping functions (stored procedures)..."
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" down -all || echo "⚠️  No functions to drop or already dropped"
+	@echo ""
+	@echo "Step 3/3: Dropping tables and indexes..."
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" down -all || echo "⚠️  No tables to drop or already dropped"
+	@echo ""
+	@echo "=========================================="
+	@echo "DATABASE DROP COMPLETE"
+	@echo "=========================================="
+
+.PHONY: drop-db
+
+# Database reset and up: Drop everything and recreate from scratch
 # Order matters:
 #   DOWN: seeds -> functions -> tables (respect dependencies)
 #   UP: tables -> functions -> seeds (build dependencies)
-reset-db:
+reset-and-up-db:
 	@echo "=========================================="
-	@echo "🔄 RESETTING DATABASE (Full Reset)"
+	@echo "RESETTING DATABASE (Full Reset)"
 	@echo "=========================================="
 	@echo ""
 	@echo "Step 1/6: Dropping seeds..."
@@ -187,7 +209,7 @@ reset-db:
 	@echo "DATABASE RESET COMPLETE"
 	@echo "=========================================="
 
-.PHONY: reset-db
+.PHONY: reset-and-up-db
 
 # Quick reset: Reset only seeds (keeps tables and structure)
 reset-seeds:

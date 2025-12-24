@@ -157,8 +157,10 @@ func (ctx *TestContext) SetupTestApp() error {
 			fx.Annotate(services.NewSignupService, fx.As(new(ports.SignUpService))),
 			fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
 			fx.Annotate(postgresql.NewUserRepository, fx.As(new(ports.UserRepository))),
-			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 			fx.Annotate(postgresql.NewRoleRepository, fx.As(new(ports.RoleRepository))),
+			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
+			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 			fx.Annotate(postgresql.NewSignupRepository, fx.As(new(ports.SignupRepository))),
 
 			// Provide use cases
