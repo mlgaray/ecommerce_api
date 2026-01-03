@@ -15,6 +15,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
@@ -375,6 +376,83 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 
 			// Public routes (no auth required)
 			router.HandleFunc("/shops/{shop_id}/categories", handler.GetAllByShopIDWithFilters).Methods("GET")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupShopTestApp initializes the test application for shop tests
+func (ctx *TestContext) SetupShopTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order
+	sqlMock.MatchExpectationsInOrder(false)
+
+	// Create TokenService for auth middleware
+	tokenService := jwt.NewTokenService()
+
+	// Generate test token for authenticated requests
+	testUser := &models.User{
+		ID:    1,
+		Email: "test@example.com",
+	}
+	testShopIDs := []int{1}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	if err != nil {
+		return err
+	}
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide TokenService for auth middleware
+			fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
+
+			// Provide auth middleware
+			middleware.NewAuthMiddleware,
+
+			// Provide shop dependencies
+			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
+
+			// Provide use cases
+			fx.Annotate(shop.NewGetShopByIDUseCase, fx.As(new(ports.GetShopByIDUseCase))),
+			fx.Annotate(shop.NewUpdateShopUseCase, fx.As(new(ports.UpdateShopUseCase))),
+
+			// Provide handler
+			authhttp.NewShopHandler,
+		),
+		fx.Invoke(func(handler *authhttp.ShopHandler, authMiddleware *middleware.AuthMiddleware) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+
+			// Protected routes (require auth) - using REAL auth middleware
+			protectedShops := router.PathPrefix("/shops").Subrouter()
+			protectedShops.Use(authMiddleware.Authenticate)
+			protectedShops.HandleFunc("/{shop_id}", handler.GetByID).Methods("GET")
+			protectedShops.HandleFunc("/{shop_id}", handler.Update).Methods("PUT")
 
 			ctx.server = httptest.NewServer(router)
 		}),

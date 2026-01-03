@@ -1,20 +1,15 @@
 package models
 
 import (
-	"time"
-
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
 // MercadoPagoConfig represents MercadoPago configuration for a shop
 type MercadoPagoConfig struct {
-	ID                  int       `json:"id,omitempty"`
-	ShopPaymentMethodID int       `json:"shop_payment_method_id,omitempty"`
-	AccessToken         string    `json:"-"` // Never expose in JSON responses
-	PublicKey           string    `json:"public_key,omitempty"`
-	UserID              string    `json:"user_id,omitempty"`
-	CreatedAt           time.Time `json:"created_at,omitempty"`
-	UpdatedAt           time.Time `json:"updated_at,omitempty"`
+	ID          int    `json:"id,omitempty"`
+	AccessToken string `json:"access_token,omitempty"`
+	PublicKey   string `json:"public_key,omitempty"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 // Validate validates business rules for MercadoPagoConfig

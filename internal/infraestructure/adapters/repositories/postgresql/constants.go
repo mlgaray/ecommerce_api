@@ -27,6 +27,7 @@ const (
 	PqErrCodeUniqueViolation     = "23505"
 	PqErrCodeForeignKeyViolation = "23503"
 	PqErrCodeRaiseException      = "P0003"
+	PqErrCodeNoDataFound         = "P0002"
 )
 
 // Database constraint names

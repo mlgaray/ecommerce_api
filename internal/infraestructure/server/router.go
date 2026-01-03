@@ -19,6 +19,7 @@ type router struct {
 	healthHandler   ports.HealthHandler
 	productHandler  ports.ProductHandler
 	categoryHandler ports.CategoryHandler
+	shopHandler     ports.ShopHandler
 	authMiddleware  *middleware.AuthMiddleware
 }
 
@@ -27,6 +28,7 @@ func NewRouter(
 	healthHandler ports.HealthHandler,
 	productHandler ports.ProductHandler,
 	categoryHandler ports.CategoryHandler,
+	shopHandler ports.ShopHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *router {
 	r := mux.NewRouter()
@@ -38,6 +40,7 @@ func NewRouter(
 		healthHandler:   healthHandler,
 		productHandler:  productHandler,
 		categoryHandler: categoryHandler,
+		shopHandler:     shopHandler,
 		authMiddleware:  authMiddleware,
 	}
 }
@@ -83,6 +86,7 @@ func (r *router) categoryRoutes() {
 }
 
 func (r *router) shopRoutes() {
+	// Public routes (no auth required)
 	sub := r.router.PathPrefix("/shops").Subrouter()
 	// GET /shops/{shop_id}/products?search=laptop&category_id=1&is_active=true&limit=20&cursor=0
 	// Supports both filtered and non-filtered queries (backward compatible)
@@ -90,6 +94,14 @@ func (r *router) shopRoutes() {
 	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
 	// GET /shops/{shop_id}/categories?search=electronics&sort=name&order=asc&limit=20&cursor=...
 	sub.HandleFunc("/{shop_id}/categories", r.categoryHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
+
+	// Protected routes (auth required)
+	protected := r.router.PathPrefix("/shops").Subrouter()
+	protected.Use(r.authMiddleware.Authenticate)
+	// GET /shops/{shop_id} - Get shop by ID (owner only)
+	protected.HandleFunc("/{shop_id}", r.shopHandler.GetByID).Methods(http.MethodGet)
+	// PUT /shops/{shop_id} - Update shop (owner only)
+	protected.HandleFunc("/{shop_id}", r.shopHandler.Update).Methods(http.MethodPut)
 }
 
 func (r *router) metricsRoutes() {

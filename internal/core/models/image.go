@@ -7,5 +7,6 @@ package models
 type Image struct {
 	ID         int    `json:"id,omitempty"`
 	URL        string `json:"url,omitempty"`
+	Type       string `json:"type,omitempty"` // Used for shops: 'logo', 'cover'. NULL for other entities.
 	StorageRef string `json:"storage_ref,omitempty"`
 }

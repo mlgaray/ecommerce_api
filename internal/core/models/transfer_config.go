@@ -1,21 +1,16 @@
 package models
 
 import (
-	"time"
-
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
 // TransferConfig represents bank transfer configuration for a shop
 type TransferConfig struct {
-	ID                  int       `json:"id,omitempty"`
-	ShopPaymentMethodID int       `json:"shop_payment_method_id,omitempty"`
-	CBU                 string    `json:"cbu,omitempty"`
-	CUIL                string    `json:"cuil,omitempty"`
-	Alias               string    `json:"alias,omitempty"`
-	AccountHolderName   string    `json:"account_holder_name,omitempty"`
-	CreatedAt           time.Time `json:"created_at,omitempty"`
-	UpdatedAt           time.Time `json:"updated_at,omitempty"`
+	ID        int    `json:"id,omitempty"`
+	CBU       string `json:"cbu,omitempty"`
+	CUIL      string `json:"cuil,omitempty"`
+	Alias     string `json:"alias,omitempty"`
+	OwnerName string `json:"owner_name,omitempty"`
 }
 
 // Validate validates business rules for TransferConfig
@@ -35,9 +30,9 @@ func (t *TransferConfig) Validate() error {
 			Message: errors.TransferCUILIsRequired,
 		}
 	}
-	if t.AccountHolderName == "" {
+	if t.OwnerName == "" {
 		return &errors.ValidationError{
-			Message: errors.TransferAccountHolderNameIsRequired,
+			Message: errors.TransferOwnerNameIsRequired,
 		}
 	}
 	return nil

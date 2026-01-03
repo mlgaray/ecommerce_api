@@ -1,17 +1,15 @@
 package models
 
-type (
-	Shop struct {
-		ID     int    `json:"id,omitempty"`
-		UserID int    `json:"user_id,omitempty"`
-		Name   string `json:"name,omitempty"`
-		Slug   string `json:"slug,omitempty"`
-		Email  string `json:"email,omitempty"`
-		Phone  string `json:"phone,omitempty"`
-		// Categories []*Category `json:"categories,omitempty"`
-		Instagram string `json:"instagram,omitempty"`
-		// Address    *Address    `json:"address,omitempty"`
-		Image string `json:"image,omitempty"`
-		File  []byte `json:"file,omitempty"`
-	}
-)
+type Shop struct {
+	ID                 int                  `json:"id,omitempty"`
+	Name               string               `json:"name,omitempty"`
+	Slug               string               `json:"slug,omitempty"`
+	Email              string               `json:"email,omitempty"`
+	Phone              string               `json:"phone,omitempty"`
+	Instagram          string               `json:"instagram,omitempty"`
+	Images             []*Image             `json:"images,omitempty"` // type='logo' or type='cover'
+	Address            *Address             `json:"address,omitempty"`
+	PaymentMethods     []*PaymentMethod     `json:"payment_methods,omitempty"`
+	DeliveryMethods    []*DeliveryMethod    `json:"delivery_methods,omitempty"`
+	OperatingSchedules []*OperatingSchedule `json:"operating_schedules,omitempty"`
+}

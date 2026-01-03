@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(rm:*)",
-      "Bash(migrate:*)"
+      "Bash(migrate:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(/usr/local/go/bin/go build:*)",
+      "Bash(/usr/bin/go build:*)",
+      "Bash(~/go/bin/go build:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

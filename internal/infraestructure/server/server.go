@@ -16,7 +16,17 @@ type Server struct {
 }
 
 func (s *Server) Initialize() {
-	handler := cors.AllowAll().Handler(s.Router.RouteApp())
+	// CORS configuration - explicit settings to ensure headers are always added
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Content-Length", "Content-Type"},
+		AllowCredentials: false, // Cannot use credentials with AllowedOrigins: *
+		MaxAge:           86400, // 24 hours - cache preflight requests
+		Debug:            os.Getenv("ENVIRONMENT") == "development",
+	})
+	handler := corsMiddleware.Handler(s.Router.RouteApp())
 	writeTimeout := 10 * time.Second // Producción
 	if os.Getenv("ENVIRONMENT") == "test" {
 		writeTimeout = 300 * time.Second // 5 minutos para debug

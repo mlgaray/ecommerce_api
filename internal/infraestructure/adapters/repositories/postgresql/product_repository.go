@@ -759,7 +759,7 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 		// Check if it's a PostgreSQL error from the stored procedure
 		if pqErr, ok := err.(*pq.Error); ok {
 			// Check for "Product not found" (P0002)
-			if pqErr.Code == "P0002" {
+			if pqErr.Code == PqErrCodeNoDataFound {
 				logs.WithFields(map[string]interface{}{
 					"file":       ProductRepositoryField,
 					"function":   ProductUpdateFunctionField,
