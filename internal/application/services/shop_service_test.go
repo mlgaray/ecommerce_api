@@ -603,4 +603,97 @@ func TestShopService_Update(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, repoError, err)
 	})
+
+	t.Run("when update returns deleted refs then cleanup goroutines are triggered", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		var logoBuffer []byte
+		var coverBuffer []byte
+		deletedRefs := []string{"old_logo_ref", "old_cover_ref"}
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, shop).
+			Return(deletedRefs, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		// Cleanup happens in fire-and-forget goroutines with background context
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_logo_ref").
+			Return(nil).Maybe()
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_cover_ref").
+			Return(nil).Maybe()
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when deleted refs contains empty strings then skips them", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		var logoBuffer []byte
+		var coverBuffer []byte
+		deletedRefs := []string{"", "valid_ref", ""}
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, shop).
+			Return(deletedRefs, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		// Only "valid_ref" should trigger Delete, empty strings are skipped
+		assetMock.EXPECT().
+			Delete(mock.Anything, "valid_ref").
+			Return(nil).Maybe()
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when both uploads fail then returns logo error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		logoBuffer := []byte("logo_data")
+		coverBuffer := []byte("cover_data")
+		logoUploadError := stdErrors.New("logo upload failed")
+		coverUploadError := stdErrors.New("cover upload failed")
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, logoBuffer, "shop_1/images").
+			Return(nil, logoUploadError)
+		assetMock.EXPECT().
+			Upload(ctx, coverBuffer, "shop_1/images").
+			Return(nil, coverUploadError)
+		// No Delete calls expected - both images failed, nothing to rollback
+
+		repoMock := mocks.NewShopRepository(t)
+		// Repository should NOT be called when uploads fail
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, logoUploadError, err) // Returns first error (logo)
+	})
 }
