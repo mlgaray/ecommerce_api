@@ -1,0 +1,1 @@
+DELETE FROM addresses WHERE name IN ('Address Text');

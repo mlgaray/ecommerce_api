@@ -14,10 +14,10 @@ import (
 
 func newValidTransferConfig() *TransferConfig {
 	return &TransferConfig{
-		CBU:               "0123456789012345678901", // 22 characters
-		CUIL:              "20-12345678-9",
-		Alias:             "MI.ALIAS.MP",
-		AccountHolderName: "John Doe",
+		CBU:       "0123456789012345678901", // 22 characters
+		CUIL:      "20-12345678-9",
+		Alias:     "MI.ALIAS.MP",
+		OwnerName: "John Doe",
 	}
 }
 
@@ -82,16 +82,16 @@ func TestTransferConfig_Validate(t *testing.T) {
 		assert.Equal(t, errors.TransferCUILIsRequired, validationErr.Message)
 	})
 
-	t.Run("when account_holder_name is empty then returns error", func(t *testing.T) {
+	t.Run("when owner_name is empty then returns error", func(t *testing.T) {
 		config := newValidTransferConfig()
-		config.AccountHolderName = ""
+		config.OwnerName = ""
 
 		err := config.Validate()
 
 		assert.Error(t, err)
 		var validationErr *errors.ValidationError
 		assert.ErrorAs(t, err, &validationErr)
-		assert.Equal(t, errors.TransferAccountHolderNameIsRequired, validationErr.Message)
+		assert.Equal(t, errors.TransferOwnerNameIsRequired, validationErr.Message)
 	})
 
 	t.Run("when alias is empty then validation passes", func(t *testing.T) {

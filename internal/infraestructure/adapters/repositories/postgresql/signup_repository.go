@@ -66,10 +66,9 @@ func (r *SignupSQLRepository) CreateUserWithShop(ctx context.Context, user *mode
 	// Agregar el rol al usuario en memoria
 	createdUser.Roles = append(createdUser.Roles, adminRole)
 
-	// 3. Asignar UserID al shop y crearlo usando ShopRepository
+	// 3. Crear shop usando ShopRepository (userID como parámetro)
 	// ShopRepository.Create() internamente crea los payment/delivery methods
-	shop.UserID = createdUser.ID
-	_, err = r.shopRepo.Create(txCtx, shop)
+	_, err = r.shopRepo.Create(txCtx, createdUser.ID, shop)
 	if err != nil {
 		return nil, err
 	}

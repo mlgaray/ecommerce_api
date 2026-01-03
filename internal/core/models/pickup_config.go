@@ -1,22 +1,17 @@
 package models
 
 import (
-	"time"
-
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
 // PickupConfig represents pickup configuration for a shop
 type PickupConfig struct {
-	ID                   int       `json:"id,omitempty"`
-	ShopDeliveryMethodID int       `json:"shop_delivery_method_id,omitempty"`
-	Address              string    `json:"address,omitempty"`
-	City                 string    `json:"city,omitempty"`
-	Province             string    `json:"province,omitempty"`
-	PostalCode           string    `json:"postal_code,omitempty"`
-	Instructions         string    `json:"instructions,omitempty"`
-	CreatedAt            time.Time `json:"created_at,omitempty"`
-	UpdatedAt            time.Time `json:"updated_at,omitempty"`
+	ID           int    `json:"id,omitempty"`
+	Address      string `json:"address,omitempty"`
+	City         string `json:"city,omitempty"`
+	Province     string `json:"province,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty"`
+	Instructions string `json:"instructions,omitempty"`
 }
 
 // Validate validates business rules for PickupConfig

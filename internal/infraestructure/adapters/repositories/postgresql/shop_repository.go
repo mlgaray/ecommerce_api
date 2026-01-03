@@ -6,8 +6,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lib/pq"
+
+	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
+)
+
+// Note: Uses 'json' variable from product_repository.go (same package)
+
+// Shop repository log field constants
+const (
+	ShopRepositoryField      = "shop_repository"
+	ShopGetByIDFunctionField = "get_by_id"
 )
 
 type ShopSQLRepository struct {
@@ -16,25 +28,25 @@ type ShopSQLRepository struct {
 	deliveryMethodRepo ports.DeliveryMethodRepository
 }
 
-func (s *ShopSQLRepository) Create(ctx context.Context, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) Create(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error) {
 	// Extraer transacción del contexto si existe
 	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
-		return s.createWithTx(ctx, tx, shop)
+		return s.createWithTx(ctx, tx, userID, shop)
 	}
 
 	// Si no hay transacción, usar conexión directa
-	return s.createWithDB(ctx, shop)
+	return s.createWithDB(ctx, userID, shop)
 }
 
-func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID int, shop *models.Shop) (*models.Shop, error) {
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram, image)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO shops (user_id, name, slug, email, phone, instagram)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var shopID int
-	err := tx.QueryRowContext(ctx, query, shop.UserID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, shop.Image).Scan(&shopID)
+	err := tx.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram).Scan(&shopID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,15 +75,15 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, shop *
 	return shop, nil
 }
 
-func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error) {
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram, image)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO shops (user_id, name, slug, email, phone, instagram)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var shopID int
-	err := s.db.QueryRowContext(ctx, query, shop.UserID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, shop.Image).Scan(&shopID)
+	err := s.db.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram).Scan(&shopID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +112,230 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 	return shop, nil
 }
 
+// GetByID returns a shop with all its related entities loaded using a single query with LEFT JOIN LATERAL.
+func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Shop, error) {
+	const query = `
+		SELECT
+			s.id, s.name, s.slug, s.email, s.phone, s.instagram,
+			COALESCE(img.images, '[]'::jsonb) AS images,
+			addr.address,
+			COALESCE(pm.payment_methods, '[]'::jsonb) AS payment_methods,
+			COALESCE(dm.delivery_methods, '[]'::jsonb) AS delivery_methods,
+			COALESCE(os.operating_schedules, '[]'::jsonb) AS operating_schedules
+		FROM shops s
+
+		-- =========================
+		-- Images (logo, cover)
+		-- =========================
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object('id', i.id, 'url', i.url, 'type', i.type)
+				ORDER BY i.type DESC -- 'logo' before 'cover'
+			) AS images
+			FROM images i
+			WHERE i.shop_id = s.id AND i.type IS NOT NULL
+		) img ON TRUE
+
+		-- =========================
+		-- Address (1–1)
+		-- =========================
+		LEFT JOIN LATERAL (
+			SELECT jsonb_build_object(
+				'id', a.id, 'name', a.name, 'place_id', a.place_id, 'lat', a.ltd, 'lng', a.lng
+			) AS address
+			FROM addresses a
+			WHERE a.shop_id = s.id
+			ORDER BY a.id
+			LIMIT 1
+		) addr ON TRUE
+
+		-- =========================
+		-- Payment Methods (1–N) - Flattened structure
+		-- =========================
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', pmt.id,
+					'name', pmt.name,
+					'code', pmt.code,
+					'is_active', spm.is_active,
+					'transfer_config', tc.transfer_config,
+					'mercadopago_config', mc.mercadopago_config
+				) ORDER BY pmt.id
+			) AS payment_methods
+			FROM shop_payment_methods spm
+			JOIN payment_methods pmt ON pmt.id = spm.payment_method_id
+			-- Transfer config (0–1)
+			LEFT JOIN LATERAL (
+				SELECT jsonb_build_object(
+					'id', tcfg.id, 'cbu', tcfg.cbu, 'cuil', tcfg.cuil,
+					'alias', tcfg.alias, 'owner_name', tcfg.owner_name
+				) AS transfer_config
+				FROM transfer_configs tcfg
+				WHERE tcfg.shop_payment_method_id = spm.id
+				LIMIT 1
+			) tc ON TRUE
+			-- MercadoPago config (0–1)
+			LEFT JOIN LATERAL (
+				SELECT jsonb_build_object(
+					'id', mcfg.id, 'access_token', mcfg.access_token,
+					'public_key', mcfg.public_key, 'user_id', mcfg.user_id
+				) AS mercadopago_config
+				FROM mercadopago_configs mcfg
+				WHERE mcfg.shop_payment_method_id = spm.id
+				LIMIT 1
+			) mc ON TRUE
+			WHERE spm.shop_id = s.id
+		) pm ON TRUE
+
+		-- =========================
+		-- Delivery Methods (1–N) - Flattened structure
+		-- =========================
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', dmt.id,
+					'name', dmt.name,
+					'code', dmt.code,
+					'is_active', sdm.is_active,
+					'delivery_config', dc.delivery_config,
+					'pickup_config', pc.pickup_config,
+					'delivery_zones', COALESCE(dz.delivery_zones, '[]'::jsonb)
+				) ORDER BY dmt.id
+			) AS delivery_methods
+			FROM shop_delivery_methods sdm
+			JOIN delivery_methods dmt ON dmt.id = sdm.delivery_method_id
+			-- Delivery config (0–1) - for delivery type
+			LEFT JOIN LATERAL (
+				SELECT jsonb_build_object(
+					'id', dcfg.id, 'fixed_price', dcfg.fixed_price
+				) AS delivery_config
+				FROM delivery_configs dcfg
+				WHERE dcfg.shop_delivery_method_id = sdm.id
+				LIMIT 1
+			) dc ON TRUE
+			-- Pickup config (0–1) - for pickup type
+			LEFT JOIN LATERAL (
+				SELECT jsonb_build_object(
+					'id', pcfg.id, 'address', pcfg.address, 'city', pcfg.city,
+					'province', pcfg.province, 'postal_code', pcfg.postal_code, 'instructions', pcfg.instructions
+				) AS pickup_config
+				FROM pickup_configs pcfg
+				WHERE pcfg.shop_delivery_method_id = sdm.id
+				LIMIT 1
+			) pc ON TRUE
+			-- Delivery zones (0–N) - for delivery type
+			LEFT JOIN LATERAL (
+				SELECT jsonb_agg(
+					jsonb_build_object('id', dzn.id, 'name', dzn.name, 'price', dzn.price) ORDER BY dzn.id
+				) AS delivery_zones
+				FROM delivery_zones dzn
+				WHERE dzn.shop_delivery_method_id = sdm.id
+			) dz ON TRUE
+			WHERE sdm.shop_id = s.id
+		) dm ON TRUE
+
+		-- =========================
+		-- Operating Schedules (1–N)
+		-- =========================
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', osch.id, 'day_of_week', osch.day_of_week,
+					'open_time', osch.open_time::text, 'close_time', osch.close_time::text
+				) ORDER BY osch.day_of_week, osch.open_time
+			) AS operating_schedules
+			FROM operating_schedules osch
+			WHERE osch.shop_id = s.id
+		) os ON TRUE
+
+		WHERE s.id = $1
+	`
+
+	shop := &models.Shop{}
+	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON []byte
+
+	err := s.db.QueryRowContext(ctx, query, shopID).Scan(
+		&shop.ID,
+		&shop.Name,
+		&shop.Slug,
+		&shop.Email,
+		&shop.Phone,
+		&shop.Instagram,
+		&imagesJSON,
+		&addressJSON,
+		&paymentMethodsJSON,
+		&deliveryMethodsJSON,
+		&schedulesJSON,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logs.WithFields(map[string]interface{}{
+				"file":     ShopRepositoryField,
+				"function": ShopGetByIDFunctionField,
+				"shop_id":  shopID,
+			}).Warn("Shop not found")
+			return nil, &errors.RecordNotFoundError{Message: errors.ShopNotFound}
+		}
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": ShopGetByIDFunctionField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Failed to get shop by ID")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Unmarshal JSON fields
+	if err := s.unmarshalShopRelations(shop, imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": ShopGetByIDFunctionField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Failed to unmarshal shop relations")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	return shop, nil
+}
+
+func (s *ShopSQLRepository) unmarshalShopRelations(
+	shop *models.Shop,
+	imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON []byte,
+) error {
+	// Images (array with type: logo, cover)
+	if err := json.Unmarshal(imagesJSON, &shop.Images); err != nil {
+		return fmt.Errorf("unmarshal images: %w", err)
+	}
+
+	// Address (can be null)
+	if len(addressJSON) > 0 && string(addressJSON) != "null" {
+		shop.Address = &models.Address{}
+		if err := json.Unmarshal(addressJSON, shop.Address); err != nil {
+			return fmt.Errorf("unmarshal address: %w", err)
+		}
+	}
+
+	// Payment Methods
+	if err := json.Unmarshal(paymentMethodsJSON, &shop.PaymentMethods); err != nil {
+		return fmt.Errorf("unmarshal payment_methods: %w", err)
+	}
+
+	// Delivery Methods
+	if err := json.Unmarshal(deliveryMethodsJSON, &shop.DeliveryMethods); err != nil {
+		return fmt.Errorf("unmarshal delivery_methods: %w", err)
+	}
+
+	// Operating Schedules
+	if err := json.Unmarshal(schedulesJSON, &shop.OperatingSchedules); err != nil {
+		return fmt.Errorf("unmarshal operating_schedules: %w", err)
+	}
+
+	return nil
+}
+
 //	func (s *ShopRepository) GetByID(ctx context.Context, shopID int) (*entities.Shop, error) {
 //		query := `
 //	       		SELECT
@@ -112,7 +348,7 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //		row := s.DB.QueryRow(query, shopID)
 //		shop := &entities.Shop{Address: &entities.Address{}}
 //		err := row.ScanField(
-//			&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Image,
+//			&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Logo,
 //			&shop.Address.ID, &shop.Address.Text, &shop.Address.PlaceID, &shop.Address.Ltd, &shop.Address.Lng,
 //		)
 //		if err != nil {
@@ -150,7 +386,7 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //			var category entities.Category
 //
 //			err := rows.ScanField(
-//				&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Image,
+//				&shop.ID, &shop.Name, &shop.Slug, &shop.Email, &shop.Phone, &shop.Instagram, &shop.Logo,
 //				&shop.Address.ID, &shop.Address.Text, &shop.Address.PlaceID, &shop.Address.Ltd, &shop.Address.Lng,
 //				&category.ID, &category.Name, &category.Image,
 //			)
@@ -321,9 +557,10 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop)
 //	}
 //
 // GetShopsByUserID returns all shops owned by a user.
+// Used during authentication to include shop IDs in JWT token.
 func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error) {
 	const query = `
-		SELECT id, name, slug, email, phone, instagram, image
+		SELECT id, name, slug, email, phone, instagram
 		FROM shops
 		WHERE user_id = $1
 		ORDER BY id
@@ -337,7 +574,7 @@ func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([
 
 	shops := make([]*models.Shop, 0)
 	for rows.Next() {
-		shop := &models.Shop{UserID: userID}
+		shop := &models.Shop{}
 		err := rows.Scan(
 			&shop.ID,
 			&shop.Name,
@@ -345,7 +582,6 @@ func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([
 			&shop.Email,
 			&shop.Phone,
 			&shop.Instagram,
-			&shop.Image,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("database operation failed")
@@ -386,77 +622,6 @@ func (s *ShopSQLRepository) createPaymentMethodsWithDB(ctx context.Context, shop
 	return nil
 }
 
-func (s *ShopSQLRepository) GetPaymentMethods(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error) {
-	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
-		return s.getPaymentMethodsWithTx(ctx, tx, shopID)
-	}
-	return s.getPaymentMethodsWithDB(ctx, shopID)
-}
-
-func (s *ShopSQLRepository) getPaymentMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int) ([]*models.ShopPaymentMethod, error) {
-	const query = `
-		SELECT
-			spm.id, spm.shop_id, spm.payment_method_id, spm.is_active,
-			pm.id, pm.name, pm.code, pm.description, pm.is_active
-		FROM shop_payment_methods spm
-		JOIN payment_methods pm ON spm.payment_method_id = pm.id
-		WHERE spm.shop_id = $1
-		ORDER BY pm.id
-	`
-
-	rows, err := tx.QueryContext(ctx, query, shopID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return s.scanShopPaymentMethods(rows)
-}
-
-func (s *ShopSQLRepository) getPaymentMethodsWithDB(ctx context.Context, shopID int) ([]*models.ShopPaymentMethod, error) {
-	const query = `
-		SELECT
-			spm.id, spm.shop_id, spm.payment_method_id, spm.is_active,
-			pm.id, pm.name, pm.code, pm.description, pm.is_active
-		FROM shop_payment_methods spm
-		JOIN payment_methods pm ON spm.payment_method_id = pm.id
-		WHERE spm.shop_id = $1
-		ORDER BY pm.id
-	`
-
-	rows, err := s.db.QueryContext(ctx, query, shopID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return s.scanShopPaymentMethods(rows)
-}
-
-func (s *ShopSQLRepository) scanShopPaymentMethods(rows *sql.Rows) ([]*models.ShopPaymentMethod, error) {
-	var methods []*models.ShopPaymentMethod
-	for rows.Next() {
-		var spm models.ShopPaymentMethod
-		var pm models.PaymentMethod
-		var pmDescription sql.NullString
-
-		err := rows.Scan(
-			&spm.ID, &spm.ShopID, &spm.PaymentMethodID, &spm.IsActive,
-			&pm.ID, &pm.Name, &pm.Code, &pmDescription, &pm.IsActive,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if pmDescription.Valid {
-			pm.Description = pmDescription.String
-		}
-		spm.PaymentMethod = &pm
-		methods = append(methods, &spm)
-	}
-	return methods, rows.Err()
-}
-
 // ==================== Delivery Methods (internal) ====================
 
 func (s *ShopSQLRepository) createDeliveryMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int, methods []*models.DeliveryMethod) error {
@@ -481,77 +646,6 @@ func (s *ShopSQLRepository) createDeliveryMethodsWithDB(ctx context.Context, sho
 		}
 	}
 	return nil
-}
-
-func (s *ShopSQLRepository) GetDeliveryMethods(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error) {
-	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
-		return s.getDeliveryMethodsWithTx(ctx, tx, shopID)
-	}
-	return s.getDeliveryMethodsWithDB(ctx, shopID)
-}
-
-func (s *ShopSQLRepository) getDeliveryMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int) ([]*models.ShopDeliveryMethod, error) {
-	const query = `
-		SELECT
-			sdm.id, sdm.shop_id, sdm.delivery_method_id, sdm.is_active,
-			dm.id, dm.name, dm.code, dm.description, dm.is_active
-		FROM shop_delivery_methods sdm
-		JOIN delivery_methods dm ON sdm.delivery_method_id = dm.id
-		WHERE sdm.shop_id = $1
-		ORDER BY dm.id
-	`
-
-	rows, err := tx.QueryContext(ctx, query, shopID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return s.scanShopDeliveryMethods(rows)
-}
-
-func (s *ShopSQLRepository) getDeliveryMethodsWithDB(ctx context.Context, shopID int) ([]*models.ShopDeliveryMethod, error) {
-	const query = `
-		SELECT
-			sdm.id, sdm.shop_id, sdm.delivery_method_id, sdm.is_active,
-			dm.id, dm.name, dm.code, dm.description, dm.is_active
-		FROM shop_delivery_methods sdm
-		JOIN delivery_methods dm ON sdm.delivery_method_id = dm.id
-		WHERE sdm.shop_id = $1
-		ORDER BY dm.id
-	`
-
-	rows, err := s.db.QueryContext(ctx, query, shopID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return s.scanShopDeliveryMethods(rows)
-}
-
-func (s *ShopSQLRepository) scanShopDeliveryMethods(rows *sql.Rows) ([]*models.ShopDeliveryMethod, error) {
-	var methods []*models.ShopDeliveryMethod
-	for rows.Next() {
-		var sdm models.ShopDeliveryMethod
-		var dm models.DeliveryMethod
-		var dmDescription sql.NullString
-
-		err := rows.Scan(
-			&sdm.ID, &sdm.ShopID, &sdm.DeliveryMethodID, &sdm.IsActive,
-			&dm.ID, &dm.Name, &dm.Code, &dmDescription, &dm.IsActive,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if dmDescription.Valid {
-			dm.Description = dmDescription.String
-		}
-		sdm.DeliveryMethod = &dm
-		methods = append(methods, &sdm)
-	}
-	return methods, rows.Err()
 }
 
 // ==================== Operating Schedules ====================
@@ -603,10 +697,12 @@ func (s *ShopSQLRepository) scanOperatingSchedules(rows *sql.Rows) ([]*models.Op
 	for rows.Next() {
 		var os models.OperatingSchedule
 		var openTime, closeTime time.Time
+		var shopID int          // DB column, not needed in domain model
+		var createdAt time.Time // DB column, not needed in domain model
 
 		err := rows.Scan(
-			&os.ID, &os.ShopID, &os.DayOfWeek,
-			&openTime, &closeTime, &os.CreatedAt,
+			&os.ID, &shopID, &os.DayOfWeek,
+			&openTime, &closeTime, &createdAt,
 		)
 		if err != nil {
 			return nil, err
@@ -687,6 +783,149 @@ func (s *ShopSQLRepository) IsShopOpen(ctx context.Context, shopID int, checkTim
 	}
 
 	return isOpen, nil
+}
+
+// Update updates a shop and all its relations using a stored procedure.
+// Returns array of storage_refs of deleted images for Cloudinary cleanup.
+//
+//nolint:gocyclo // Complexity is intentional for readability - JSON serialization and error handling
+func (s *ShopSQLRepository) Update(ctx context.Context, shopID int, shop *models.Shop) ([]string, error) {
+	startTime := time.Now()
+
+	// Serialize images to JSONB
+	imagesJSON, err := json.Marshal(shop.Images)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "update",
+			"sub_func": "marshal_images",
+			"error":    err.Error(),
+		}).Error("Failed to marshal images")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Serialize address to JSONB (can be nil)
+	var addressJSON []byte
+	if shop.Address != nil {
+		addressJSON, err = json.Marshal(shop.Address)
+		if err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":     ShopRepositoryField,
+				"function": "update",
+				"sub_func": "marshal_address",
+				"error":    err.Error(),
+			}).Error("Failed to marshal address")
+			return nil, fmt.Errorf("database operation failed")
+		}
+	}
+
+	// Serialize payment methods to JSONB
+	paymentMethodsJSON, err := json.Marshal(shop.PaymentMethods)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "update",
+			"sub_func": "marshal_payment_methods",
+			"error":    err.Error(),
+		}).Error("Failed to marshal payment methods")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Serialize delivery methods to JSONB
+	deliveryMethodsJSON, err := json.Marshal(shop.DeliveryMethods)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "update",
+			"sub_func": "marshal_delivery_methods",
+			"error":    err.Error(),
+		}).Error("Failed to marshal delivery methods")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Serialize operating schedules to JSONB
+	schedulesJSON, err := json.Marshal(shop.OperatingSchedules)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "update",
+			"sub_func": "marshal_schedules",
+			"error":    err.Error(),
+		}).Error("Failed to marshal operating schedules")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Call stored procedure
+	var deletedRefs []string
+	err = s.db.QueryRowContext(ctx, `
+		SELECT update_shop($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		shopID,
+		shop.Name,
+		shop.Slug,
+		shop.Email,
+		shop.Phone,
+		shop.Instagram,
+		imagesJSON,
+		addressJSON,
+		paymentMethodsJSON,
+		deliveryMethodsJSON,
+		schedulesJSON,
+	).Scan(pq.Array(&deletedRefs))
+
+	if err != nil {
+		// Check if it's a PostgreSQL error from the stored procedure
+		if pqErr, ok := err.(*pq.Error); ok {
+			// Check for "Shop not found" (P0002)
+			if pqErr.Code == PqErrCodeNoDataFound {
+				logs.WithFields(map[string]interface{}{
+					"file":     ShopRepositoryField,
+					"function": "update",
+					"shop_id":  shopID,
+				}).Warn("Shop not found")
+				return nil, &errors.RecordNotFoundError{Message: errors.ShopNotFound}
+			}
+
+			// Unique violation (e.g., duplicate slug/email)
+			if pqErr.Code == PqErrCodeUniqueViolation {
+				logs.WithFields(map[string]interface{}{
+					"file":       ShopRepositoryField,
+					"function":   "update",
+					"shop_id":    shopID,
+					"pg_code":    pqErr.Code,
+					"pg_message": pqErr.Message,
+				}).Warn("Unique constraint violation")
+				return nil, &errors.ValidationError{Message: "unique constraint violation: " + pqErr.Message}
+			}
+
+			logs.WithFields(map[string]interface{}{
+				"file":       ShopRepositoryField,
+				"function":   "update",
+				"shop_id":    shopID,
+				"pg_code":    pqErr.Code,
+				"pg_message": pqErr.Message,
+			}).Error("PostgreSQL error")
+
+			return nil, fmt.Errorf("database operation failed")
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "update",
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Failed to update shop")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":              ShopRepositoryField,
+		"function":          "update",
+		"shop_id":           shopID,
+		"deleted_refs":      len(deletedRefs),
+		"total_duration_ms": time.Since(startTime).Milliseconds(),
+	}).Info("Shop update completed (stored procedure)")
+
+	return deletedRefs, nil
 }
 
 func NewShopRepository(

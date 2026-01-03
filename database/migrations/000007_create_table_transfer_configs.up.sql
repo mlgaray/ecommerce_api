@@ -5,7 +5,7 @@ create table
                      cbu text not null,
                      cuil text not null,
                      alias text null,
-                     account_holder_name text not null,
+                     owner_name text not null,
                      created_at timestamp with time zone not null default now(),
                      updated_at timestamp with time zone not null default now(),
                      constraint transfer_configs_pkey primary key (id),

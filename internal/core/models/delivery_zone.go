@@ -1,18 +1,14 @@
 package models
 
 import (
-	"time"
-
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 )
 
-// DeliveryZone represents a delivery zone with its cost
+// DeliveryZone represents a delivery zone with its price
 type DeliveryZone struct {
-	ID                   int       `json:"id,omitempty"`
-	ShopDeliveryMethodID int       `json:"shop_delivery_method_id,omitempty"`
-	Name                 string    `json:"name,omitempty"`
-	Cost                 float64   `json:"cost"`
-	CreatedAt            time.Time `json:"created_at,omitempty"`
+	ID    int     `json:"id,omitempty"`
+	Name  string  `json:"name,omitempty"`
+	Price float64 `json:"price"`
 }
 
 // Validate validates business rules for DeliveryZone
@@ -22,9 +18,9 @@ func (d *DeliveryZone) Validate() error {
 			Message: errors.DeliveryZoneNameIsRequired,
 		}
 	}
-	if d.Cost < 0 {
+	if d.Price < 0 {
 		return &errors.ValidationError{
-			Message: errors.DeliveryZoneCostCannotBeNegative,
+			Message: errors.DeliveryZonePriceCannotBeNegative,
 		}
 	}
 	return nil

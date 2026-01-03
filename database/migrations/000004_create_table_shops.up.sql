@@ -6,7 +6,6 @@ create table
                      created_at timestamp with time zone not null default now(),
                      email text null,
                      phone text null,
-                     image text null,
                      instagram text null,
                      slug text null,
                      constraint businesses_pkey primary key (id),
