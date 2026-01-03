@@ -14,8 +14,8 @@ import (
 
 func newValidDeliveryZone() *DeliveryZone {
 	return &DeliveryZone{
-		Name: "Centro",
-		Cost: 500.00,
+		Name:  "Centro",
+		Price: 500.00,
 	}
 }
 
@@ -44,30 +44,30 @@ func TestDeliveryZone_Validate(t *testing.T) {
 		assert.Equal(t, errors.DeliveryZoneNameIsRequired, validationErr.Message)
 	})
 
-	t.Run("when cost is negative then returns error", func(t *testing.T) {
+	t.Run("when price is negative then returns error", func(t *testing.T) {
 		zone := newValidDeliveryZone()
-		zone.Cost = -100.00
+		zone.Price = -100.00
 
 		err := zone.Validate()
 
 		assert.Error(t, err)
 		var validationErr *errors.ValidationError
 		assert.ErrorAs(t, err, &validationErr)
-		assert.Equal(t, errors.DeliveryZoneCostCannotBeNegative, validationErr.Message)
+		assert.Equal(t, errors.DeliveryZonePriceCannotBeNegative, validationErr.Message)
 	})
 
-	t.Run("when cost is zero then validation passes", func(t *testing.T) {
+	t.Run("when price is zero then validation passes", func(t *testing.T) {
 		zone := newValidDeliveryZone()
-		zone.Cost = 0 // Free delivery is allowed
+		zone.Price = 0 // Free delivery is allowed
 
 		err := zone.Validate()
 
 		assert.NoError(t, err)
 	})
 
-	t.Run("when cost is positive then validation passes", func(t *testing.T) {
+	t.Run("when price is positive then validation passes", func(t *testing.T) {
 		zone := newValidDeliveryZone()
-		zone.Cost = 1000.50
+		zone.Price = 1000.50
 
 		err := zone.Validate()
 

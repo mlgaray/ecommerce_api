@@ -24,11 +24,9 @@ const (
 // A shop can have multiple schedules per day (split hours)
 type OperatingSchedule struct {
 	ID        int       `json:"id,omitempty"`
-	ShopID    int       `json:"shop_id,omitempty"`
 	DayOfWeek DayOfWeek `json:"day_of_week"`
 	OpenTime  string    `json:"open_time"`  // Format: "HH:MM"
 	CloseTime string    `json:"close_time"` // Format: "HH:MM"
-	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
 // Validate validates the operating schedule business rules

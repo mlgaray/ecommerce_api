@@ -38,8 +38,9 @@ func (a *AuthSteps) setupSQLExpectations() {
 			WillReturnRows(rows)
 
 		// Mock GetShopsByUserID - returns user's shops for JWT token
-		shopRows := sqlmock.NewRows([]string{"id", "name", "slug", "email", "phone", "instagram", "image"}).
-			AddRow(1, "Test Shop", "test-shop", "shop@example.com", "+1234567890", "@testshop", "image.jpg")
+		// Query: SELECT id, name, slug, email, phone, instagram FROM shops WHERE user_id = $1
+		shopRows := sqlmock.NewRows([]string{"id", "name", "slug", "email", "phone", "instagram"}).
+			AddRow(1, "Test Shop", "test-shop", "shop@example.com", "+1234567890", "@testshop")
 		ctx.mockSQLMock.ExpectQuery("FROM shops").
 			WithArgs(1).
 			WillReturnRows(shopRows)

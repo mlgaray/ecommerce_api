@@ -49,8 +49,9 @@ func (s *SignUpSteps) setupSQLExpectations() {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		// 5. Shop creation (ShopRepo.Create)
+		// Query: INSERT INTO shops (user_id, name, slug, email, phone, instagram) VALUES ($1, $2, $3, $4, $5, $6)
 		ctx.mockSQLMock.ExpectQuery("INSERT INTO shops \\(.+\\) VALUES \\(.+\\) RETURNING id").
-			WithArgs(1, "John's Shop", sqlmock.AnyArg(), "shop@example.com", "+1234567890", sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WithArgs(1, "John's Shop", "johns-shop", "shop@example.com", "+1234567890", "").
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 		// 6. Get all payment methods (PaymentMethodRepo.GetAll)

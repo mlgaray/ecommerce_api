@@ -99,7 +99,7 @@ migrate-down-seeds:
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 6
+	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
 
 .PHONY: migrate-force-seeds
 
@@ -160,17 +160,17 @@ code-quality: fmt lint
 # Order matters: seeds -> functions -> tables (respect dependencies)
 drop-db:
 	@echo "=========================================="
-	@echo "🗑️  DROPPING DATABASE (All Objects)"
+	@echo "DROPPING DATABASE (All Objects)"
 	@echo "=========================================="
 	@echo ""
 	@echo "Step 1/3: Dropping seeds..."
-	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" down -all || echo "⚠️  No seeds to drop or already dropped"
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" down -all || echo "No seeds to drop or already dropped"
 	@echo ""
 	@echo "Step 2/3: Dropping functions (stored procedures)..."
-	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" down -all || echo "⚠️  No functions to drop or already dropped"
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" down -all || echo "No functions to drop or already dropped"
 	@echo ""
 	@echo "Step 3/3: Dropping tables and indexes..."
-	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" down -all || echo "⚠️  No tables to drop or already dropped"
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" down -all || echo "No tables to drop or already dropped"
 	@echo ""
 	@echo "=========================================="
 	@echo "DATABASE DROP COMPLETE"
@@ -210,6 +210,27 @@ reset-and-up-db:
 	@echo "=========================================="
 
 .PHONY: reset-and-up-db
+
+# Migrate up all: tables -> functions -> seeds (in correct order)
+migrate-up-all:
+	@echo "=========================================="
+	@echo "RUNNING ALL MIGRATIONS UP"
+	@echo "=========================================="
+	@echo ""
+	@echo "Step 1/3: Creating tables and indexes..."
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" -verbose up
+	@echo ""
+	@echo "Step 2/3: Creating functions (stored procedures)..."
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" -verbose up
+	@echo ""
+	@echo "Step 3/3: Loading seeds..."
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose up
+	@echo ""
+	@echo "=========================================="
+	@echo "ALL MIGRATIONS COMPLETE"
+	@echo "=========================================="
+
+.PHONY: migrate-up-all
 
 # Quick reset: Reset only seeds (keeps tables and structure)
 reset-seeds:

@@ -62,11 +62,11 @@ const (
 	ShopPaymentMethodAlreadyExists = "shop_payment_method_already_exists"
 
 	// Transfer config error messages
-	TransferConfigurationRequired       = "transfer_configuration_required"
-	TransferCBUIsRequired               = "transfer_cbu_is_required"
-	TransferCBUInvalidLength            = "transfer_cbu_invalid_length"
-	TransferCUILIsRequired              = "transfer_cuil_is_required"
-	TransferAccountHolderNameIsRequired = "transfer_account_holder_name_is_required"
+	TransferConfigurationRequired = "transfer_configuration_required"
+	TransferCBUIsRequired         = "transfer_cbu_is_required"
+	TransferCBUInvalidLength      = "transfer_cbu_invalid_length"
+	TransferCUILIsRequired        = "transfer_cuil_is_required"
+	TransferOwnerNameIsRequired   = "transfer_owner_name_is_required"
 
 	// MercadoPago config error messages
 	MercadoPagoConfigurationRequired = "mercadopago_configuration_required"
@@ -80,8 +80,8 @@ const (
 	ShopDeliveryMethodAlreadyExists = "shop_delivery_method_already_exists"
 
 	// Delivery zone error messages
-	DeliveryZoneNameIsRequired       = "delivery_zone_name_is_required"
-	DeliveryZoneCostCannotBeNegative = "delivery_zone_cost_cannot_be_negative"
+	DeliveryZoneNameIsRequired        = "delivery_zone_name_is_required"
+	DeliveryZonePriceCannotBeNegative = "delivery_zone_price_cannot_be_negative"
 
 	// Pickup config error messages
 	PickupConfigurationRequired = "pickup_configuration_required"
