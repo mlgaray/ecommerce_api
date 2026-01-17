@@ -12,4 +12,5 @@ type Shop struct {
 	PaymentMethods     []*PaymentMethod     `json:"payment_methods,omitempty"`
 	DeliveryMethods    []*DeliveryMethod    `json:"delivery_methods,omitempty"`
 	OperatingSchedules []*OperatingSchedule `json:"operating_schedules,omitempty"`
+	Timezone           *Timezone            `json:"timezone,omitempty"`
 }

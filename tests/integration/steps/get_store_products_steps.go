@@ -280,7 +280,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 	// Shop columns for GetBySlug query - must match shop_repository.go scan order
 	shopColumns := []string{
 		"id", "name", "slug", "email", "phone", "instagram",
-		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
+		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
 	// Product columns for GetAllByShopIDWithFilters query - must match product_repository.go scan order:
@@ -299,7 +299,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
 			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
-				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
+				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -325,7 +325,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
 			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore",
-				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
+				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -353,7 +353,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		// The use case should filter out inactive products
 		shopRows := sqlmock.NewRows(shopColumns).
 			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
-				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
+				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).

@@ -35,13 +35,21 @@ const shopQueryBase = `
 		END AS address,
 		COALESCE(pm.payment_methods, '[]'::jsonb) AS payment_methods,
 		COALESCE(dm.delivery_methods, '[]'::jsonb) AS delivery_methods,
-		COALESCE(os.operating_schedules, '[]'::jsonb) AS operating_schedules
+		COALESCE(os.operating_schedules, '[]'::jsonb) AS operating_schedules,
+		CASE WHEN tz.id IS NOT NULL THEN
+			jsonb_build_object('id', tz.id, 'name', tz.name, 'identifier', tz.identifier, 'utc_offset', tz.utc_offset)
+		END AS timezone
 	FROM shops s
 
 	-- =========================
 	-- Address (1-1) - Simple LEFT JOIN
 	-- =========================
 	LEFT JOIN addresses a ON a.shop_id = s.id
+
+	-- =========================
+	-- Timezone (1-1) - Simple LEFT JOIN
+	-- =========================
+	LEFT JOIN timezones tz ON tz.id = s.timezone_id
 
 	-- =========================
 	-- Images (aggregated by shop_id)
@@ -156,14 +164,21 @@ func (s *ShopSQLRepository) Create(ctx context.Context, userID int, shop *models
 }
 
 func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID int, shop *models.Shop) (*models.Shop, error) {
+	// Get default timezone ID (America/Buenos_Aires)
+	var defaultTimezoneID *int
+	err := tx.QueryRowContext(ctx, `SELECT id FROM timezones WHERE identifier = 'America/Buenos_Aires' LIMIT 1`).Scan(&defaultTimezoneID)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO shops (user_id, name, slug, email, phone, instagram, timezone_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	var shopID int
-	err := tx.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram).Scan(&shopID)
+	err = tx.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,14 +208,21 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID
 }
 
 func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error) {
+	// Get default timezone ID (America/Buenos_Aires)
+	var defaultTimezoneID *int
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM timezones WHERE identifier = 'America/Buenos_Aires' LIMIT 1`).Scan(&defaultTimezoneID)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO shops (user_id, name, slug, email, phone, instagram, timezone_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	var shopID int
-	err := s.db.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram).Scan(&shopID)
+	err = s.db.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +257,7 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 	query := shopQueryBase + ` WHERE s.id = $1`
 
 	shop := &models.Shop{}
-	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON []byte
+	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON []byte
 
 	err := s.db.QueryRowContext(ctx, query, shopID).Scan(
 		&shop.ID,
@@ -249,6 +271,7 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 		&paymentMethodsJSON,
 		&deliveryMethodsJSON,
 		&schedulesJSON,
+		&timezoneJSON,
 	)
 
 	if err != nil {
@@ -270,7 +293,7 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 	}
 
 	// Unmarshal JSON fields
-	if err := s.unmarshalShopRelations(shop, imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON); err != nil {
+	if err := s.unmarshalShopRelations(shop, imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ShopRepositoryField,
 			"function": ShopGetByIDFunctionField,
@@ -285,36 +308,48 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 
 func (s *ShopSQLRepository) unmarshalShopRelations(
 	shop *models.Shop,
-	imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON []byte,
+	imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON []byte,
 ) error {
-	// Images (array with type: logo, cover)
 	if err := json.Unmarshal(imagesJSON, &shop.Images); err != nil {
 		return fmt.Errorf("unmarshal images: %w", err)
 	}
 
-	// Address (can be null)
-	if len(addressJSON) > 0 && string(addressJSON) != "null" {
+	if err := s.unmarshalNullableAddress(shop, addressJSON); err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(paymentMethodsJSON, &shop.PaymentMethods); err != nil {
+		return fmt.Errorf("unmarshal payment_methods: %w", err)
+	}
+
+	if err := json.Unmarshal(deliveryMethodsJSON, &shop.DeliveryMethods); err != nil {
+		return fmt.Errorf("unmarshal delivery_methods: %w", err)
+	}
+
+	if err := json.Unmarshal(schedulesJSON, &shop.OperatingSchedules); err != nil {
+		return fmt.Errorf("unmarshal operating_schedules: %w", err)
+	}
+
+	return s.unmarshalNullableTimezone(shop, timezoneJSON)
+}
+
+func (s *ShopSQLRepository) unmarshalNullableAddress(shop *models.Shop, addressJSON []byte) error {
+	if len(addressJSON) > 0 && string(addressJSON) != JSONNull {
 		shop.Address = &models.Address{}
 		if err := json.Unmarshal(addressJSON, shop.Address); err != nil {
 			return fmt.Errorf("unmarshal address: %w", err)
 		}
 	}
+	return nil
+}
 
-	// Payment Methods
-	if err := json.Unmarshal(paymentMethodsJSON, &shop.PaymentMethods); err != nil {
-		return fmt.Errorf("unmarshal payment_methods: %w", err)
+func (s *ShopSQLRepository) unmarshalNullableTimezone(shop *models.Shop, timezoneJSON []byte) error {
+	if len(timezoneJSON) > 0 && string(timezoneJSON) != JSONNull {
+		shop.Timezone = &models.Timezone{}
+		if err := json.Unmarshal(timezoneJSON, shop.Timezone); err != nil {
+			return fmt.Errorf("unmarshal timezone: %w", err)
+		}
 	}
-
-	// Delivery Methods
-	if err := json.Unmarshal(deliveryMethodsJSON, &shop.DeliveryMethods); err != nil {
-		return fmt.Errorf("unmarshal delivery_methods: %w", err)
-	}
-
-	// Operating Schedules
-	if err := json.Unmarshal(schedulesJSON, &shop.OperatingSchedules); err != nil {
-		return fmt.Errorf("unmarshal operating_schedules: %w", err)
-	}
-
 	return nil
 }
 
@@ -325,7 +360,7 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 	query := shopQueryBase + ` WHERE s.slug = $1`
 
 	shop := &models.Shop{}
-	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON []byte
+	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON []byte
 
 	err := s.db.QueryRowContext(ctx, query, slug).Scan(
 		&shop.ID,
@@ -339,6 +374,7 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 		&paymentMethodsJSON,
 		&deliveryMethodsJSON,
 		&schedulesJSON,
+		&timezoneJSON,
 	)
 
 	if err != nil {
@@ -360,7 +396,7 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 	}
 
 	// Unmarshal JSON fields
-	if err := s.unmarshalShopRelations(shop, imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON); err != nil {
+	if err := s.unmarshalShopRelations(shop, imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ShopRepositoryField,
 			"function": ShopGetBySlugFunctionField,

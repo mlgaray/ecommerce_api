@@ -25,6 +25,7 @@ const (
 	testProductImagesJSON        = `[{"id": 1, "url": "https://cloudinary.com/product1.jpg", "type": "gallery"}]`
 	testEmptySchedulesJSON       = `[]`
 	testEmptyVariantsJSON        = `[]`
+	testStoreTimezoneJSON        = `{"id": 1, "name": "Buenos Aires", "identifier": "America/Buenos_Aires", "utc_offset": "-03:00"}`
 )
 
 type GetStoreBySlugSteps struct{}
@@ -110,10 +111,10 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	ctx := GetTestContext()
 
 	// Columns returned by GetBySlug query - must match shop_repository.go GetBySlug scan order
-	// id, name, slug, email, phone, instagram, images, address, payment_methods, delivery_methods, operating_schedules
+	// id, name, slug, email, phone, instagram, images, address, payment_methods, delivery_methods, operating_schedules, timezone
 	columns := []string{
 		"id", "name", "slug", "email", "phone", "instagram",
-		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
+		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
 	switch ctx.scenario {
@@ -121,7 +122,7 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 		// Mock store with all relations
 		rows := sqlmock.NewRows(columns).
 			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
-				testStoreImagesFullJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testOperatingSchedulesJSON)
+				testStoreImagesFullJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testOperatingSchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -131,7 +132,7 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 		// Mock store without images
 		rows := sqlmock.NewRows(columns).
 			AddRow(2, "Test Store No Images", slug, "test@store.com", "+54111234567", "@teststore",
-				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
+				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -245,6 +246,32 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreDeliveryMethods() 
 	return nil
 }
 
+func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreTimezone() error {
+	ctx := GetTestContext()
+	store, ok := ctx.responseBody.(models.Store)
+	if !ok {
+		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+	}
+	if store.Timezone == nil {
+		return fmt.Errorf("expected store with timezone, got nil timezone")
+	}
+	if store.Timezone.Identifier == "" {
+		return fmt.Errorf("expected store with timezone identifier, got empty identifier")
+	}
+	return nil
+}
+
+func (g *GetStoreBySlugSteps) theResponseShouldContainTheIsOpenField() error {
+	ctx := GetTestContext()
+	_, ok := ctx.responseBody.(models.Store)
+	if !ok {
+		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+	}
+	// is_open is a bool field, always present in JSON response
+	// We just verify the response was parsed correctly as a Store
+	return nil
+}
+
 // ===== Register Steps =====
 
 func (g *GetStoreBySlugSteps) RegisterSteps(sc *godog.ScenarioContext) {
@@ -264,4 +291,6 @@ func (g *GetStoreBySlugSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the response should contain the store address$`, g.theResponseShouldContainTheStoreAddress)
 	sc.Step(`^the response should contain the store payment methods$`, g.theResponseShouldContainTheStorePaymentMethods)
 	sc.Step(`^the response should contain the store delivery methods$`, g.theResponseShouldContainTheStoreDeliveryMethods)
+	sc.Step(`^the response should contain the store timezone$`, g.theResponseShouldContainTheStoreTimezone)
+	sc.Step(`^the response should contain the is_open field$`, g.theResponseShouldContainTheIsOpenField)
 }

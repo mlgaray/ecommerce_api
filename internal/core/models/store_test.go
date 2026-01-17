@@ -2,6 +2,7 @@ package models
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -197,5 +198,270 @@ func TestNewStoreFromShop(t *testing.T) {
 		// Assert
 		assert.NotNil(t, result)
 		assert.Equal(t, 0, result.ID)
+	})
+
+	t.Run("when shop has timezone then maps timezone", func(t *testing.T) {
+		// Arrange
+		shop := &Shop{
+			ID:   1,
+			Name: "Test Shop",
+			Timezone: &Timezone{
+				ID:         1,
+				Name:       "Buenos Aires",
+				Identifier: "America/Buenos_Aires",
+				UTCOffset:  "-03:00",
+			},
+		}
+
+		// Act
+		result := NewStoreFromShop(shop)
+
+		// Assert
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Timezone)
+		assert.Equal(t, "America/Buenos_Aires", result.Timezone.Identifier)
+	})
+}
+
+// =============================================================================
+// CalculateIsOpen Tests
+// =============================================================================
+
+func TestStore_CalculateIsOpen(t *testing.T) {
+	t.Run("when timezone is nil then returns false", func(t *testing.T) {
+		// Arrange
+		store := &Store{
+			Timezone: nil,
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(time.Now())
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when timezone identifier is empty then returns false", func(t *testing.T) {
+		// Arrange
+		store := &Store{
+			Timezone: &Timezone{Identifier: ""},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(time.Now())
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when operating schedules is empty then returns false", func(t *testing.T) {
+		// Arrange
+		store := &Store{
+			Timezone:           &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(time.Now())
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when timezone identifier is invalid then returns false", func(t *testing.T) {
+		// Arrange
+		store := &Store{
+			Timezone: &Timezone{Identifier: "Invalid/Timezone"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(time.Now())
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when current time is within schedule then returns true", func(t *testing.T) {
+		// Arrange: Monday at 10:00 in Buenos Aires
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 10, 0, 0, 0, loc) // Jan 8, 2024 is Monday
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.True(t, result)
+	})
+
+	t.Run("when current time is before schedule then returns false", func(t *testing.T) {
+		// Arrange: Monday at 08:00 in Buenos Aires (before 09:00 opening)
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 8, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when current time is after schedule then returns false", func(t *testing.T) {
+		// Arrange: Monday at 19:00 in Buenos Aires (after 18:00 closing)
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 19, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when day does not match schedule then returns false", func(t *testing.T) {
+		// Arrange: Tuesday at 10:00, but schedule is for Monday
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		tuesday := time.Date(2024, 1, 9, 10, 0, 0, 0, loc) // Jan 9, 2024 is Tuesday
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(tuesday)
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when multiple schedules and one matches then returns true", func(t *testing.T) {
+		// Arrange: Wednesday at 15:00
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		wednesday := time.Date(2024, 1, 10, 15, 0, 0, 0, loc) // Jan 10, 2024 is Wednesday
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+				{DayOfWeek: Tuesday, OpenTime: "09:00", CloseTime: "18:00"},
+				{DayOfWeek: Wednesday, OpenTime: "10:00", CloseTime: "20:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(wednesday)
+
+		// Assert
+		assert.True(t, result)
+	})
+
+	t.Run("when split hours and second slot matches then returns true", func(t *testing.T) {
+		// Arrange: Monday at 16:00 (second shift: 15:00-19:00)
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 16, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "13:00"}, // Morning
+				{DayOfWeek: Monday, OpenTime: "15:00", CloseTime: "19:00"}, // Afternoon
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.True(t, result)
+	})
+
+	t.Run("when split hours and between slots then returns false", func(t *testing.T) {
+		// Arrange: Monday at 14:00 (between 13:00 and 15:00)
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 14, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "13:00"}, // Morning
+				{DayOfWeek: Monday, OpenTime: "15:00", CloseTime: "19:00"}, // Afternoon
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.False(t, result)
+	})
+
+	t.Run("when exactly at opening time then returns true", func(t *testing.T) {
+		// Arrange: Monday at exactly 09:00
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 9, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.True(t, result)
+	})
+
+	t.Run("when exactly at closing time then returns true", func(t *testing.T) {
+		// Arrange: Monday at exactly 18:00
+		loc, _ := time.LoadLocation("America/Buenos_Aires")
+		monday := time.Date(2024, 1, 8, 18, 0, 0, 0, loc)
+
+		store := &Store{
+			Timezone: &Timezone{Identifier: "America/Buenos_Aires"},
+			OperatingSchedules: []*OperatingSchedule{
+				{DayOfWeek: Monday, OpenTime: "09:00", CloseTime: "18:00"},
+			},
+		}
+
+		// Act
+		result := store.CalculateIsOpen(monday)
+
+		// Assert
+		assert.True(t, result)
 	})
 }

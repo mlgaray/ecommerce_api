@@ -17,7 +17,11 @@
       "Bash(where go:*)",
       "Bash(done)",
       "Bash(/usr/local/go/bin/go version:*)",
-      "Bash(/home/lgaray/go/bin/go version:*)"
+      "Bash(/home/lgaray/go/bin/go version:*)",
+      "Bash(git mv:*)",
+      "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" tool cover -func=coverage_models.out)",
+      "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" test -v -run \"TestFeatures/get_store\")",
+      "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" test -v -run \"TestFeatures/auth\")"
     ],
     "deny": [],
     "ask": []

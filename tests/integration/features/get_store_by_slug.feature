@@ -12,6 +12,8 @@ Feature: Get Store by Slug
     And the response should contain the store address
     And the response should contain the store payment methods
     And the response should contain the store delivery methods
+    And the response should contain the store timezone
+    And the response should contain the is_open field
 
   Scenario: Successfully get a store without images
     Given a store with slug "shop-no-images" exists without images
