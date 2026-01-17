@@ -409,11 +409,15 @@ func (ctx *TestContext) SetupShopTestApp() error {
 	tokenService := jwt.NewTokenService()
 
 	// Generate test token for authenticated requests
+	// Include multiple shop IDs to support different test scenarios
+	// - Shop 1, 2: standard test shops
+	// - Shop 888: for "not found" tests (passes auth, but shop doesn't exist in DB)
+	// - Shop 999: intentionally excluded for "not owned" tests
 	testUser := &models.User{
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1}
+	testShopIDs := []int{1, 2, 888}
 	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
 	if err != nil {
 		return err
@@ -433,6 +437,10 @@ func (ctx *TestContext) SetupShopTestApp() error {
 			// Provide auth middleware
 			middleware.NewAuthMiddleware,
 
+			// Provide repository dependencies required by ShopRepository
+			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
+
 			// Provide shop dependencies
 			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
@@ -443,9 +451,9 @@ func (ctx *TestContext) SetupShopTestApp() error {
 			fx.Annotate(shop.NewUpdateShopUseCase, fx.As(new(ports.UpdateShopUseCase))),
 
 			// Provide handler
-			authhttp.NewShopHandler,
+			fx.Annotate(authhttp.NewShopHandler, fx.As(new(ports.ShopHandler))),
 		),
-		fx.Invoke(func(handler *authhttp.ShopHandler, authMiddleware *middleware.AuthMiddleware) {
+		fx.Invoke(func(handler ports.ShopHandler, authMiddleware *middleware.AuthMiddleware) {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 
@@ -491,6 +499,8 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			},
 
 			// Provide store dependencies (no auth required - public endpoints)
+			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 
@@ -518,9 +528,9 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			fx.Annotate(store.NewGetStoreFeaturedProductsUseCase, fx.As(new(ports.GetStoreFeaturedProductsUseCase))),
 
 			// Provide handler
-			authhttp.NewStoreHandler,
+			fx.Annotate(authhttp.NewStoreHandler, fx.As(new(ports.StoreHandler))),
 		),
-		fx.Invoke(func(handler *authhttp.StoreHandler) {
+		fx.Invoke(func(handler ports.StoreHandler) {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 

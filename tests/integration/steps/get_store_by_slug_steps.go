@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
@@ -110,22 +109,19 @@ func (g *GetStoreBySlugSteps) iSendAnUnauthenticatedGetStoreBySlugRequestFor(slu
 func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	ctx := GetTestContext()
 
-	// Columns returned by GetBySlug query (same as GetByID but uses slug)
+	// Columns returned by GetBySlug query - must match shop_repository.go GetBySlug scan order
+	// id, name, slug, email, phone, instagram, images, address, payment_methods, delivery_methods, operating_schedules
 	columns := []string{
-		"id", "name", "slug", "email", "phone", "instagram", "created_at",
+		"id", "name", "slug", "email", "phone", "instagram",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
 	}
-
-	now := time.Now()
 
 	switch ctx.scenario {
 	case scenarioStoreExists:
 		// Mock store with all relations
-		imagesJSON := testStoreImagesFullJSON
-
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", now,
-				imagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testOperatingSchedulesJSON)
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+				testStoreImagesFullJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testOperatingSchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -134,8 +130,8 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	case scenarioStoreExistsNoImages:
 		// Mock store without images
 		rows := sqlmock.NewRows(columns).
-			AddRow(2, "Test Store No Images", slug, "test@store.com", "+54111234567", "@teststore", now,
-				testEmptySchedulesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
+			AddRow(2, "Test Store No Images", slug, "test@store.com", "+54111234567", "@teststore",
+				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).

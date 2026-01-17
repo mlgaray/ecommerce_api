@@ -13,8 +13,13 @@ import (
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
+
+func init() {
+	logs.Init()
+}
 
 // =============================================================================
 // Test Helpers
@@ -126,7 +131,7 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 		// Arrange
 		handler := NewStoreHandler(nil, nil, nil, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/stores/   ", nil)
+		req := httptest.NewRequest(http.MethodGet, "/stores/whitespace-test", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "   "})
 		rr := httptest.NewRecorder()
 

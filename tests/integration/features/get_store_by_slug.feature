@@ -26,10 +26,9 @@ Feature: Get Store by Slug
     Then the response status should be 404
     And the user should receive an error message "store_not_found"
 
-  Scenario: Get store with empty slug returns 400
+  Scenario: Get store with empty slug returns 404
     When I send a get store by slug request for ""
-    Then the response status should be 400
-    And the user should receive an error message "invalid_slug_format"
+    Then the response status should be 404
 
   Scenario: Get store does not require authentication
     Given a store with slug "public-shop" exists

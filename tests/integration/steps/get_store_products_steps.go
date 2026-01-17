@@ -74,6 +74,11 @@ func (g *GetStoreProductsSteps) iSendAGetStoreProductsRequestFor(slug string) er
 		}
 	}
 
+	// If requesting a different slug than what was set up, treat as "not found"
+	if ctx.pathParams != nil && ctx.pathParams["slug"] != "" && ctx.pathParams["slug"] != slug {
+		ctx.scenario = scenarioStoreProductsNotFound
+	}
+
 	// Setup SQL expectations based on scenario
 	g.setupGetStoreProductsSQLExpectations(slug, "", 0, 0)
 
@@ -272,31 +277,29 @@ func (g *GetStoreProductsSteps) iSendAGetStoreProductsRequestForWithSortAndOrder
 func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, search string, categoryID, limit int) {
 	ctx := GetTestContext()
 
-	// Shop columns for GetBySlug query
+	// Shop columns for GetBySlug query - must match shop_repository.go scan order
 	shopColumns := []string{
-		"id", "name", "slug", "email", "phone", "instagram", "created_at",
+		"id", "name", "slug", "email", "phone", "instagram",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
 	}
 
-	// Product columns for GetAllByShopIDWithFilters query
+	// Product columns for GetAllByShopIDWithFilters query - must match product_repository.go scan order:
+	// ID, Name, Description, Price, Stock, MinimumStock, IsActive, IsHighlighted, IsPromotional, PromotionalPrice, CreatedAt, Category.ID, Category.Name, Category.Description, imagesJSON
 	productColumns := []string{
-		"id", "name", "description", "price", "is_active", "is_promotional",
-		"promotional_price", "is_highlighted", "stock", "minimum_stock",
-		"created_at", "category_id", "category_name", "category_image_url",
-		"images", "variants",
+		"id", "name", "description", "price", "stock", "minimum_stock",
+		"is_active", "is_highlighted", "is_promotional", "promotional_price",
+		"created_at", "category_id", "category_name", "category_description", "images",
 	}
 
 	now := time.Now()
+	productImagesJSON := testProductImagesJSON
 
 	switch ctx.scenario {
 	case scenarioStoreProductsExists, scenarioStoreProductsWithSearch, scenarioStoreProductsWithCategory, scenarioStoreProductsWithLimit, scenarioStoreProductsSearchAndCategory, scenarioStoreProductsWithSort:
 		// Mock shop exists
-		imagesJSON := testStoreImagesJSON
-		schedulesJSON := testEmptySchedulesJSON
-
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", now,
-				imagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, schedulesJSON)
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -307,28 +310,22 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		ctx.mockSQLMock.ExpectQuery("SELECT COUNT").
 			WillReturnRows(countRows)
 
-		// Mock products
-		productImagesJSON := testProductImagesJSON
-		variantsJSON := testEmptyVariantsJSON
-
+		// Mock products - order: id, name, desc, price, stock, min_stock, is_active, is_highlighted, is_promotional, promo_price, created_at, cat_id, cat_name, cat_desc, images
 		productRows := sqlmock.NewRows(productColumns).
-			AddRow(1, "Product 1", "Description 1", 99.99, true, false, 0, false, 10, 2, now, 1, "Electronics", "https://cat.jpg", productImagesJSON, variantsJSON).
-			AddRow(2, "Product 2", "Description 2", 149.99, true, true, 129.99, true, 5, 1, now, 1, "Electronics", "https://cat.jpg", productImagesJSON, variantsJSON).
-			AddRow(3, "Product 3", "Description 3", 199.99, true, false, 0, false, 20, 5, now, 2, "Clothing", "https://cat2.jpg", productImagesJSON, variantsJSON).
-			AddRow(4, "Product 4", "Description 4", 249.99, false, false, 0, true, 15, 3, now, 1, "Electronics", "https://cat.jpg", productImagesJSON, variantsJSON).
-			AddRow(5, "Product 5", "Description 5", 299.99, true, true, 249.99, false, 8, 2, now, 2, "Clothing", "https://cat2.jpg", productImagesJSON, variantsJSON)
+			AddRow(1, "Product 1", "Description 1", 99.99, 10, 2, true, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON).
+			AddRow(2, "Product 2", "Description 2", 149.99, 5, 1, true, true, true, 129.99, now, 1, "Electronics", "Electronics desc", productImagesJSON).
+			AddRow(3, "Product 3", "Description 3", 199.99, 20, 5, true, false, false, 0.0, now, 2, "Clothing", "Clothing desc", productImagesJSON).
+			AddRow(4, "Product 4", "Description 4", 249.99, 15, 3, false, true, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON).
+			AddRow(5, "Product 5", "Description 5", 299.99, 8, 2, true, false, true, 249.99, now, 2, "Clothing", "Clothing desc", productImagesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(productRows)
 
 	case scenarioStoreProductsEmpty:
 		// Mock shop exists
-		imagesJSON := `[]`
-		schedulesJSON := testEmptySchedulesJSON
-
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore", now,
-				imagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, schedulesJSON)
+			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore",
+				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -344,7 +341,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(productRows)
 
-	case scenarioStoreProductsNotFound:
+	case scenarioStoreProductsNotFound, scenarioStoreNotFound:
 		// Mock shop not found
 		emptyRows := sqlmock.NewRows(shopColumns)
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -354,12 +351,9 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 	case scenarioStoreProductsMixedActive:
 		// Mock shop exists with products that have mixed is_active values
 		// The use case should filter out inactive products
-		imagesJSON := testStoreImagesJSON
-		schedulesJSON := testEmptySchedulesJSON
-
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", now,
-				imagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, schedulesJSON)
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(slug).
@@ -371,14 +365,10 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 			WillReturnRows(countRows)
 
 		// Mock only active products (the repository already filters by is_active=true)
-		// So we return only active products to simulate what the repository would return
-		productImagesJSON := testProductImagesJSON
-		variantsJSON := testEmptyVariantsJSON
-
 		productRows := sqlmock.NewRows(productColumns).
-			AddRow(1, "Active Product 1", "Description 1", 99.99, true, false, 0, false, 10, 2, now, 1, "Electronics", "https://cat.jpg", productImagesJSON, variantsJSON).
-			AddRow(2, "Active Product 2", "Description 2", 149.99, true, true, 129.99, true, 5, 1, now, 1, "Electronics", "https://cat.jpg", productImagesJSON, variantsJSON).
-			AddRow(3, "Active Product 3", "Description 3", 199.99, true, false, 0, false, 20, 5, now, 2, "Clothing", "https://cat2.jpg", productImagesJSON, variantsJSON)
+			AddRow(1, "Active Product 1", "Description 1", 99.99, 10, 2, true, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON).
+			AddRow(2, "Active Product 2", "Description 2", 149.99, 5, 1, true, true, true, 129.99, now, 1, "Electronics", "Electronics desc", productImagesJSON).
+			AddRow(3, "Active Product 3", "Description 3", 199.99, 20, 5, true, false, false, 0.0, now, 2, "Clothing", "Clothing desc", productImagesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(productRows)
