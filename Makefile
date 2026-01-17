@@ -1,5 +1,6 @@
 # Define the path where you want to generate your mocks
 SRC_DIR := .
+MOCK_DIR := mocks
 
 # Install mockery if not installed
 install-mockery:
@@ -56,7 +57,7 @@ create-env-file:
 
 
 # Incluir el archivo .env.develop y definir el comando migrate
-include $(ENV_FILE)
+-include $(ENV_FILE)
 # Exportar variables específicas (compatible con Windows)
 export DB_USER DB_PASSWORD DB_HOST DB_PORT DB_NAME MIGRATE_DB_PORT
 
@@ -99,15 +100,15 @@ migrate-down-seeds:
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
 
 .PHONY: migrate-force-seeds
 
 
 
 migrate-force:
-	@echo "Forcing seeds migrations to version $(V)..."
-	migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 7
+	@echo "Forcing migrations to version $(V)..."
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 11
 
 .PHONY: migrate-force
 

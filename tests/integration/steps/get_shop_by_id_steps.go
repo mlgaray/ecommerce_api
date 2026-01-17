@@ -22,6 +22,7 @@ const (
 	testPaymentMethodsJSON     = `[{"id": 1, "name": "Transfer", "code": "transfer", "is_active": true}]`
 	testDeliveryMethodsJSON    = `[{"id": 1, "name": "Delivery", "code": "delivery", "is_active": true}]`
 	testOperatingSchedulesJSON = `[{"id": 1, "day_of_week": 1, "open_time": "09:00", "close_time": "18:00"}]`
+	testTimezoneJSON           = `{"id": 1, "name": "Buenos Aires", "identifier": "America/Buenos_Aires", "utc_offset": "-03:00"}`
 	// testEmptySchedulesJSON is defined in get_store_by_slug_steps.go (same package)
 )
 
@@ -199,10 +200,10 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 	ctx := GetTestContext()
 
 	// Columns returned by GetByID query (matches shopQueryBase in shop_repository.go)
-	// Note: No created_at - the query only returns these 11 columns
+	// Note: No created_at - the query only returns these 12 columns
 	columns := []string{
 		"id", "name", "slug", "email", "phone", "instagram",
-		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
+		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
 	switch ctx.scenario {
@@ -212,7 +213,7 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 
 		rows := sqlmock.NewRows(columns).
 			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop",
-				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testOperatingSchedulesJSON)
+				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testOperatingSchedulesJSON, testTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).
@@ -222,7 +223,7 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 		// Mock shop without images
 		rows := sqlmock.NewRows(columns).
 			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop",
-				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testEmptySchedulesJSON)
+				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).
@@ -340,6 +341,21 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopDeliveryMethods() erro
 	return nil
 }
 
+func (g *GetShopByIDSteps) theResponseShouldContainTheShopTimezone() error {
+	ctx := GetTestContext()
+	shop, ok := ctx.responseBody.(models.Shop)
+	if !ok {
+		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+	}
+	if shop.Timezone == nil {
+		return fmt.Errorf("expected shop with timezone, got nil timezone")
+	}
+	if shop.Timezone.Identifier == "" {
+		return fmt.Errorf("expected shop with timezone identifier, got empty identifier")
+	}
+	return nil
+}
+
 // ===== Register Steps =====
 
 func (g *GetShopByIDSteps) RegisterSteps(sc *godog.ScenarioContext) {
@@ -363,4 +379,5 @@ func (g *GetShopByIDSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the response should contain the shop address$`, g.theResponseShouldContainTheShopAddress)
 	sc.Step(`^the response should contain the shop payment methods$`, g.theResponseShouldContainTheShopPaymentMethods)
 	sc.Step(`^the response should contain the shop delivery methods$`, g.theResponseShouldContainTheShopDeliveryMethods)
+	sc.Step(`^the response should contain the shop timezone$`, g.theResponseShouldContainTheShopTimezone)
 }

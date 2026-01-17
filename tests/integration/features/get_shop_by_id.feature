@@ -15,6 +15,7 @@ Feature: Get Shop by ID
     And the response should contain the shop address
     And the response should contain the shop payment methods
     And the response should contain the shop delivery methods
+    And the response should contain the shop timezone
 
   Scenario: Successfully get a shop without images
     Given a shop with ID 2 exists without images
