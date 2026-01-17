@@ -10,6 +10,9 @@ const (
 	ShopNotFound      = "shop_not_found"
 	ShopAlreadyExists = "shop_already_exists"
 
+	// Store related error messages
+	StoreNotFound = "store_not_found"
+
 	// Product related error messages
 	ProductNotFound                               = "product_not_found"
 	ProductAlreadyExists                          = "product_already_exists"

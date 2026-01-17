@@ -20,6 +20,7 @@ type router struct {
 	productHandler  ports.ProductHandler
 	categoryHandler ports.CategoryHandler
 	shopHandler     ports.ShopHandler
+	storeHandler    ports.StoreHandler
 	authMiddleware  *middleware.AuthMiddleware
 }
 
@@ -29,6 +30,7 @@ func NewRouter(
 	productHandler ports.ProductHandler,
 	categoryHandler ports.CategoryHandler,
 	shopHandler ports.ShopHandler,
+	storeHandler ports.StoreHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *router {
 	r := mux.NewRouter()
@@ -41,6 +43,7 @@ func NewRouter(
 		productHandler:  productHandler,
 		categoryHandler: categoryHandler,
 		shopHandler:     shopHandler,
+		storeHandler:    storeHandler,
 		authMiddleware:  authMiddleware,
 	}
 }
@@ -52,6 +55,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.categoryRoutes()
 	r.metricsRoutes()
 	r.shopRoutes()
+	r.storeRoutes()
 	return r.router
 }
 
@@ -106,4 +110,18 @@ func (r *router) shopRoutes() {
 
 func (r *router) metricsRoutes() {
 	r.router.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
+}
+
+func (r *router) storeRoutes() {
+	// Public routes (no auth required) - Customer-facing store endpoints
+	sub := r.router.PathPrefix("/stores").Subrouter()
+	// Note: More specific routes must be registered before less specific ones
+	// GET /stores/{slug}/products/featured - Get store featured products (public)
+	sub.HandleFunc("/{slug}/products/featured", r.storeHandler.GetFeaturedProducts).Methods(http.MethodGet)
+	// GET /stores/{slug}/products - Get store products (public)
+	sub.HandleFunc("/{slug}/products", r.storeHandler.GetProducts).Methods(http.MethodGet)
+	// GET /stores/{slug}/categories - Get store categories (public)
+	sub.HandleFunc("/{slug}/categories", r.storeHandler.GetCategories).Methods(http.MethodGet)
+	// GET /stores/{slug} - Get store by slug (public)
+	sub.HandleFunc("/{slug}", r.storeHandler.GetBySlug).Methods(http.MethodGet)
 }

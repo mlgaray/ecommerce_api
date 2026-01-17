@@ -10,7 +10,10 @@
       "Bash(/usr/local/go/bin/go build:*)",
       "Bash(/usr/bin/go build:*)",
       "Bash(~/go/bin/go build:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(go test:*)",
+      "Bash(make lint:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []

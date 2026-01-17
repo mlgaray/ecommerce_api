@@ -16,6 +16,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
@@ -453,6 +454,82 @@ func (ctx *TestContext) SetupShopTestApp() error {
 			protectedShops.Use(authMiddleware.Authenticate)
 			protectedShops.HandleFunc("/{shop_id}", handler.GetByID).Methods("GET")
 			protectedShops.HandleFunc("/{shop_id}", handler.Update).Methods("PUT")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupStoreTestApp initializes the test application for store tests (public endpoints)
+func (ctx *TestContext) SetupStoreTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order
+	sqlMock.MatchExpectationsInOrder(false)
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide store dependencies (no auth required - public endpoints)
+			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
+
+			// Provide category dependencies (for store categories endpoint)
+			fx.Annotate(postgresql.NewCategoryRepository, fx.As(new(ports.CategoryRepository))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewCategoryService, fx.As(new(ports.CategoryService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Category],
+				fx.As(new(ports.PaginationService[*models.Category])),
+			),
+
+			// Provide product dependencies (for store featured products endpoint)
+			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+			fx.Annotate(services.NewProductService, fx.As(new(ports.ProductService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Product],
+				fx.As(new(ports.PaginationService[*models.Product])),
+			),
+
+			// Provide use cases
+			fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
+			fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
+			fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
+			fx.Annotate(store.NewGetStoreFeaturedProductsUseCase, fx.As(new(ports.GetStoreFeaturedProductsUseCase))),
+
+			// Provide handler
+			authhttp.NewStoreHandler,
+		),
+		fx.Invoke(func(handler *authhttp.StoreHandler) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+
+			// Public routes (no auth required) - Customer-facing store endpoints
+			// Note: More specific routes must be registered before less specific ones
+			router.HandleFunc("/stores/{slug}/products/featured", handler.GetFeaturedProducts).Methods("GET")
+			router.HandleFunc("/stores/{slug}/products", handler.GetProducts).Methods("GET")
+			router.HandleFunc("/stores/{slug}/categories", handler.GetCategories).Methods("GET")
+			router.HandleFunc("/stores/{slug}", handler.GetBySlug).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),

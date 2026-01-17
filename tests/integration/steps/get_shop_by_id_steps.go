@@ -19,9 +19,10 @@ const (
 	scenarioShopNotOwned       = "shop-not-owned"
 
 	// Test JSON data constants
-	testAddressJSON         = `{"id": 1, "name": "Main Street 123", "place_id": "ChIJ123", "lat": -34.6037, "lng": -58.3816}`
-	testPaymentMethodsJSON  = `[{"id": 1, "name": "Transfer", "code": "transfer", "is_active": true}]`
-	testDeliveryMethodsJSON = `[{"id": 1, "name": "Delivery", "code": "delivery", "is_active": true}]`
+	testAddressJSON            = `{"id": 1, "name": "Main Street 123", "place_id": "ChIJ123", "lat": -34.6037, "lng": -58.3816}`
+	testPaymentMethodsJSON     = `[{"id": 1, "name": "Transfer", "code": "transfer", "is_active": true}]`
+	testDeliveryMethodsJSON    = `[{"id": 1, "name": "Delivery", "code": "delivery", "is_active": true}]`
+	testOperatingSchedulesJSON = `[{"id": 1, "day_of_week": 1, "open_time": "09:00", "close_time": "18:00"}]`
 )
 
 type GetShopByIDSteps struct{}
@@ -209,11 +210,10 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 	case scenarioShopExists:
 		// Mock shop with all relations
 		imagesJSON := `[{"id": 1, "url": "https://cloudinary.com/logo.jpg", "type": "logo"}, {"id": 2, "url": "https://cloudinary.com/cover.jpg", "type": "cover"}]`
-		schedulesJSON := `[{"id": 1, "day_of_week": 1, "open_time": "09:00", "close_time": "18:00"}]`
 
 		rows := sqlmock.NewRows(columns).
 			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop", now,
-				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, schedulesJSON)
+				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testOperatingSchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).
@@ -221,11 +221,9 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 
 	case scenarioShopExistsNoImages:
 		// Mock shop without images
-		schedulesJSON := `[]`
-
 		rows := sqlmock.NewRows(columns).
 			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop", now,
-				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, schedulesJSON)
+				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).

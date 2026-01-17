@@ -18,6 +18,11 @@ type ShopRepository interface {
 	// Returns RecordNotFoundError if shop doesn't exist.
 	GetByID(ctx context.Context, shopID int) (*models.Shop, error)
 
+	// GetBySlug returns a shop with all its related entities loaded by slug.
+	// Used for public store view (no authentication required).
+	// Returns RecordNotFoundError if shop doesn't exist.
+	GetBySlug(ctx context.Context, slug string) (*models.Shop, error)
+
 	// GetShopsByUserID returns all shops owned by a user.
 	// Used during authentication to include shop IDs in JWT token.
 	GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error)
