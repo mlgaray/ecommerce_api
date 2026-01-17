@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
@@ -19,9 +18,11 @@ const (
 	scenarioShopNotOwned       = "shop-not-owned"
 
 	// Test JSON data constants
-	testAddressJSON         = `{"id": 1, "name": "Main Street 123", "place_id": "ChIJ123", "lat": -34.6037, "lng": -58.3816}`
-	testPaymentMethodsJSON  = `[{"id": 1, "name": "Transfer", "code": "transfer", "is_active": true}]`
-	testDeliveryMethodsJSON = `[{"id": 1, "name": "Delivery", "code": "delivery", "is_active": true}]`
+	testAddressJSON            = `{"id": 1, "name": "Main Street 123", "place_id": "ChIJ123", "lat": -34.6037, "lng": -58.3816}`
+	testPaymentMethodsJSON     = `[{"id": 1, "name": "Transfer", "code": "transfer", "is_active": true}]`
+	testDeliveryMethodsJSON    = `[{"id": 1, "name": "Delivery", "code": "delivery", "is_active": true}]`
+	testOperatingSchedulesJSON = `[{"id": 1, "day_of_week": 1, "open_time": "09:00", "close_time": "18:00"}]`
+	// testEmptySchedulesJSON is defined in get_store_by_slug_steps.go (same package)
 )
 
 type GetShopByIDSteps struct{}
@@ -197,23 +198,21 @@ func (g *GetShopByIDSteps) iSendAnUnauthenticatedGetShopByIDRequestForShop(shopI
 func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 	ctx := GetTestContext()
 
-	// Columns returned by GetByID query (complex query with multiple LEFT JOIN LATERAL)
+	// Columns returned by GetByID query (matches shopQueryBase in shop_repository.go)
+	// Note: No created_at - the query only returns these 11 columns
 	columns := []string{
-		"id", "name", "slug", "email", "phone", "instagram", "created_at",
+		"id", "name", "slug", "email", "phone", "instagram",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
 	}
-
-	now := time.Now()
 
 	switch ctx.scenario {
 	case scenarioShopExists:
 		// Mock shop with all relations
 		imagesJSON := `[{"id": 1, "url": "https://cloudinary.com/logo.jpg", "type": "logo"}, {"id": 2, "url": "https://cloudinary.com/cover.jpg", "type": "cover"}]`
-		schedulesJSON := `[{"id": 1, "day_of_week": 1, "open_time": "09:00", "close_time": "18:00"}]`
 
 		rows := sqlmock.NewRows(columns).
-			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop", now,
-				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, schedulesJSON)
+			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop",
+				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testOperatingSchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).
@@ -221,11 +220,9 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 
 	case scenarioShopExistsNoImages:
 		// Mock shop without images
-		schedulesJSON := `[]`
-
 		rows := sqlmock.NewRows(columns).
-			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop", now,
-				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, schedulesJSON)
+			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop",
+				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testEmptySchedulesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
 			WithArgs(shopID).

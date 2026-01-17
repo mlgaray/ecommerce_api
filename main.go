@@ -15,6 +15,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/assets"
@@ -108,6 +109,17 @@ var Module = fx.Options(
 		fx.Annotate(shop.NewUpdateShopUseCase, fx.As(new(ports.UpdateShopUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewShopHandler, fx.As(new(ports.ShopHandler))),
+
+		// STORE (public storefront endpoints)
+		// Service depends on ShopRepository (reuses existing repository)
+		fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
+		// Use Cases depend on Services
+		fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
+		fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
+		fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
+		fx.Annotate(store.NewGetStoreFeaturedProductsUseCase, fx.As(new(ports.GetStoreFeaturedProductsUseCase))),
+		// Handler depends on Use Cases
+		fx.Annotate(http.NewStoreHandler, fx.As(new(ports.StoreHandler))),
 
 		// SERVER
 		server.NewServer,

@@ -51,7 +51,7 @@ Feature: Update Shop
     And I have shop update data with an invalid image type
     When I send an update shop request for shop 1
     Then the response status should be 400
-    And the user should receive an error message "invalid_image_type"
+    And the user should receive an error message "invalid_logo_image_type_only_jpeg_png_allowed"
 
   # Business Validation errors (Domain layer - Model.Validate())
   Scenario: Update shop with invalid transfer CBU returns 400
@@ -75,7 +75,7 @@ Feature: Update Shop
 
   # Not found errors
   Scenario: Update non-existent shop returns 404
-    Given a shop with ID 999 does not exist
-    When I send an update shop request for shop 999
+    Given a shop with ID 888 does not exist
+    When I send an update shop request for shop 888
     Then the response status should be 404
     And the user should receive an error message "shop_not_found"
