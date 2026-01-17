@@ -13,6 +13,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
+	"github.com/lib/pq"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 )
@@ -108,7 +109,7 @@ func (u *UpdateShopSteps) iSendAnUpdateShopRequestForShop(shopID int) error {
 	}
 
 	// Setup SQL expectations based on scenario
-	u.setupUpdateShopSQLExpectations(shopID)
+	u.setupUpdateShopSQLExpectations()
 
 	// Build multipart request
 	body, contentType, err := u.createShopUpdateRequest()
@@ -308,7 +309,7 @@ func (u *UpdateShopSteps) addInvalidImageToRequest(writer *multipart.Writer, ima
 
 // ===== SQL Mock Setup =====
 
-func (u *UpdateShopSteps) setupUpdateShopSQLExpectations(shopID int) {
+func (u *UpdateShopSteps) setupUpdateShopSQLExpectations() {
 	ctx := GetTestContext()
 
 	switch ctx.scenario {
@@ -323,14 +324,9 @@ func (u *UpdateShopSteps) setupUpdateShopSQLExpectations(shopID int) {
 			WillReturnRows(sqlmock.NewRows([]string{"deleted_refs"}).AddRow("{}"))
 
 	case scenarioShopUpdateNotFound, scenarioShopNotFound:
-		// Mock not found - the stored procedure returns empty or we check for shop existence
-		columns := []string{
-			"id", "name", "slug", "email", "phone", "instagram", "created_at",
-			"images", "address", "payment_methods", "delivery_methods", "operating_schedules",
-		}
-		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
-			WithArgs(shopID).
-			WillReturnRows(sqlmock.NewRows(columns))
+		// Mock not found - the stored procedure raises P0002 (no data found) error
+		ctx.mockSQLMock.ExpectQuery("SELECT update_shop").
+			WillReturnError(&pq.Error{Code: "P0002", Message: "Shop not found"})
 
 	case scenarioShopNotOwned:
 		// This is handled by authorization check in handler, no SQL mock needed

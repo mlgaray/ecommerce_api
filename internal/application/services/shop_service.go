@@ -30,6 +30,20 @@ func (s *ShopService) GetByID(ctx context.Context, shopID int) (*models.Shop, er
 	return s.shopRepository.GetByID(ctx, shopID)
 }
 
+// validateShop validates business rules for shop update.
+// Validates nested models like PaymentMethods with TransferConfig.
+func (s *ShopService) validateShop(shop *models.Shop) error {
+	// Validate payment methods with transfer config
+	for _, pm := range shop.PaymentMethods {
+		if pm.IsActive && pm.TransferConfig != nil {
+			if err := pm.TransferConfig.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // Update updates an existing shop with optional new images.
 // Business logic: validates shop, uploads new images to storage, persists via repository.
 // Handles: upload new images -> persist to DB -> delete removed images from storage.
@@ -37,6 +51,11 @@ func (s *ShopService) GetByID(ctx context.Context, shopID int) (*models.Shop, er
 //
 //nolint:gocyclo // Complexity is intentional for readability - parallel upload logic with rollback
 func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop, newLogoBuffer []byte, newCoverBuffer []byte) error {
+	// 0. Validate shop business rules
+	if err := s.validateShop(shop); err != nil {
+		return err
+	}
+
 	// 1. Upload new images in parallel using WaitGroup
 	var (
 		wg         sync.WaitGroup
