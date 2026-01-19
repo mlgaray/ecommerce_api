@@ -175,6 +175,52 @@ func (_c *StoreHandler_GetFeaturedProducts_Call) RunAndReturn(run func(responseW
 	return _c
 }
 
+// GetProductByID provides a mock function for the type StoreHandler
+func (_mock *StoreHandler) GetProductByID(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// StoreHandler_GetProductByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProductByID'
+type StoreHandler_GetProductByID_Call struct {
+	*mock.Call
+}
+
+// GetProductByID is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *StoreHandler_Expecter) GetProductByID(responseWriter interface{}, request interface{}) *StoreHandler_GetProductByID_Call {
+	return &StoreHandler_GetProductByID_Call{Call: _e.mock.On("GetProductByID", responseWriter, request)}
+}
+
+func (_c *StoreHandler_GetProductByID_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_GetProductByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreHandler_GetProductByID_Call) Return() *StoreHandler_GetProductByID_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *StoreHandler_GetProductByID_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_GetProductByID_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetProducts provides a mock function for the type StoreHandler
 func (_mock *StoreHandler) GetProducts(responseWriter http.ResponseWriter, request *http.Request) {
 	_mock.Called(responseWriter, request)

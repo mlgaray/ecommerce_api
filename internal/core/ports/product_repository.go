@@ -26,4 +26,9 @@ type ProductRepository interface {
 	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
 	// Related entities (images, variants, variant_options) are cascade-deleted automatically.
 	Delete(ctx context.Context, productID, shopID int) (deletedRefs []string, err error)
+
+	// GetByIDAndShopID retrieves a product by ID and validates shop ownership.
+	// Used by public store endpoints where shop ID comes from slug lookup.
+	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+	GetByIDAndShopID(ctx context.Context, productID, shopID int) (*models.Product, error)
 }

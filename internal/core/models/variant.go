@@ -14,5 +14,6 @@ type Variant struct {
 	Order         int           `json:"order,omitempty"`
 	SelectionType SelectionType `json:"selection_type,omitempty"`
 	MaxSelections int           `json:"max_selections,omitempty"`
+	IsRequired    bool          `json:"is_required,omitempty"`
 	Options       []*Option     `json:"options,omitempty"`
 }

@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -20,6 +21,7 @@ const (
 	GetStoreCategoriesFunctionField       = "get_categories"
 	GetStoreProductsFunctionField         = "get_products"
 	GetStoreFeaturedProductsFunctionField = "get_featured_products"
+	GetStoreProductByIDFunctionField      = "get_product_by_id"
 )
 
 type StoreHandler struct {
@@ -27,6 +29,7 @@ type StoreHandler struct {
 	getStoreCategories       ports.GetStoreCategoriesUseCase
 	getStoreProducts         ports.GetStoreProductsUseCase
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase
+	getStoreProductByID      ports.GetStoreProductByIDUseCase
 }
 
 func NewStoreHandler(
@@ -34,12 +37,14 @@ func NewStoreHandler(
 	getStoreCategories ports.GetStoreCategoriesUseCase,
 	getStoreProducts ports.GetStoreProductsUseCase,
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase,
+	getStoreProductByID ports.GetStoreProductByIDUseCase,
 ) ports.StoreHandler {
 	return &StoreHandler{
 		getStoreBySlug:           getStoreBySlug,
 		getStoreCategories:       getStoreCategories,
 		getStoreProducts:         getStoreProducts,
 		getStoreFeaturedProducts: getStoreFeaturedProducts,
+		getStoreProductByID:      getStoreProductByID,
 	}
 }
 
@@ -322,6 +327,66 @@ func (h *StoreHandler) GetFeaturedProducts(w http.ResponseWriter, r *http.Reques
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
 			"function": GetStoreFeaturedProductsFunctionField,
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
+}
+
+// GetProductByID handles GET /stores/{slug}/products/{productId} requests.
+// Returns a product by ID for a store identified by slug.
+func (h *StoreHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse slug from URL
+	slug, err := h.parseSlug(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// Parse productId from URL
+	vars := mux.Vars(r)
+	productIDStr := vars["productId"]
+	productID, err := strconv.Atoi(productIDStr)
+	if err != nil || productID <= 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":       StoreHandlerField,
+			"function":   GetStoreProductByIDFunctionField,
+			"slug":       slug,
+			"product_id": productIDStr,
+		}).Warn("Invalid product ID format")
+		httpErrors.HandleError(w, &httpErrors.BadRequestError{Message: "invalid_product_id"})
+		return
+	}
+
+	// Execute use case (NO authorization check - public endpoint)
+	product, err := h.getStoreProductByID.Execute(ctx, slug, productID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       StoreHandlerField,
+			"function":   GetStoreProductByIDFunctionField,
+			"slug":       slug,
+			"product_id": productID,
+			"error":      err.Error(),
+		}).Error("Error retrieving store product")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":       StoreHandlerField,
+		"function":   GetStoreProductByIDFunctionField,
+		"slug":       slug,
+		"product_id": productID,
+	}).Debug("Store product retrieved successfully")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(product); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     StoreHandlerField,
+			"function": GetStoreProductByIDFunctionField,
 			"sub_func": "json.Encode",
 			"error":    err.Error(),
 		}).Error("Error encoding response")
