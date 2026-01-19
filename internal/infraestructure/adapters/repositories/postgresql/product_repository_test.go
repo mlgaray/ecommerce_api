@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/lib/pq"
@@ -702,6 +703,444 @@ func TestProductRepository_Delete(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, storageRefs)
 		assert.Contains(t, err.Error(), "database operation failed")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestProductRepository_GetByID(t *testing.T) {
+	t.Run("when product exists then returns product with variants and images", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+
+		imagesJSON := `[{"id":1,"url":"http://example.com/image1.jpg"}]`
+		variantsJSON := `[{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"is_required":true,"options":[{"id":1,"name":"Small","price":0,"order":1}]}]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			1, "Test Product", "Test Description", 99.99, 10, 5,
+			true, false, false, 0.0,
+			time.Now(), 1, "Electronics", "Electronics category",
+			imagesJSON, variantsJSON,
+		)
+
+		// CTE query pattern - match FROM products p
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByID(ctx, productID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Equal(t, 1, product.ID)
+		assert.Equal(t, "Test Product", product.Name)
+		assert.Equal(t, 99.99, product.Price)
+		assert.True(t, product.IsActive)
+		assert.NotNil(t, product.Category)
+		assert.Equal(t, 1, product.Category.ID)
+		assert.Len(t, product.Images, 1)
+		assert.Len(t, product.Variants, 1)
+		assert.Len(t, product.Variants[0].Options, 1)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 999
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByID(ctx, productID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, product)
+		var notFoundErr *coreErrors.RecordNotFoundError
+		assert.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, coreErrors.ProductNotFound, notFoundErr.Message)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when database connection fails then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+
+		expectedError := errors.New("connection refused")
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID).
+			WillReturnError(expectedError)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByID(ctx, productID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, product)
+		assert.Contains(t, err.Error(), "database operation failed")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product has no variants then returns product with empty variants", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 2
+
+		imagesJSON := `[{"id":1,"url":"http://example.com/image1.jpg"}]`
+		variantsJSON := `[]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			2, "Simple Product", "No variants", 49.99, 20, 10,
+			true, false, false, 0.0,
+			time.Now(), 1, "Electronics", "Electronics category",
+			imagesJSON, variantsJSON,
+		)
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByID(ctx, productID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Equal(t, 2, product.ID)
+		assert.Empty(t, product.Variants)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product has no images then returns product with empty images", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 3
+
+		imagesJSON := `[]`
+		variantsJSON := `[]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			3, "No Images Product", "No images", 29.99, 15, 5,
+			true, false, false, 0.0,
+			time.Now(), 1, "Electronics", "Electronics category",
+			imagesJSON, variantsJSON,
+		)
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByID(ctx, productID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Equal(t, 3, product.ID)
+		assert.Empty(t, product.Images)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestProductRepository_GetByIDAndShopID(t *testing.T) {
+	t.Run("when product exists and belongs to shop then returns product", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		imagesJSON := `[{"id":1,"url":"http://example.com/image1.jpg"}]`
+		variantsJSON := `[{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"is_required":true,"options":[{"id":1,"name":"Small","price":0,"order":1}]}]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			1, "Test Product", "Test Description", 99.99, 10, 5,
+			true, false, false, 0.0,
+			time.Now(), 1, "Electronics", "Electronics category",
+			imagesJSON, variantsJSON,
+		)
+
+		// CTE query pattern - match FROM products p with shop_id filter
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Equal(t, 1, product.ID)
+		assert.Equal(t, "Test Product", product.Name)
+		assert.True(t, product.IsActive)
+		assert.NotNil(t, product.Category)
+		assert.Len(t, product.Images, 1)
+		assert.Len(t, product.Variants, 1)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 999
+		shopID := 1
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, product)
+		var notFoundErr *coreErrors.RecordNotFoundError
+		assert.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, coreErrors.ProductNotFound, notFoundErr.Message)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product belongs to different shop then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 2 // Product belongs to shop 1, not shop 2
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		})
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, product)
+		var notFoundErr *coreErrors.RecordNotFoundError
+		assert.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, coreErrors.ProductNotFound, notFoundErr.Message)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when database connection fails then returns error", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		expectedError := errors.New("connection timeout")
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnError(expectedError)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, product)
+		assert.Contains(t, err.Error(), "database operation failed")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product is inactive then still returns product", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		imagesJSON := `[]`
+		variantsJSON := `[]`
+
+		// Note: Repository returns inactive products - filtering is done at use case layer
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			1, "Inactive Product", "This product is inactive", 99.99, 10, 5,
+			false, false, false, 0.0, // is_active = false
+			time.Now(), 1, "Electronics", "Electronics category",
+			imagesJSON, variantsJSON,
+		)
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Equal(t, 1, product.ID)
+		assert.False(t, product.IsActive) // Repository returns it, use case filters
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("when product has multiple variants with options then returns all", func(t *testing.T) {
+		// Arrange
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+
+		imagesJSON := `[{"id":1,"url":"http://example.com/img1.jpg"},{"id":2,"url":"http://example.com/img2.jpg"}]`
+		variantsJSON := `[
+			{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"is_required":true,"options":[
+				{"id":1,"name":"Small","price":0,"order":1},
+				{"id":2,"name":"Medium","price":0,"order":2},
+				{"id":3,"name":"Large","price":2,"order":3}
+			]},
+			{"id":2,"name":"Extras","order":2,"selection_type":"multiple","max_selections":3,"is_required":false,"options":[
+				{"id":4,"name":"Cheese","price":1.5,"order":1},
+				{"id":5,"name":"Bacon","price":2,"order":2}
+			]}
+		]`
+
+		rows := sqlmock.NewRows([]string{
+			"id", "name", "description", "price", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}).AddRow(
+			1, "Complex Product", "Product with multiple variants", 99.99, 10, 5,
+			true, true, false, 0.0,
+			time.Now(), 1, "Food", "Food category",
+			imagesJSON, variantsJSON,
+		)
+
+		mock.ExpectQuery("(?s)FROM products p").
+			WithArgs(productID, shopID).
+			WillReturnRows(rows)
+
+		repo := &ProductRepository{db: db}
+
+		// Act
+		product, err := repo.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, product)
+		assert.Len(t, product.Images, 2)
+		assert.Len(t, product.Variants, 2)
+		assert.Equal(t, "Size", product.Variants[0].Name)
+		assert.Len(t, product.Variants[0].Options, 3)
+		assert.Equal(t, "Extras", product.Variants[1].Name)
+		assert.Len(t, product.Variants[1].Options, 2)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

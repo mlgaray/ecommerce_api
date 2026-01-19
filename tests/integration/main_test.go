@@ -61,6 +61,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getStoreCategoriesSteps := steps.NewGetStoreCategoriesSteps()
 	getStoreProductsSteps := steps.NewGetStoreProductsSteps()
 	getStoreFeaturedProductsSteps := steps.NewGetStoreFeaturedProductsSteps()
+	getStoreProductByIDSteps := steps.NewGetStoreProductByIDSteps()
 	commonSteps := steps.NewCommonSteps()
 
 	// Register steps
@@ -81,6 +82,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getStoreCategoriesSteps.RegisterSteps(sc)
 	getStoreProductsSteps.RegisterSteps(sc)
 	getStoreFeaturedProductsSteps.RegisterSteps(sc)
+	getStoreProductByIDSteps.RegisterSteps(sc)
 	commonSteps.RegisterSteps(sc)
 
 	// Setup hooks

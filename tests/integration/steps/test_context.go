@@ -526,6 +526,7 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
 			fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
 			fx.Annotate(store.NewGetStoreFeaturedProductsUseCase, fx.As(new(ports.GetStoreFeaturedProductsUseCase))),
+			fx.Annotate(store.NewGetStoreProductByIDUseCase, fx.As(new(ports.GetStoreProductByIDUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewStoreHandler, fx.As(new(ports.StoreHandler))),
@@ -537,6 +538,7 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			// Public routes (no auth required) - Customer-facing store endpoints
 			// Note: More specific routes must be registered before less specific ones
 			router.HandleFunc("/stores/{slug}/products/featured", handler.GetFeaturedProducts).Methods("GET")
+			router.HandleFunc("/stores/{slug}/products/{productId}", handler.GetProductByID).Methods("GET")
 			router.HandleFunc("/stores/{slug}/products", handler.GetProducts).Methods("GET")
 			router.HandleFunc("/stores/{slug}/categories", handler.GetCategories).Methods("GET")
 			router.HandleFunc("/stores/{slug}", handler.GetBySlug).Methods("GET")
