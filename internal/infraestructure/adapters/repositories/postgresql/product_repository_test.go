@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/lib/pq"
@@ -727,7 +728,7 @@ func TestProductRepository_GetByID(t *testing.T) {
 		}).AddRow(
 			1, "Test Product", "Test Description", 99.99, 10, 5,
 			true, false, false, 0.0,
-			sqlmock.AnyArg(), 1, "Electronics", "Electronics category",
+			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
 		)
 
@@ -836,7 +837,7 @@ func TestProductRepository_GetByID(t *testing.T) {
 		}).AddRow(
 			2, "Simple Product", "No variants", 49.99, 20, 10,
 			true, false, false, 0.0,
-			sqlmock.AnyArg(), 1, "Electronics", "Electronics category",
+			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
 		)
 
@@ -877,7 +878,7 @@ func TestProductRepository_GetByID(t *testing.T) {
 		}).AddRow(
 			3, "No Images Product", "No images", 29.99, 15, 5,
 			true, false, false, 0.0,
-			sqlmock.AnyArg(), 1, "Electronics", "Electronics category",
+			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
 		)
 
@@ -921,7 +922,7 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		}).AddRow(
 			1, "Test Product", "Test Description", 99.99, 10, 5,
 			true, false, false, 0.0,
-			sqlmock.AnyArg(), 1, "Electronics", "Electronics category",
+			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
 		)
 
@@ -1066,7 +1067,7 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		}).AddRow(
 			1, "Inactive Product", "This product is inactive", 99.99, 10, 5,
 			false, false, false, 0.0, // is_active = false
-			sqlmock.AnyArg(), 1, "Electronics", "Electronics category",
+			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
 		)
 
@@ -1118,7 +1119,7 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		}).AddRow(
 			1, "Complex Product", "Product with multiple variants", 99.99, 10, 5,
 			true, true, false, 0.0,
-			sqlmock.AnyArg(), 1, "Food", "Food category",
+			time.Now(), 1, "Food", "Food category",
 			imagesJSON, variantsJSON,
 		)
 

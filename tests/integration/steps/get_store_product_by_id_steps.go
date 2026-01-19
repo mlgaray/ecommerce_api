@@ -54,6 +54,11 @@ func (g *GetStoreProductByIDSteps) iSendAGetStoreProductByIDRequestFor(slug stri
 		ctx.scenario = scenarioStoreNotFound
 	}
 
+	// Detect non-existent product ID (99999 is the conventional "not found" product ID in tests)
+	if productID == 99999 {
+		ctx.scenario = scenarioStoreProductByIDNotFound
+	}
+
 	// Set scenario based on product ID if not already set
 	if ctx.scenario == "" {
 		ctx.scenario = scenarioStoreProductByIDExists
