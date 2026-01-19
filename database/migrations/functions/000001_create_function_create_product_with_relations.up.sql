@@ -83,12 +83,13 @@ BEGIN
             -- Insert variant and get ID
             -- Using NULLIF for safe-cast of empty strings
             INSERT INTO product_variants (
-                name, "order", selection_type, max_selections, product_id
+                name, "order", selection_type, max_selections, is_required, product_id
             ) VALUES (
                 v_variant->>'name',
                 COALESCE(NULLIF(v_variant->>'order', '')::INTEGER, 0),
                 v_variant->>'selection_type',
                 COALESCE(NULLIF(v_variant->>'max_selections', '')::INTEGER, 0),
+                COALESCE((v_variant->>'is_required')::BOOLEAN, false),
                 v_product_id
             ) RETURNING id INTO v_variant_id;
 

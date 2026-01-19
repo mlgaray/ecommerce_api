@@ -118,6 +118,8 @@ func (r *router) storeRoutes() {
 	// Note: More specific routes must be registered before less specific ones
 	// GET /stores/{slug}/products/featured - Get store featured products (public)
 	sub.HandleFunc("/{slug}/products/featured", r.storeHandler.GetFeaturedProducts).Methods(http.MethodGet)
+	// GET /stores/{slug}/products/{productId} - Get store product by ID (public)
+	sub.HandleFunc("/{slug}/products/{productId}", r.storeHandler.GetProductByID).Methods(http.MethodGet)
 	// GET /stores/{slug}/products - Get store products (public)
 	sub.HandleFunc("/{slug}/products", r.storeHandler.GetProducts).Methods(http.MethodGet)
 	// GET /stores/{slug}/categories - Get store categories (public)

@@ -148,3 +148,10 @@ func (s *ProductService) Delete(ctx context.Context, productID, shopID int) erro
 
 	return nil
 }
+
+// GetByIDAndShopID retrieves a product by ID and validates shop ownership.
+// Used by public store endpoints where shop ID comes from slug lookup.
+// Delegates to repository - service layer can add business logic if needed.
+func (s *ProductService) GetByIDAndShopID(ctx context.Context, productID, shopID int) (*models.Product, error) {
+	return s.productRepository.GetByIDAndShopID(ctx, productID, shopID)
+}

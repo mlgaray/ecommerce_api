@@ -71,7 +71,7 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 			Execute(mock.Anything, "test-store").
 			Return(store, nil)
 
-		handler := NewStoreHandler(useCaseMock, nil, nil, nil)
+		handler := NewStoreHandler(useCaseMock, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -99,7 +99,7 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 			Execute(mock.Anything, "non-existent").
 			Return(nil, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewStoreHandler(useCaseMock, nil, nil, nil)
+		handler := NewStoreHandler(useCaseMock, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/non-existent", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "non-existent"})
@@ -114,7 +114,7 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewStoreHandler(nil, nil, nil, nil)
+		handler := NewStoreHandler(nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -129,7 +129,7 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 
 	t.Run("when slug is whitespace only then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewStoreHandler(nil, nil, nil, nil)
+		handler := NewStoreHandler(nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/whitespace-test", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "   "})
@@ -157,7 +157,7 @@ func TestStoreHandler_GetCategories(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, "", false, nil)
 
-		handler := NewStoreHandler(nil, useCaseMock, nil, nil)
+		handler := NewStoreHandler(nil, useCaseMock, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/categories", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -183,7 +183,7 @@ func TestStoreHandler_GetCategories(t *testing.T) {
 			Execute(mock.Anything, "non-existent", mock.AnythingOfType("models.CategoryFilters")).
 			Return(nil, "", false, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewStoreHandler(nil, useCaseMock, nil, nil)
+		handler := NewStoreHandler(nil, useCaseMock, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/non-existent/categories", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "non-existent"})
@@ -198,7 +198,7 @@ func TestStoreHandler_GetCategories(t *testing.T) {
 
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewStoreHandler(nil, nil, nil, nil)
+		handler := NewStoreHandler(nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores//categories", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -220,7 +220,7 @@ func TestStoreHandler_GetCategories(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, "", false, nil)
 
-		handler := NewStoreHandler(nil, useCaseMock, nil, nil)
+		handler := NewStoreHandler(nil, useCaseMock, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/categories?search=electronics", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -243,7 +243,7 @@ func TestStoreHandler_GetCategories(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.CategoryFilters")).
 			Return(categories, expectedCursor, true, nil)
 
-		handler := NewStoreHandler(nil, useCaseMock, nil, nil)
+		handler := NewStoreHandler(nil, useCaseMock, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/categories?limit=2", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -277,7 +277,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, "", false, nil)
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -303,7 +303,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "non-existent", mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, "", false, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/non-existent/products", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "non-existent"})
@@ -318,7 +318,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewStoreHandler(nil, nil, nil, nil)
+		handler := NewStoreHandler(nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores//products", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -340,7 +340,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, "", false, nil)
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products?search=phone", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -362,7 +362,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, "", false, nil)
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products?category_id=5", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -385,7 +385,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, expectedCursor, true, nil)
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products?limit=2", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -411,7 +411,7 @@ func TestStoreHandler_GetProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, "", false, &domainErrors.ValidationError{Message: domainErrors.InvalidSortField})
 
-		handler := NewStoreHandler(nil, nil, useCaseMock, nil)
+		handler := NewStoreHandler(nil, nil, useCaseMock, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -439,7 +439,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, "", false, nil)
 
-		handler := NewStoreHandler(nil, nil, nil, useCaseMock)
+		handler := NewStoreHandler(nil, nil, nil, useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products/featured", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -465,7 +465,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 			Execute(mock.Anything, "non-existent", mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, "", false, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewStoreHandler(nil, nil, nil, useCaseMock)
+		handler := NewStoreHandler(nil, nil, nil, useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/non-existent/products/featured", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "non-existent"})
@@ -480,7 +480,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewStoreHandler(nil, nil, nil, nil)
+		handler := NewStoreHandler(nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores//products/featured", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -503,7 +503,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(products, expectedCursor, true, nil)
 
-		handler := NewStoreHandler(nil, nil, nil, useCaseMock)
+		handler := NewStoreHandler(nil, nil, nil, useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products/featured?limit=2", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -529,7 +529,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return(nil, "", false, &domainErrors.ValidationError{Message: domainErrors.InvalidSortField})
 
-		handler := NewStoreHandler(nil, nil, nil, useCaseMock)
+		handler := NewStoreHandler(nil, nil, nil, useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products/featured", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
@@ -549,7 +549,7 @@ func TestStoreHandler_GetFeaturedProducts(t *testing.T) {
 			Execute(mock.Anything, "test-store", mock.AnythingOfType("models.ProductFilters")).
 			Return([]*models.Product{}, "", false, nil)
 
-		handler := NewStoreHandler(nil, nil, nil, useCaseMock)
+		handler := NewStoreHandler(nil, nil, nil, useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/stores/test-store/products/featured", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})

@@ -16,4 +16,7 @@ type StoreHandler interface {
 
 	// GetFeaturedProducts handles GET /stores/{slug}/products/featured
 	GetFeaturedProducts(http.ResponseWriter, *http.Request)
+
+	// GetProductByID handles GET /stores/{slug}/products/{productId}
+	GetProductByID(http.ResponseWriter, *http.Request)
 }

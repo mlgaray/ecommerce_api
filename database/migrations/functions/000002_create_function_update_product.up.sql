@@ -128,16 +128,18 @@ BEGIN
                 SET name = v_variant->>'name',
                     "order" = (v_variant->>'order')::INTEGER,
                     selection_type = v_variant->>'selection_type',
-                    max_selections = (v_variant->>'max_selections')::INTEGER
+                    max_selections = (v_variant->>'max_selections')::INTEGER,
+                    is_required = COALESCE((v_variant->>'is_required')::BOOLEAN, false)
                 WHERE id = v_variant_id;
             ELSE
                 -- INSERT new variant
-                INSERT INTO product_variants (name, "order", selection_type, max_selections, product_id)
+                INSERT INTO product_variants (name, "order", selection_type, max_selections, is_required, product_id)
                 VALUES (
                     v_variant->>'name',
                     (v_variant->>'order')::INTEGER,
                     v_variant->>'selection_type',
                     (v_variant->>'max_selections')::INTEGER,
+                    COALESCE((v_variant->>'is_required')::BOOLEAN, false),
                     p_product_id
                 ) RETURNING id INTO v_variant_id;
             END IF;

@@ -23,15 +23,16 @@ type ProductRepository struct {
 
 // Product repository log field constants
 const (
-	ProductRepositoryField          = "product_repository"
-	ProductCreateFunctionField      = "create"
-	ProductGetByIDFunctionField     = "get_by_id"
-	ProductUpdateFunctionField      = "update"
-	ProductDeleteFunctionField      = "delete"
-	ProductUnmarshallSubFuncField   = "unmarshall"
-	MarshalVariantsSubFuncField     = "marshal_variants"
-	MarshalImagesSubFuncField       = "marshal_images"
-	CallStoredProcedureSubFuncField = "call_stored_procedure"
+	ProductRepositoryField               = "product_repository"
+	ProductCreateFunctionField           = "create"
+	ProductGetByIDFunctionField          = "get_by_id"
+	ProductGetByIDAndShopIDFunctionField = "get_by_id_and_shop_id"
+	ProductUpdateFunctionField           = "update"
+	ProductDeleteFunctionField           = "delete"
+	ProductUnmarshallSubFuncField        = "unmarshall"
+	MarshalVariantsSubFuncField          = "marshal_variants"
+	MarshalImagesSubFuncField            = "marshal_images"
+	CallStoredProcedureSubFuncField      = "call_stored_procedure"
 )
 
 // Product repository log message constants
@@ -57,51 +58,77 @@ func NewProductRepository(dataBaseConnection DataBaseConnection) *ProductReposit
 }
 
 func (r *ProductRepository) GetByID(ctx context.Context, productID int) (*models.Product, error) {
+	// Optimized query using CTEs for pre-aggregation
+	// Benefits: cleaner plan, better readability, PostgreSQL 12+ can inline non-recursive CTEs
 	query := `
-		SELECT
-			p.id, p.name, p.description, p.price, p.stock, COALESCE(p.minimum_stock, 0),
-			p.is_active, p.is_highlighted, p.is_promotional, COALESCE(p.promotional_price, 0),
-			p.created_at,
-			c.id, c.name, COALESCE(c.description, ''),
-			COALESCE(
-				(SELECT jsonb_agg(
+		WITH images_agg AS (
+			SELECT
+				img.product_id,
+				jsonb_agg(
 					jsonb_build_object(
 						'id', img.id,
 						'url', img.url
 					) ORDER BY img.id
-				)
-				FROM images img
-				WHERE img.product_id = p.id),
-				'[]'::jsonb
-			) AS images,
-			COALESCE(
-				(SELECT jsonb_agg(
+				) AS images
+			FROM images img
+			WHERE img.product_id = $1
+			GROUP BY img.product_id
+		),
+		variant_options_agg AS (
+			SELECT
+				vo.variant_id,
+				jsonb_agg(
 					jsonb_build_object(
-						'id', pv2.id,
-						'name', pv2.name,
-						'order', pv2."order",
-						'selection_type', pv2.selection_type,
-						'max_selections', pv2.max_selections,
-						'options', (
-							SELECT COALESCE(jsonb_agg(
-								jsonb_build_object(
-									'id', vo.id,
-									'name', vo.name,
-									'price', vo.price,
-									'order', vo."order"
-								) ORDER BY vo."order"
-							), '[]'::jsonb)
-							FROM variant_options vo
-							WHERE vo.variant_id = pv2.id
-						)
-					) ORDER BY pv2."order"
-				)
-				FROM product_variants pv2
-				WHERE pv2.product_id = p.id),
-				'[]'::jsonb
-			) AS variants
+						'id', vo.id,
+						'name', vo.name,
+						'price', vo.price,
+						'order', vo."order"
+					) ORDER BY vo."order"
+				) AS options
+			FROM variant_options vo
+			WHERE vo.variant_id IN (SELECT id FROM product_variants WHERE product_id = $1)
+			GROUP BY vo.variant_id
+		),
+		variants_agg AS (
+			SELECT
+				pv.product_id,
+				jsonb_agg(
+					jsonb_build_object(
+						'id', pv.id,
+						'name', pv.name,
+						'order', pv."order",
+						'selection_type', pv.selection_type,
+						'max_selections', pv.max_selections,
+						'is_required', pv.is_required,
+						'options', COALESCE(voa.options, '[]'::jsonb)
+					) ORDER BY pv."order"
+				) AS variants
+			FROM product_variants pv
+			LEFT JOIN variant_options_agg voa ON voa.variant_id = pv.id
+			WHERE pv.product_id = $1
+			GROUP BY pv.product_id
+		)
+		SELECT
+			p.id,
+			p.name,
+			p.description,
+			p.price,
+			p.stock,
+			COALESCE(p.minimum_stock, 0),
+			p.is_active,
+			p.is_highlighted,
+			p.is_promotional,
+			COALESCE(p.promotional_price, 0),
+			p.created_at,
+			c.id,
+			c.name,
+			COALESCE(c.description, ''),
+			COALESCE(img.images, '[]'::jsonb),
+			COALESCE(v.variants, '[]'::jsonb)
 		FROM products p
-		INNER JOIN categories c ON p.category_id = c.id
+		INNER JOIN categories c ON c.id = p.category_id
+		LEFT JOIN images_agg img ON img.product_id = p.id
+		LEFT JOIN variants_agg v ON v.product_id = p.id
 		WHERE p.id = $1`
 
 	product := &models.Product{
@@ -869,4 +896,155 @@ func (r *ProductRepository) Delete(ctx context.Context, productID, shopID int) (
 	}).Info("Product deleted successfully")
 
 	return storageRefs, nil
+}
+
+// GetByIDAndShopID retrieves a product by ID and validates shop ownership.
+// Used by public store endpoints where shop ID comes from slug lookup.
+// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
+func (r *ProductRepository) GetByIDAndShopID(ctx context.Context, productID, shopID int) (*models.Product, error) {
+	// Optimized query using CTEs for pre-aggregation
+	// Benefits: cleaner plan, better readability, PostgreSQL 12+ can inline non-recursive CTEs
+	query := `
+		WITH images_agg AS (
+			SELECT
+				img.product_id,
+				jsonb_agg(
+					jsonb_build_object(
+						'id', img.id,
+						'url', img.url
+					) ORDER BY img.id
+				) AS images
+			FROM images img
+			WHERE img.product_id = $1
+			GROUP BY img.product_id
+		),
+		variant_options_agg AS (
+			SELECT
+				vo.variant_id,
+				jsonb_agg(
+					jsonb_build_object(
+						'id', vo.id,
+						'name', vo.name,
+						'price', vo.price,
+						'order', vo."order"
+					) ORDER BY vo."order"
+				) AS options
+			FROM variant_options vo
+			WHERE vo.variant_id IN (SELECT id FROM product_variants WHERE product_id = $1)
+			GROUP BY vo.variant_id
+		),
+		variants_agg AS (
+			SELECT
+				pv.product_id,
+				jsonb_agg(
+					jsonb_build_object(
+						'id', pv.id,
+						'name', pv.name,
+						'order', pv."order",
+						'selection_type', pv.selection_type,
+						'max_selections', pv.max_selections,
+						'is_required', pv.is_required,
+						'options', COALESCE(voa.options, '[]'::jsonb)
+					) ORDER BY pv."order"
+				) AS variants
+			FROM product_variants pv
+			LEFT JOIN variant_options_agg voa ON voa.variant_id = pv.id
+			WHERE pv.product_id = $1
+			GROUP BY pv.product_id
+		)
+		SELECT
+			p.id,
+			p.name,
+			p.description,
+			p.price,
+			p.stock,
+			COALESCE(p.minimum_stock, 0),
+			p.is_active,
+			p.is_highlighted,
+			p.is_promotional,
+			COALESCE(p.promotional_price, 0),
+			p.created_at,
+			c.id,
+			c.name,
+			COALESCE(c.description, ''),
+			COALESCE(img.images, '[]'::jsonb),
+			COALESCE(v.variants, '[]'::jsonb)
+		FROM products p
+		INNER JOIN categories c ON c.id = p.category_id
+		LEFT JOIN images_agg img ON img.product_id = p.id
+		LEFT JOIN variants_agg v ON v.product_id = p.id
+		WHERE p.id = $1 AND p.shop_id = $2`
+
+	product := &models.Product{
+		Category: &models.Category{},
+	}
+
+	var imagesJSON, variantsJSON []byte
+
+	err := r.db.QueryRowContext(ctx, query, productID, shopID).Scan(
+		&product.ID,
+		&product.Name,
+		&product.Description,
+		&product.Price,
+		&product.Stock,
+		&product.MinimumStock,
+		&product.IsActive,
+		&product.IsHighlighted,
+		&product.IsPromotional,
+		&product.PromotionalPrice,
+		&product.CreatedAt,
+		&product.Category.ID,
+		&product.Category.Name,
+		&product.Category.Description,
+		&imagesJSON,
+		&variantsJSON,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logs.WithFields(map[string]interface{}{
+				"file":       ProductRepositoryField,
+				"function":   ProductGetByIDAndShopIDFunctionField,
+				"product_id": productID,
+				"shop_id":    shopID,
+			}).Warn(productNotFoundMessage)
+			return nil, &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductRepositoryField,
+			"function":   ProductGetByIDAndShopIDFunctionField,
+			"sub_func":   ScanField,
+			"product_id": productID,
+			"shop_id":    shopID,
+			"error":      err.Error(),
+		}).Error(failedReadProductByID)
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Parse images JSON
+	if err := json.Unmarshal(imagesJSON, &product.Images); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductRepositoryField,
+			"function":   ProductGetByIDAndShopIDFunctionField,
+			"sub_func":   UnmarshallField,
+			"product_id": product.ID,
+			"error":      err.Error(),
+		}).Error("Failed to unmarshal product images")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Parse variants JSON
+	if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductRepositoryField,
+			"function":   ProductGetByIDAndShopIDFunctionField,
+			"sub_func":   UnmarshallField,
+			"product_id": product.ID,
+			"error":      err.Error(),
+		}).Error("Failed to unmarshal product variants")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	return product, nil
 }

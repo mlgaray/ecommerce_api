@@ -21,7 +21,10 @@
       "Bash(git mv:*)",
       "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" tool cover -func=coverage_models.out)",
       "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" test -v -run \"TestFeatures/get_store\")",
-      "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" test -v -run \"TestFeatures/auth\")"
+      "Bash(\"/mnt/c/Program Files/Go/bin/go.exe\" test -v -run \"TestFeatures/auth\")",
+      "Bash(make generate-mocks:*)",
+      "Bash(make code-quality:*)",
+      "Bash(go fmt:*)"
     ],
     "deny": [],
     "ask": []
