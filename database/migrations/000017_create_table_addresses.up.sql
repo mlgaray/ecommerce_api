@@ -13,3 +13,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_addresses_shop_id ON public.addresses (shop_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;

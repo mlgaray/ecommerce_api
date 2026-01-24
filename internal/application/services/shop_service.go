@@ -10,6 +10,12 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
 
+// Image type constants
+const (
+	imageTypeLogo  = "logo"
+	imageTypeCover = "cover"
+)
+
 // ShopService contains business logic, validations, and data access coordination.
 // Use Cases orchestrate the flow using this service (NOT repositories directly).
 type ShopService struct {
@@ -33,6 +39,11 @@ func (s *ShopService) GetByID(ctx context.Context, shopID int) (*models.Shop, er
 // validateShop validates business rules for shop update.
 // Validates nested models like PaymentMethods with TransferConfig.
 func (s *ShopService) validateShop(shop *models.Shop) error {
+	// Validate shop domain model (e.g., primary_color format)
+	if err := shop.Validate(); err != nil {
+		return err
+	}
+
 	// Validate payment methods with transfer config
 	for _, pm := range shop.PaymentMethods {
 		if pm.IsActive && pm.TransferConfig != nil {
@@ -77,7 +88,7 @@ func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop,
 				logoErr = err
 				return
 			}
-			img.Type = "logo"
+			img.Type = imageTypeLogo
 			logoImage = img
 		}()
 	}
@@ -92,7 +103,7 @@ func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop,
 				coverErr = err
 				return
 			}
-			img.Type = "cover"
+			img.Type = imageTypeCover
 			coverImage = img
 		}()
 	}
@@ -116,7 +127,24 @@ func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop,
 		return coverErr
 	}
 
-	// 2. Append uploaded images to shop (order: logo first, then cover)
+	// 2. Filter out existing images of the same type as new uploads
+	// This ensures the old image will be:
+	// - Removed from the JSONB sent to the stored procedure
+	// - Detected as "to delete" by the SP (exists in DB but not in JSONB)
+	// - Its storage_ref returned for cleanup from Cloudinary
+	if logoImage != nil || coverImage != nil {
+		filteredImages := make([]*models.Image, 0, len(shop.Images))
+		for _, img := range shop.Images {
+			keepLogo := img.Type != imageTypeLogo || logoImage == nil
+			keepCover := img.Type != imageTypeCover || coverImage == nil
+			if keepLogo && keepCover {
+				filteredImages = append(filteredImages, img)
+			}
+		}
+		shop.Images = filteredImages
+	}
+
+	// 3. Append uploaded images to shop (order: logo first, then cover)
 	if logoImage != nil {
 		shop.Images = append(shop.Images, logoImage)
 	}
@@ -124,7 +152,7 @@ func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop,
 		shop.Images = append(shop.Images, coverImage)
 	}
 
-	// 3. Persist to database - returns refs of deleted images
+	// 4. Persist to database - returns refs of deleted images
 	deletedRefs, err := s.shopRepository.Update(ctx, shopID, shop)
 	if err != nil {
 		// Rollback: delete newly uploaded images
@@ -137,7 +165,7 @@ func (s *ShopService) Update(ctx context.Context, shopID int, shop *models.Shop,
 		return err
 	}
 
-	// 4. Cleanup: delete removed images from storage (fire-and-forget)
+	// 5. Cleanup: delete removed images from storage (fire-and-forget)
 	for _, ref := range deletedRefs {
 		if ref != "" {
 			go func(storageRef string) {

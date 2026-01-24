@@ -17,3 +17,6 @@ CREATE INDEX IF NOT EXISTS idx_delivery_configs_sdm_id ON public.delivery_config
 
 COMMENT ON TABLE delivery_configs IS 'Configuration for delivery-type methods. If fixed_price is set, use it; otherwise use delivery_zones for zone-based pricing';
 COMMENT ON COLUMN delivery_configs.fixed_price IS 'Fixed shipping price. NULL means use zone-based pricing from delivery_zones. 0 means free shipping.';
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE delivery_configs ENABLE ROW LEVEL SECURITY;

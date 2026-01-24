@@ -31,7 +31,8 @@ EXCEPTION
         RAISE;  -- Re-raise with original code 23505 for Go to handle
     -- Other errors propagate naturally with original SQLSTATE
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Function documentation
 COMMENT ON FUNCTION create_category IS

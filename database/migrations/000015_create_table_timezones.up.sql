@@ -9,3 +9,6 @@ CREATE TABLE public.timezones (
 
 CREATE INDEX idx_timezones_identifier ON public.timezones (identifier);
 CREATE INDEX idx_timezones_is_active ON public.timezones (is_active);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE timezones ENABLE ROW LEVEL SECURITY;

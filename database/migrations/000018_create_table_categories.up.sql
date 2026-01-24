@@ -12,3 +12,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_categories_shop_id ON public.categories (shop_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;

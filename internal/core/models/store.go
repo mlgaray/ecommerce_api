@@ -11,6 +11,7 @@ type Store struct {
 	Email              string               `json:"email,omitempty"`
 	Phone              string               `json:"phone,omitempty"`
 	Instagram          string               `json:"instagram,omitempty"`
+	PrimaryColor       *string              `json:"primary_color,omitempty"`
 	Images             []*Image             `json:"images,omitempty"`
 	Address            *Address             `json:"address,omitempty"`
 	PaymentMethods     []*PaymentMethod     `json:"payment_methods,omitempty"`
@@ -33,6 +34,7 @@ func NewStoreFromShop(shop *Shop) *Store {
 		Email:              shop.Email,
 		Phone:              shop.Phone,
 		Instagram:          shop.Instagram,
+		PrimaryColor:       shop.PrimaryColor,
 		Images:             shop.Images,
 		Address:            shop.Address,
 		PaymentMethods:     shop.PaymentMethods,

@@ -8,8 +8,7 @@ DO $$
         INSERT INTO images (url, storage_ref, shop_id, type)
         VALUES
             ('https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/McDonald%27s_logo.svg/2560px-McDonald%27s_logo.svg.png', '', v_shop_id, 'logo'),
-            ('https://cdn.britannica.com/67/231567-050-DB21B46A/McDonalds-restaurant-Taiwan.jpg', '', v_shop_id, 'cover'),
-            ('https://res.cloudinary.com/dysydflnc/image/upload/v1768683786/shop_1/images/lyu69gs08z1h65hgwdxn.png', 'shop_1/images/lyu69gs08z1h65hgwdxn', v_shop_id, 'cover');
+            ('https://cdn.britannica.com/67/231567-050-DB21B46A/McDonalds-restaurant-Taiwan.jpg', '', v_shop_id, 'cover');
     END $$;
 
 -- Insert product images

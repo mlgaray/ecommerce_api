@@ -28,7 +28,7 @@ const (
 // Planning: 4ms, Execution: 1ms (vs 78ms/17ms with LATERAL).
 const shopQueryBase = `
 	SELECT
-		s.id, s.name, s.slug, s.email, s.phone, s.instagram,
+		s.id, s.name, s.slug, s.email, s.phone, s.instagram, s.primary_color,
 		COALESCE(img.images, '[]'::jsonb) AS images,
 		CASE WHEN a.id IS NOT NULL THEN
 			jsonb_build_object('id', a.id, 'name', a.name, 'place_id', a.place_id, 'lat', a.ltd, 'lng', a.lng)
@@ -257,6 +257,7 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 	query := shopQueryBase + ` WHERE s.id = $1`
 
 	shop := &models.Shop{}
+	var primaryColor sql.NullString
 	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON []byte
 
 	err := s.db.QueryRowContext(ctx, query, shopID).Scan(
@@ -266,6 +267,7 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 		&shop.Email,
 		&shop.Phone,
 		&shop.Instagram,
+		&primaryColor,
 		&imagesJSON,
 		&addressJSON,
 		&paymentMethodsJSON,
@@ -290,6 +292,11 @@ func (s *ShopSQLRepository) GetByID(ctx context.Context, shopID int) (*models.Sh
 			"error":    err.Error(),
 		}).Error("Failed to get shop by ID")
 		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Convert nullable fields
+	if primaryColor.Valid {
+		shop.PrimaryColor = &primaryColor.String
 	}
 
 	// Unmarshal JSON fields
@@ -360,6 +367,7 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 	query := shopQueryBase + ` WHERE s.slug = $1`
 
 	shop := &models.Shop{}
+	var primaryColor sql.NullString
 	var imagesJSON, addressJSON, paymentMethodsJSON, deliveryMethodsJSON, schedulesJSON, timezoneJSON []byte
 
 	err := s.db.QueryRowContext(ctx, query, slug).Scan(
@@ -369,6 +377,7 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 		&shop.Email,
 		&shop.Phone,
 		&shop.Instagram,
+		&primaryColor,
 		&imagesJSON,
 		&addressJSON,
 		&paymentMethodsJSON,
@@ -393,6 +402,11 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 			"error":    err.Error(),
 		}).Error("Failed to get shop by slug")
 		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Convert nullable fields
+	if primaryColor.Valid {
+		shop.PrimaryColor = &primaryColor.String
 	}
 
 	// Unmarshal JSON fields
@@ -931,13 +945,14 @@ func (s *ShopSQLRepository) Update(ctx context.Context, shopID int, shop *models
 	// Call stored procedure
 	var deletedRefs []string
 	err = s.db.QueryRowContext(ctx, `
-		SELECT update_shop($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		SELECT update_shop($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		shopID,
 		shop.Name,
 		shop.Slug,
 		shop.Email,
 		shop.Phone,
 		shop.Instagram,
+		shop.PrimaryColor,
 		imagesJSON,
 		addressJSON,
 		paymentMethodsJSON,

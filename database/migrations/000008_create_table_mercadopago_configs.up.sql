@@ -13,3 +13,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_mercadopago_configs_spm_id ON public.mercadopago_configs (shop_payment_method_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE mercadopago_configs ENABLE ROW LEVEL SECURITY;

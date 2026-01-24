@@ -70,3 +70,6 @@ COMMENT ON INDEX idx_products_category_id IS
 
 COMMENT ON INDEX idx_products_search_spanish IS
 'Full-text search index in Spanish. Reserved for future linguistic matching features (currently using trigram instead).';
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;

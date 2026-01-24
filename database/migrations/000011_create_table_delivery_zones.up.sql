@@ -10,3 +10,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_delivery_zones_sdm_id ON public.delivery_zones (shop_delivery_method_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE delivery_zones ENABLE ROW LEVEL SECURITY;

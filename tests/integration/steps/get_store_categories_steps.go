@@ -127,7 +127,7 @@ func (g *GetStoreCategoriesSteps) setupGetStoreCategoriesSQLExpectations(slug, s
 
 	// Shop columns for GetBySlug query - must match shop_repository.go scan order
 	shopColumns := []string{
-		"id", "name", "slug", "email", "phone", "instagram",
+		"id", "name", "slug", "email", "phone", "instagram", "primary_color",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
@@ -144,7 +144,7 @@ func (g *GetStoreCategoriesSteps) setupGetStoreCategoriesSQLExpectations(slug, s
 	case scenarioStoreCategoriesExists, scenarioStoreCategoriesWithSearch:
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -168,7 +168,7 @@ func (g *GetStoreCategoriesSteps) setupGetStoreCategoriesSQLExpectations(slug, s
 	case scenarioStoreCategoriesEmpty:
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore",
+			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore", "#8B5CF6",
 				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").

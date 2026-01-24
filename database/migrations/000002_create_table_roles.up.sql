@@ -9,3 +9,6 @@ CREATE TABLE
 ) TABLESPACE pg_default;
 
 CREATE INDEX idx_roles_name ON public.roles (NAME);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;

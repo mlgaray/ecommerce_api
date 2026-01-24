@@ -11,3 +11,7 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX idx_user_roles_user_id_role_id ON user_roles(user_id, role_id);
+CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;

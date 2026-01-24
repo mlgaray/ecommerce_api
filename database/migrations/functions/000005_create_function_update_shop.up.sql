@@ -7,6 +7,11 @@ DROP FUNCTION IF EXISTS update_shop(
     JSONB, JSONB, JSONB, JSONB, JSONB
 );
 
+DROP FUNCTION IF EXISTS update_shop(
+    INTEGER, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT,
+    JSONB, JSONB, JSONB, JSONB, JSONB
+);
+
 CREATE OR REPLACE FUNCTION update_shop(
     p_shop_id INTEGER,
     p_name TEXT,
@@ -14,6 +19,7 @@ CREATE OR REPLACE FUNCTION update_shop(
     p_email TEXT,
     p_phone TEXT,
     p_instagram TEXT,
+    p_primary_color TEXT,        -- Hex color for store branding (e.g., '#8B5CF6')
     p_images JSONB,              -- [{"id": 1, "url": "...", "type": "logo"}, {"url": "new", "type": "cover", "storage_ref": "..."}]
     p_address JSONB,             -- {"id": 1, "name": "...", "place_id": "...", "lat": -34.6, "lng": -58.4} or NULL
     p_payment_methods JSONB,     -- [{"id": 10, "is_active": true, "transfer_config": {...}, "mercadopago_config": {...}}]
@@ -31,7 +37,8 @@ BEGIN
         slug = p_slug,
         email = p_email,
         phone = p_phone,
-        instagram = p_instagram
+        instagram = p_instagram,
+        primary_color = p_primary_color
     WHERE id = p_shop_id;
 
     IF NOT FOUND THEN
@@ -353,7 +360,8 @@ EXCEPTION
     WHEN unique_violation THEN
         RAISE;  -- Re-raise with original code 23505 for Go to handle
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Function documentation
 COMMENT ON FUNCTION update_shop IS
@@ -366,6 +374,7 @@ OPTIMIZED V2:
 Parameters:
 - p_shop_id: ID of the shop to update
 - p_name, p_slug, p_email, p_phone, p_instagram: Shop basic fields
+- p_primary_color: Hex color for store branding (e.g., #8B5CF6)
 - p_images: JSONB array of images (logo, cover). IDs indicate existing, no ID = new.
 - p_address: JSONB object for address (null to delete)
 - p_payment_methods: JSONB array with id (shop_payment_method_id), is_active, and nested configs

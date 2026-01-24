@@ -101,9 +101,9 @@ func (g *GetStoreFeaturedProductsSteps) iSendAnUnauthenticatedGetStoreFeaturedPr
 func (g *GetStoreFeaturedProductsSteps) setupGetStoreFeaturedProductsSQLExpectations(slug string) {
 	ctx := GetTestContext()
 
-	// Shop columns for GetBySlug query - must match shop_repository.go scan order (12 columns, no created_at)
+	// Shop columns for GetBySlug query - must match shop_repository.go scan order (13 columns, no created_at)
 	shopColumns := []string{
-		"id", "name", "slug", "email", "phone", "instagram",
+		"id", "name", "slug", "email", "phone", "instagram", "primary_color",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
@@ -118,9 +118,9 @@ func (g *GetStoreFeaturedProductsSteps) setupGetStoreFeaturedProductsSQLExpectat
 
 	switch ctx.scenario {
 	case scenarioStoreFeaturedExists, scenarioStoreFeaturedMixed:
-		// Mock shop exists (12 values, no created_at)
+		// Mock shop exists (13 values, no created_at)
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -143,9 +143,9 @@ func (g *GetStoreFeaturedProductsSteps) setupGetStoreFeaturedProductsSQLExpectat
 			WillReturnRows(productRows)
 
 	case scenarioStoreFeaturedEmpty:
-		// Mock shop exists (12 values, no created_at)
+		// Mock shop exists (13 values, no created_at)
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore",
+			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore", "#8B5CF6",
 				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").

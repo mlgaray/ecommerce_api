@@ -11,3 +11,6 @@ create table public.product_variants (
 ) TABLESPACE pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON public.product_variants (product_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
