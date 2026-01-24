@@ -7,8 +7,9 @@ const (
 	InvalidUserCredentials = "invalid_credentials"
 
 	// Shop related error messages
-	ShopNotFound      = "shop_not_found"
-	ShopAlreadyExists = "shop_already_exists"
+	ShopNotFound              = "shop_not_found"
+	ShopAlreadyExists         = "shop_already_exists"
+	InvalidPrimaryColorFormat = "invalid_primary_color_format"
 
 	// Store related error messages
 	StoreNotFound = "store_not_found"

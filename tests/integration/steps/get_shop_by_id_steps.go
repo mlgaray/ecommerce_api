@@ -200,9 +200,9 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 	ctx := GetTestContext()
 
 	// Columns returned by GetByID query (matches shopQueryBase in shop_repository.go)
-	// Note: No created_at - the query only returns these 12 columns
+	// Note: No created_at - the query only returns these 13 columns
 	columns := []string{
-		"id", "name", "slug", "email", "phone", "instagram",
+		"id", "name", "slug", "email", "phone", "instagram", "primary_color",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
@@ -212,7 +212,7 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 		imagesJSON := `[{"id": 1, "url": "https://cloudinary.com/logo.jpg", "type": "logo"}, {"id": 2, "url": "https://cloudinary.com/cover.jpg", "type": "cover"}]`
 
 		rows := sqlmock.NewRows(columns).
-			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop",
+			AddRow(shopID, "Test Shop", "test-shop", "test@shop.com", "+54111234567", "@testshop", "#8B5CF6",
 				imagesJSON, testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testOperatingSchedulesJSON, testTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -222,7 +222,7 @@ func (g *GetShopByIDSteps) setupGetShopByIDSQLExpectations(shopID int) {
 	case scenarioShopExistsNoImages:
 		// Mock shop without images
 		rows := sqlmock.NewRows(columns).
-			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop",
+			AddRow(shopID, "Test Shop No Images", "test-shop-no-images", "test@shop.com", "+54111234567", "@testshop", "#8B5CF6",
 				"[]", testAddressJSON, testPaymentMethodsJSON, testDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").

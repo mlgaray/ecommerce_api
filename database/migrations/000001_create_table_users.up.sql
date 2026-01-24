@@ -13,3 +13,6 @@ create table users (
 ) TABLESPACE pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON public.users (is_active);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;

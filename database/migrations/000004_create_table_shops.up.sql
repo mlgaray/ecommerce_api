@@ -8,6 +8,7 @@ create table
                      phone text null,
                      instagram text null,
                      slug text null,
+                     primary_color varchar(7) default '#8B5CF6',
                      constraint businesses_pkey primary key (id),
                      constraint shops_email_key unique (email),
                      constraint businesses_user_id_fkey foreign key (user_id) references users (id) on update cascade on delete cascade
@@ -15,3 +16,6 @@ create table
 
 CREATE INDEX IF NOT EXISTS idx_shops_user_id ON public.shops (user_id);
 CREATE INDEX IF NOT EXISTS idx_shops_slug ON public.shops (slug);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE shops ENABLE ROW LEVEL SECURITY;

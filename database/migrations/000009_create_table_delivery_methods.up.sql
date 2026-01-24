@@ -12,3 +12,6 @@ create table
 
 CREATE INDEX IF NOT EXISTS idx_delivery_methods_code ON public.delivery_methods (code);
 CREATE INDEX IF NOT EXISTS idx_delivery_methods_is_active ON public.delivery_methods (is_active);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE delivery_methods ENABLE ROW LEVEL SECURITY;

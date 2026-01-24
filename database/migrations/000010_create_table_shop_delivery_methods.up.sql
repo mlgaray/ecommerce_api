@@ -14,3 +14,6 @@ create table
 CREATE INDEX IF NOT EXISTS idx_shop_delivery_methods_shop_id ON public.shop_delivery_methods (shop_id);
 CREATE INDEX IF NOT EXISTS idx_shop_delivery_methods_delivery_method_id ON public.shop_delivery_methods (delivery_method_id);
 CREATE INDEX IF NOT EXISTS idx_shop_delivery_methods_is_active ON public.shop_delivery_methods (is_active);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE shop_delivery_methods ENABLE ROW LEVEL SECURITY;

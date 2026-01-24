@@ -14,3 +14,6 @@ create table public.variant_options (
 CREATE INDEX IF NOT EXISTS idx_variant_options_variant_id_id ON public.variant_options (variant_id, id);
 
 -- This composite index also serves queries that filter by variant_id alone (leftmost prefix rule)
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE variant_options ENABLE ROW LEVEL SECURITY;

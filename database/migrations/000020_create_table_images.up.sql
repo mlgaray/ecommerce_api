@@ -25,3 +25,15 @@ CREATE INDEX idx_images_product ON images(product_id) WHERE product_id IS NOT NU
 CREATE INDEX idx_images_user ON images(user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX idx_images_shop ON images(shop_id) WHERE shop_id IS NOT NULL;
 CREATE INDEX idx_images_shop_type ON images(shop_id, type) WHERE shop_id IS NOT NULL;
+
+-- Prevent duplicate logo/cover images per shop (defense in depth)
+CREATE UNIQUE INDEX idx_images_shop_logo_unique
+ON images (shop_id)
+WHERE shop_id IS NOT NULL AND type = 'logo';
+
+CREATE UNIQUE INDEX idx_images_shop_cover_unique
+ON images (shop_id)
+WHERE shop_id IS NOT NULL AND type = 'cover';
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE images ENABLE ROW LEVEL SECURITY;

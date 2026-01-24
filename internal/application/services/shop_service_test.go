@@ -119,6 +119,7 @@ func TestShopService_GetByID(t *testing.T) {
 // Update Tests
 // =============================================================================
 
+//nolint:gocyclo // Test function with many test cases - complexity is acceptable
 func TestShopService_Update(t *testing.T) {
 	t.Run("when updating with both images then uploads and persists successfully", func(t *testing.T) {
 		// Arrange
@@ -695,5 +696,296 @@ func TestShopService_Update(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Equal(t, logoUploadError, err) // Returns first error (logo)
+	})
+
+	t.Run("when shop validation fails then returns validation error without uploading", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		invalidColor := "invalid-color" // Invalid hex color format
+		shop := &models.Shop{
+			Name:         "Test Shop",
+			Slug:         "test-shop",
+			Email:        "test@shop.com",
+			Phone:        "+54 11 1234-5678",
+			PrimaryColor: &invalidColor, // This will fail shop.Validate()
+		}
+		logoBuffer := []byte("logo_data")
+		var coverBuffer []byte
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		// Neither Upload nor Repository should be called when validation fails
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+	})
+
+	t.Run("when payment method transfer config validation fails then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.PaymentMethods = []*models.PaymentMethod{
+			{
+				IsActive: true,
+				TransferConfig: &models.TransferConfig{
+					CBU:       "", // Invalid: empty CBU
+					OwnerName: "Test Account",
+				},
+			},
+		}
+		var logoBuffer []byte
+		var coverBuffer []byte
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		// Neither Upload nor Repository should be called when validation fails
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+	})
+
+	t.Run("when inactive payment method has invalid transfer config then ignores validation", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.PaymentMethods = []*models.PaymentMethod{
+			{
+				IsActive: false, // Inactive - validation should be skipped
+				TransferConfig: &models.TransferConfig{
+					CBU:       "", // Would be invalid if active
+					OwnerName: "",
+				},
+			},
+		}
+		var logoBuffer []byte
+		var coverBuffer []byte
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, shop).
+			Return([]string{}, nil)
+
+		assetMock := mocks.NewAssetService(t)
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when uploading new logo with existing logo then filters out old logo", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.Images = []*models.Image{
+			{ID: 1, URL: "https://cloudinary.com/old_logo.jpg", Type: "logo", StorageRef: "old_logo_ref"},
+			{ID: 2, URL: "https://cloudinary.com/cover.jpg", Type: "cover", StorageRef: "cover_ref"},
+		}
+		logoBuffer := []byte("new_logo_data")
+		var coverBuffer []byte
+
+		newLogoResult := &models.Image{
+			URL:        "https://cloudinary.com/new_logo.jpg",
+			StorageRef: "shop_1/images/new_logo_abc123",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, logoBuffer, "shop_1/images").
+			Return(newLogoResult, nil)
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, mock.MatchedBy(func(s *models.Shop) bool {
+				// Should have: cover (existing) + new logo
+				// Old logo should be filtered out
+				hasNewLogo := false
+				hasOldLogo := false
+				hasCover := false
+				for _, img := range s.Images {
+					if img.Type == "logo" && img.StorageRef == "shop_1/images/new_logo_abc123" {
+						hasNewLogo = true
+					}
+					if img.Type == "logo" && img.StorageRef == "old_logo_ref" {
+						hasOldLogo = true
+					}
+					if img.Type == "cover" {
+						hasCover = true
+					}
+				}
+				return hasNewLogo && !hasOldLogo && hasCover
+			})).
+			Return([]string{"old_logo_ref"}, nil)
+
+		// Cleanup goroutine for old logo
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_logo_ref").
+			Return(nil).Maybe()
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when uploading new cover with existing cover then filters out old cover", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.Images = []*models.Image{
+			{ID: 1, URL: "https://cloudinary.com/logo.jpg", Type: "logo", StorageRef: "logo_ref"},
+			{ID: 2, URL: "https://cloudinary.com/old_cover.jpg", Type: "cover", StorageRef: "old_cover_ref"},
+		}
+		var logoBuffer []byte
+		coverBuffer := []byte("new_cover_data")
+
+		newCoverResult := &models.Image{
+			URL:        "https://cloudinary.com/new_cover.jpg",
+			StorageRef: "shop_1/images/new_cover_xyz789",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, coverBuffer, "shop_1/images").
+			Return(newCoverResult, nil)
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, mock.MatchedBy(func(s *models.Shop) bool {
+				// Should have: logo (existing) + new cover
+				// Old cover should be filtered out
+				hasNewCover := false
+				hasOldCover := false
+				hasLogo := false
+				for _, img := range s.Images {
+					if img.Type == "cover" && img.StorageRef == "shop_1/images/new_cover_xyz789" {
+						hasNewCover = true
+					}
+					if img.Type == "cover" && img.StorageRef == "old_cover_ref" {
+						hasOldCover = true
+					}
+					if img.Type == "logo" {
+						hasLogo = true
+					}
+				}
+				return hasNewCover && !hasOldCover && hasLogo
+			})).
+			Return([]string{"old_cover_ref"}, nil)
+
+		// Cleanup goroutine for old cover
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_cover_ref").
+			Return(nil).Maybe()
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when uploading both images with existing images then filters out both old images", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.Images = []*models.Image{
+			{ID: 1, URL: "https://cloudinary.com/old_logo.jpg", Type: "logo", StorageRef: "old_logo_ref"},
+			{ID: 2, URL: "https://cloudinary.com/old_cover.jpg", Type: "cover", StorageRef: "old_cover_ref"},
+			{ID: 3, URL: "https://cloudinary.com/gallery.jpg", Type: "gallery", StorageRef: "gallery_ref"},
+		}
+		logoBuffer := []byte("new_logo_data")
+		coverBuffer := []byte("new_cover_data")
+
+		newLogoResult := &models.Image{
+			URL:        "https://cloudinary.com/new_logo.jpg",
+			StorageRef: "shop_1/images/new_logo_abc123",
+		}
+		newCoverResult := &models.Image{
+			URL:        "https://cloudinary.com/new_cover.jpg",
+			StorageRef: "shop_1/images/new_cover_xyz789",
+		}
+
+		assetMock := mocks.NewAssetService(t)
+		assetMock.EXPECT().
+			Upload(ctx, logoBuffer, "shop_1/images").
+			Return(newLogoResult, nil)
+		assetMock.EXPECT().
+			Upload(ctx, coverBuffer, "shop_1/images").
+			Return(newCoverResult, nil)
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, mock.MatchedBy(func(s *models.Shop) bool {
+				// Should have: gallery (kept) + new logo + new cover
+				// Old logo and old cover should be filtered out
+				hasNewLogo := false
+				hasNewCover := false
+				hasOldLogo := false
+				hasOldCover := false
+				hasGallery := false
+				for _, img := range s.Images {
+					if img.Type == "logo" && img.StorageRef == "shop_1/images/new_logo_abc123" {
+						hasNewLogo = true
+					}
+					if img.Type == "cover" && img.StorageRef == "shop_1/images/new_cover_xyz789" {
+						hasNewCover = true
+					}
+					if img.StorageRef == "old_logo_ref" {
+						hasOldLogo = true
+					}
+					if img.StorageRef == "old_cover_ref" {
+						hasOldCover = true
+					}
+					if img.Type == "gallery" {
+						hasGallery = true
+					}
+				}
+				return hasNewLogo && hasNewCover && !hasOldLogo && !hasOldCover && hasGallery
+			})).
+			Return([]string{"old_logo_ref", "old_cover_ref"}, nil)
+
+		// Cleanup goroutines for old images
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_logo_ref").
+			Return(nil).Maybe()
+		assetMock.EXPECT().
+			Delete(mock.Anything, "old_cover_ref").
+			Return(nil).Maybe()
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
 	})
 }

@@ -111,9 +111,9 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	ctx := GetTestContext()
 
 	// Columns returned by GetBySlug query - must match shop_repository.go GetBySlug scan order
-	// id, name, slug, email, phone, instagram, images, address, payment_methods, delivery_methods, operating_schedules, timezone
+	// id, name, slug, email, phone, instagram, primary_color, images, address, payment_methods, delivery_methods, operating_schedules, timezone
 	columns := []string{
-		"id", "name", "slug", "email", "phone", "instagram",
+		"id", "name", "slug", "email", "phone", "instagram", "primary_color",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
@@ -121,7 +121,7 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	case scenarioStoreExists:
 		// Mock store with all relations
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				testStoreImagesFullJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testOperatingSchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -131,7 +131,7 @@ func (g *GetStoreBySlugSteps) setupGetStoreBySlugSQLExpectations(slug string) {
 	case scenarioStoreExistsNoImages:
 		// Mock store without images
 		rows := sqlmock.NewRows(columns).
-			AddRow(2, "Test Store No Images", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(2, "Test Store No Images", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").

@@ -279,7 +279,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 
 	// Shop columns for GetBySlug query - must match shop_repository.go scan order
 	shopColumns := []string{
-		"id", "name", "slug", "email", "phone", "instagram",
+		"id", "name", "slug", "email", "phone", "instagram", "primary_color",
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
@@ -298,7 +298,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 	case scenarioStoreProductsExists, scenarioStoreProductsWithSearch, scenarioStoreProductsWithCategory, scenarioStoreProductsWithLimit, scenarioStoreProductsSearchAndCategory, scenarioStoreProductsWithSort:
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -324,7 +324,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 	case scenarioStoreProductsEmpty:
 		// Mock shop exists
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore",
+			AddRow(2, "Empty Store", slug, "test@store.com", "+54111234567", "@emptystore", "#8B5CF6",
 				"[]", testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, nil)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").
@@ -352,7 +352,7 @@ func (g *GetStoreProductsSteps) setupGetStoreProductsSQLExpectations(slug, searc
 		// Mock shop exists with products that have mixed is_active values
 		// The use case should filter out inactive products
 		shopRows := sqlmock.NewRows(shopColumns).
-			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore",
+			AddRow(1, "Test Store", slug, "test@store.com", "+54111234567", "@teststore", "#8B5CF6",
 				testStoreImagesJSON, testStoreAddressJSON, testStorePaymentMethodsJSON, testStoreDeliveryMethodsJSON, testEmptySchedulesJSON, testStoreTimezoneJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM shops").

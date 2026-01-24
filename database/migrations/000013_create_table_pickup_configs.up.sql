@@ -15,3 +15,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_pickup_configs_sdm_id ON public.pickup_configs (shop_delivery_method_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE pickup_configs ENABLE ROW LEVEL SECURITY;

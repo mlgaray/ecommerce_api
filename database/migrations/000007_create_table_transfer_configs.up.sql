@@ -14,3 +14,6 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_transfer_configs_spm_id ON public.transfer_configs (shop_payment_method_id);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE transfer_configs ENABLE ROW LEVEL SECURITY;

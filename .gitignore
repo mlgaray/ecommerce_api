@@ -51,3 +51,15 @@ GOPATH/pkg/mod/cache/
 # other Go environment files
 .env.develop
 .env
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+
+# IntelliJ IDEA
+*.iml
+
+# Cursor skills symlinks (recreatable from .agents/)
+.cursor/skills/
+
+# GitHub skills symlinks
+.github/skills/

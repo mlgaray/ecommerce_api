@@ -28,3 +28,6 @@ CREATE TABLE public.operating_schedules (
 -- Indexes for frequent queries
 CREATE INDEX idx_operating_schedules_shop_id ON public.operating_schedules(shop_id);
 CREATE INDEX idx_operating_schedules_day ON public.operating_schedules(shop_id, day_of_week);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE operating_schedules ENABLE ROW LEVEL SECURITY;

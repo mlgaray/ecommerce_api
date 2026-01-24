@@ -108,7 +108,7 @@ migrate-force-seeds:
 
 migrate-force:
 	@echo "Forcing migrations to version $(V)..."
-	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 11
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 15
 
 .PHONY: migrate-force
 

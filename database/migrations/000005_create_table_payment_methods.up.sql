@@ -12,3 +12,6 @@ create table
 
 CREATE INDEX IF NOT EXISTS idx_payment_methods_code ON public.payment_methods (code);
 CREATE INDEX IF NOT EXISTS idx_payment_methods_is_active ON public.payment_methods (is_active);
+
+-- Enable Row Level Security (blocks REST API access without policies)
+ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
