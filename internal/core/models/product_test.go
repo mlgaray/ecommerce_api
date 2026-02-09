@@ -717,3 +717,265 @@ func TestProduct_EdgeCases(t *testing.T) {
 		assert.Equal(t, errors.ProductStockCannotBeNegative, validationErr.Message)
 	})
 }
+
+// =============================================================================
+// HasSufficientStock Tests
+// =============================================================================
+
+func TestProduct_HasSufficientStock(t *testing.T) {
+	t.Run("when not stockeable then always returns true", func(t *testing.T) {
+		product := &Product{IsStockeable: false, Stock: 0}
+
+		assert.True(t, product.HasSufficientStock(100))
+	})
+
+	t.Run("when stockeable and stock equals quantity then returns true", func(t *testing.T) {
+		product := &Product{IsStockeable: true, Stock: 5}
+
+		assert.True(t, product.HasSufficientStock(5))
+	})
+
+	t.Run("when stockeable and stock greater than quantity then returns true", func(t *testing.T) {
+		product := &Product{IsStockeable: true, Stock: 10}
+
+		assert.True(t, product.HasSufficientStock(5))
+	})
+
+	t.Run("when stockeable and stock less than quantity then returns false", func(t *testing.T) {
+		product := &Product{IsStockeable: true, Stock: 3}
+
+		assert.False(t, product.HasSufficientStock(5))
+	})
+
+	t.Run("when stockeable and stock is zero then returns false", func(t *testing.T) {
+		product := &Product{IsStockeable: true, Stock: 0}
+
+		assert.False(t, product.HasSufficientStock(1))
+	})
+
+	t.Run("when stockeable and quantity is zero then returns true", func(t *testing.T) {
+		product := &Product{IsStockeable: true, Stock: 5}
+
+		assert.True(t, product.HasSufficientStock(0))
+	})
+}
+
+// =============================================================================
+// EqualsForOrder Tests
+// =============================================================================
+
+func TestProduct_EqualsForOrder(t *testing.T) {
+	t.Run("when other is nil then returns false", func(t *testing.T) {
+		product := &Product{ID: 1, Name: "Big Mac", Price: 10000}
+
+		assert.False(t, product.EqualsForOrder(nil))
+	})
+
+	t.Run("when all fields match then returns true", func(t *testing.T) {
+		dbProduct := &Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    false,
+			PromotionalPrice: 0,
+		}
+		frontendProduct := &Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    false,
+			PromotionalPrice: 0,
+		}
+
+		assert.True(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("when promotional fields match then returns true", func(t *testing.T) {
+		dbProduct := &Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    true,
+			PromotionalPrice: 8000,
+		}
+		frontendProduct := &Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    true,
+			PromotionalPrice: 8000,
+		}
+
+		assert.True(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("when name differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000}
+		frontendProduct := &Product{ID: 1, Name: "Wrong Name", Price: 10000}
+
+		assert.False(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("when price differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000}
+		frontendProduct := &Product{ID: 1, Name: "Big Mac", Price: 15000}
+
+		assert.False(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("when is_promotional differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000, IsPromotional: false}
+		frontendProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000, IsPromotional: true}
+
+		assert.False(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("when promotional_price differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000, IsPromotional: true, PromotionalPrice: 8000}
+		frontendProduct := &Product{ID: 1, Name: "Big Mac", Price: 10000, IsPromotional: true, PromotionalPrice: 7000}
+
+		assert.False(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+
+	t.Run("ignores fields not compared (ID, IsActive, Stock, etc)", func(t *testing.T) {
+		dbProduct := &Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        100,
+		}
+		frontendProduct := &Product{
+			ID:           999, // Different ID
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     false, // Different
+			IsStockeable: false, // Different
+			Stock:        0,     // Different
+		}
+
+		// Should still match because EqualsForOrder only compares Name, Price, IsPromotional, PromotionalPrice
+		assert.True(t, dbProduct.EqualsForOrder(frontendProduct))
+	})
+}
+
+// =============================================================================
+// VariantsEqualForOrder Tests
+// =============================================================================
+
+func TestProduct_VariantsEqualForOrder(t *testing.T) {
+	t.Run("when no frontend variants then returns true", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+
+		assert.True(t, dbProduct.VariantsEqualForOrder([]*Variant{}))
+	})
+
+	t.Run("when variant found and options match then returns true", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{
+					{ID: 1, Name: "Chico", Price: 0},
+					{ID: 2, Name: "Grande", Price: 1500},
+				}},
+				{ID: 2, Name: "Extras", Options: []*Option{
+					{ID: 3, Name: "Extra bacon", Price: 800},
+					{ID: 4, Name: "Extra queso", Price: 800},
+				}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 2, Name: "Grande", Price: 1500}}},
+			{ID: 2, Name: "Extras", Options: []*Option{{ID: 3, Name: "Extra bacon", Price: 800}}},
+		}
+
+		assert.True(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when variant not found in db then returns false", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 999, Name: "Unknown", Options: []*Option{{ID: 1, Name: "Option", Price: 0}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when variant name differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Wrong Name", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when option not found in db variant then returns false", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 999, Name: "Unknown", Price: 0}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when option name differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Wrong", Price: 1500}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when option price differs then returns false", func(t *testing.T) {
+		dbProduct := &Product{
+			Variants: []*Variant{
+				{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+			},
+		}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 9999}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when db product has no variants then frontend variant not found returns false", func(t *testing.T) {
+		dbProduct := &Product{Variants: []*Variant{}}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+
+	t.Run("when db product has nil variants then frontend variant not found returns false", func(t *testing.T) {
+		dbProduct := &Product{Variants: nil}
+		frontendVariants := []*Variant{
+			{ID: 1, Name: "Tamaño", Options: []*Option{{ID: 1, Name: "Grande", Price: 1500}}},
+		}
+
+		assert.False(t, dbProduct.VariantsEqualForOrder(frontendVariants))
+	})
+}
