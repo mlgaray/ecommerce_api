@@ -10,7 +10,6 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/lib/pq"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 )
 
@@ -116,14 +115,14 @@ func (s *SignUpSteps) iHaveValidUserRegistrationData() error {
 	ctx := GetTestContext()
 	ctx.scenario = "valid-registration"
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "newuser@example.com",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -136,14 +135,14 @@ func (s *SignUpSteps) iHaveValidUserRegistrationData() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyEmail() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -156,14 +155,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyEmail() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyPassword() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "newuser@example.com",
 			Password: "",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -176,14 +175,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyPassword() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyName() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "",
 			LastName: "Doe",
 			Email:    "newuser@example.com",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -196,14 +195,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyName() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithEmptyShopSlug() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "newuser@example.com",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Email: "shop@example.com",
 			Phone: "+1234567890",
@@ -216,14 +215,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithEmptyShopSlug() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithInvalidEmailFormat() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "invalid-email",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -237,14 +236,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithExistingEmail() error {
 	ctx := GetTestContext()
 	ctx.scenario = "existing-user"
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "existing@example.com",
 			Password: "SecurePassword123!",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",
@@ -257,14 +256,14 @@ func (s *SignUpSteps) iHaveRegistrationDataWithExistingEmail() error {
 func (s *SignUpSteps) iHaveRegistrationDataWithWeakPassword() error {
 	ctx := GetTestContext()
 	ctx.requestBody = contracts.SignUpRequest{
-		User: models.User{
+		User: contracts.UserRequest{
 			Name:     "John",
 			LastName: "Doe",
 			Email:    "newuser@example.com",
 			Password: "123",
 			Phone:    "+1234567890",
 		},
-		Shop: models.Shop{
+		Shop: contracts.SignUpShopRequest{
 			Name:  "John's Shop",
 			Slug:  "johns-shop",
 			Email: "shop@example.com",

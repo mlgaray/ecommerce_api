@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
@@ -34,6 +35,96 @@ func NewShopService(shopRepository ports.ShopRepository, assetService ports.Asse
 // Delegates to repository - service layer can add business logic if needed.
 func (s *ShopService) GetByID(ctx context.Context, shopID int) (*models.Shop, error) {
 	return s.shopRepository.GetByID(ctx, shopID)
+}
+
+// GetBySlug retrieves a shop by slug.
+// Used for public store endpoints.
+func (s *ShopService) GetBySlug(ctx context.Context, slug string) (*models.Shop, error) {
+	return s.shopRepository.GetBySlug(ctx, slug)
+}
+
+// GetActivePaymentMethod retrieves an active payment method from the shop.
+// Returns ValidationError if not found or inactive.
+func (s *ShopService) GetActivePaymentMethod(shop *models.Shop, paymentMethodID int) (*models.PaymentMethod, error) {
+	for _, method := range shop.PaymentMethods {
+		if method.ID == paymentMethodID {
+			if !method.IsActive {
+				return nil, &errors.ValidationError{Message: errors.PaymentMethodNotFound}
+			}
+			return method, nil
+		}
+	}
+	return nil, &errors.ValidationError{Message: errors.PaymentMethodNotFound}
+}
+
+// GetActiveDeliveryMethod retrieves an active delivery method from the shop.
+// Returns ValidationError if not found or inactive.
+func (s *ShopService) GetActiveDeliveryMethod(shop *models.Shop, deliveryMethodID int) (*models.DeliveryMethod, error) {
+	for _, method := range shop.DeliveryMethods {
+		if method.ID == deliveryMethodID {
+			if !method.IsActive {
+				return nil, &errors.ValidationError{Message: errors.DeliveryMethodNotFound}
+			}
+			return method, nil
+		}
+	}
+	return nil, &errors.ValidationError{Message: errors.DeliveryMethodNotFound}
+}
+
+// ValidateShippingCost validates the shipping cost matches the delivery method configuration.
+// Returns ValidationError if mismatch.
+//
+//nolint:gocyclo // Complexity is intentional - sequential validation for each delivery type (pickup, fixed, zones, free)
+func (s *ShopService) ValidateShippingCost(shippingCost float64, method *models.DeliveryMethod, selectedZoneID int) error {
+	// Pickup should have zero shipping cost
+	if method.Code == models.DeliveryMethodPickup {
+		if shippingCost != 0 {
+			return &errors.ValidationError{Message: errors.PickupShouldHaveZeroCost}
+		}
+		return nil
+	}
+
+	// Delivery method - check for fixed price first
+	if method.DeliveryConfig != nil && method.DeliveryConfig.FixedPrice != nil {
+		if shippingCost != *method.DeliveryConfig.FixedPrice {
+			return &errors.ValidationError{Message: errors.ShippingCostMismatch}
+		}
+		return nil
+	}
+
+	// Zone-based pricing
+	if len(method.DeliveryZones) > 0 {
+		if selectedZoneID == 0 {
+			return &errors.ValidationError{Message: errors.DeliveryZoneRequired}
+		}
+
+		zone := s.findDeliveryZone(method.DeliveryZones, selectedZoneID)
+		if zone == nil {
+			return &errors.ValidationError{Message: errors.DeliveryZoneNotFound}
+		}
+
+		if shippingCost != zone.Price {
+			return &errors.ValidationError{Message: errors.ShippingCostMismatch}
+		}
+		return nil
+	}
+
+	// No configuration - shipping cost should be zero (free delivery)
+	if shippingCost != 0 {
+		return &errors.ValidationError{Message: errors.ShippingCostMismatch}
+	}
+
+	return nil
+}
+
+// findDeliveryZone searches for a delivery zone by ID in the method's zones.
+func (s *ShopService) findDeliveryZone(zones []*models.DeliveryZone, id int) *models.DeliveryZone {
+	for _, zone := range zones {
+		if zone.ID == id {
+			return zone
+		}
+	}
+	return nil
 }
 
 // validateShop validates business rules for shop update.

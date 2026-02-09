@@ -107,9 +107,9 @@ func (g *GetStoreFeaturedProductsSteps) setupGetStoreFeaturedProductsSQLExpectat
 		"images", "address", "payment_methods", "delivery_methods", "operating_schedules", "timezone",
 	}
 
-	// Product columns for GetAllByShopIDWithFilters query - must match product_repository.go scan order (15 columns)
+	// Product columns for GetAllByShopIDWithFilters query - must match product_repository.go scan order (16 columns)
 	productColumns := []string{
-		"id", "name", "description", "price", "stock", "minimum_stock",
+		"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 		"is_active", "is_highlighted", "is_promotional", "promotional_price",
 		"created_at", "category_id", "category_name", "category_description", "images",
 	}
@@ -132,12 +132,12 @@ func (g *GetStoreFeaturedProductsSteps) setupGetStoreFeaturedProductsSQLExpectat
 		ctx.mockSQLMock.ExpectQuery("SELECT COUNT").
 			WillReturnRows(countRows)
 
-		// Mock featured products (is_highlighted=true, is_active=true) - 15 values per row
-		// Order: id, name, description, price, stock, minimum_stock, is_active, is_highlighted, is_promotional, promotional_price, created_at, category_id, category_name, category_description, images
+		// Mock featured products (is_highlighted=true, is_active=true) - 16 values per row
+		// Order: id, name, description, price, is_stockeable, stock, minimum_stock, is_active, is_highlighted, is_promotional, promotional_price, created_at, category_id, category_name, category_description, images
 		productRows := sqlmock.NewRows(productColumns).
-			AddRow(1, "Featured Product 1", "Description 1", 99.99, 10, 2, true, true, false, 0.0, now, 1, "Electronics", "Electronics desc", testProductImagesJSON).
-			AddRow(2, "Featured Product 2", "Description 2", 149.99, 5, 1, true, true, true, 129.99, now, 1, "Electronics", "Electronics desc", testProductImagesJSON).
-			AddRow(3, "Featured Product 3", "Description 3", 199.99, 20, 5, true, true, false, 0.0, now, 2, "Clothing", "Clothing desc", testProductImagesJSON)
+			AddRow(1, "Featured Product 1", "Description 1", 99.99, false, 10, 2, true, true, false, 0.0, now, 1, "Electronics", "Electronics desc", testProductImagesJSON).
+			AddRow(2, "Featured Product 2", "Description 2", 149.99, false, 5, 1, true, true, true, 129.99, now, 1, "Electronics", "Electronics desc", testProductImagesJSON).
+			AddRow(3, "Featured Product 3", "Description 3", 199.99, false, 20, 5, true, true, false, 0.0, now, 2, "Clothing", "Clothing desc", testProductImagesJSON)
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(productRows)

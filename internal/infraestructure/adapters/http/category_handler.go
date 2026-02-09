@@ -125,7 +125,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create category via use case
-	createdCategory, err := h.createCategory.Execute(ctx, &request.Category, imageBuffer, request.ShopID)
+	createdCategory, err := h.createCategory.Execute(ctx, request.ToModel(), imageBuffer, request.ShopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":          CategoryHandlerField,
@@ -147,7 +147,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(createdCategory); err != nil {
+	if err := json.NewEncoder(w).Encode(contracts.CategoryResponseFromModel(createdCategory)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": CreateCategoryFunctionField,
@@ -213,12 +213,7 @@ func (h *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *ht
 	}
 
 	// Build HTTP response
-	response := contracts.PaginatedCategoriesResponse{
-		Categories: categories,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-		TotalCount: totalCount,
-	}
+	response := contracts.NewPaginatedCategoriesResponse(categories, nextCursor, hasMore, totalCount)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         CategoryHandlerField,
@@ -265,10 +260,10 @@ func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return category directly (no DTO wrapper needed for single category)
+	// Return category response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(category); err != nil {
+	if err := json.NewEncoder(w).Encode(contracts.CategoryResponseFromModel(category)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": GetByIDCategoryFunctionField,
@@ -358,7 +353,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update category via use case
-	err = h.updateCategory.Execute(ctx, categoryID, &request.Category, imageBuffer, shopID)
+	err = h.updateCategory.Execute(ctx, categoryID, request.ToModel(), imageBuffer, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":          CategoryHandlerField,

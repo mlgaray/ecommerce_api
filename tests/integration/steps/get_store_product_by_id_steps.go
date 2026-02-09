@@ -134,9 +134,9 @@ func (g *GetStoreProductByIDSteps) setupGetStoreProductByIDSQLExpectations(slug 
 	}
 
 	// Product columns for GetByIDAndShopID query - must match product_repository.go scan order:
-	// ID, Name, Description, Price, Stock, MinimumStock, IsActive, IsHighlighted, IsPromotional, PromotionalPrice, CreatedAt, Category.ID, Category.Name, Category.Description, imagesJSON, variantsJSON
+	// ID, Name, Description, Price, IsStockeable, Stock, MinimumStock, IsActive, IsHighlighted, IsPromotional, PromotionalPrice, CreatedAt, Category.ID, Category.Name, Category.Description, imagesJSON, variantsJSON
 	productColumns := []string{
-		"id", "name", "description", "price", "stock", "minimum_stock",
+		"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 		"is_active", "is_highlighted", "is_promotional", "promotional_price",
 		"created_at", "category_id", "category_name", "category_description", "images", "variants",
 	}
@@ -159,7 +159,7 @@ func (g *GetStoreProductByIDSteps) setupGetStoreProductByIDSQLExpectations(slug 
 		// Mock product by ID - active product
 		// Note: Query uses CTEs, so we use (?s) to match across newlines
 		productRows := sqlmock.NewRows(productColumns).
-			AddRow(productID, "Test Product", "Test product description", 99.99, 10, 2, true, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON, productVariantsJSON)
+			AddRow(productID, "Test Product", "Test product description", 99.99, false, 10, 2, true, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON, productVariantsJSON)
 
 		ctx.mockSQLMock.ExpectQuery("(?s)FROM products p").
 			WillReturnRows(productRows)
@@ -193,7 +193,7 @@ func (g *GetStoreProductByIDSteps) setupGetStoreProductByIDSQLExpectations(slug 
 		// Mock inactive product
 		// Note: Query uses CTEs, so we use (?s) to match across newlines
 		productRows := sqlmock.NewRows(productColumns).
-			AddRow(productID, "Inactive Product", "Inactive product description", 99.99, 10, 2, false, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON, productVariantsJSON)
+			AddRow(productID, "Inactive Product", "Inactive product description", 99.99, false, 10, 2, false, false, false, 0.0, now, 1, "Electronics", "Electronics desc", productImagesJSON, productVariantsJSON)
 
 		ctx.mockSQLMock.ExpectQuery("(?s)FROM products p").
 			WillReturnRows(productRows)

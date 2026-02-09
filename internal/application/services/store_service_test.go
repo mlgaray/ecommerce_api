@@ -44,12 +44,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			},
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -74,12 +76,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 		slug := "non-existent-shop"
 		notFoundError := &errors.RecordNotFoundError{Message: errors.StoreNotFound}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(nil, notFoundError)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -98,12 +102,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 		slug := "test-shop"
 		expectedError := stdErrors.New("database error")
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(nil, expectedError)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -125,12 +131,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			Images: []*models.Image{},
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -152,12 +160,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			Address: nil,
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -179,12 +189,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			PaymentMethods: []*models.PaymentMethod{},
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -206,12 +218,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			DeliveryMethods: []*models.DeliveryMethod{},
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -233,12 +247,14 @@ func TestStoreService_GetBySlug(t *testing.T) {
 			OperatingSchedules: []*models.OperatingSchedule{},
 		}
 
-		repoMock := mocks.NewShopRepository(t)
-		repoMock.EXPECT().
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedShop, nil)
 
-		service := NewStoreService(repoMock)
+		productRepoMock := mocks.NewProductRepository(t)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -247,5 +263,410 @@ func TestStoreService_GetBySlug(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Empty(t, result.OperatingSchedules)
+	})
+}
+
+// =============================================================================
+// ValidateOrderItems Tests
+// =============================================================================
+
+func TestStoreService_ValidateOrderItems(t *testing.T) {
+	t.Run("when item has no product then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{{Product: nil}}
+		storeID := 1
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.OrderItemProductRequired, validationErr.Message)
+	})
+
+	t.Run("when product not found then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 999, Name: "Unknown", Price: 100}, Quantity: 1, UnitPrice: 100},
+		}
+		storeID := 1
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{999}, storeID).
+			Return(map[int]*models.Product{}, nil) // Empty map = product not found
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var notFoundErr *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFoundErr))
+	})
+
+	t.Run("when product is not active then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 1, Name: "Inactive Product", Price: 100}, Quantity: 1, UnitPrice: 100},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Inactive Product",
+			Price:        100,
+			IsActive:     false,
+			IsStockeable: true,
+			Stock:        10,
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.ProductNotActive, validationErr.Message)
+	})
+
+	t.Run("when product data mismatch then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 1, Name: "Wrong Name", Price: 100}, Quantity: 1, UnitPrice: 100},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Correct Name",
+			Price:        100,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.ProductDataMismatch, validationErr.Message)
+	})
+
+	t.Run("when unit price mismatch without options then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 1, Name: "Big Mac", Price: 10000}, Quantity: 1, UnitPrice: 15000}, // Wrong price
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.UnitPriceMismatch, validationErr.Message)
+	})
+
+	t.Run("when unit price mismatch with options then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		// Unit price should be 10000 + 1500 + 800 = 12300, but we send 15000
+		items := []*models.OrderItem{
+			{
+				Product: &models.Product{
+					ID:    1,
+					Name:  "Big Mac",
+					Price: 10000,
+					Variants: []*models.Variant{
+						{
+							ID:   1,
+							Name: "Tamaño",
+							Options: []*models.Option{
+								{ID: 2, Name: "Grande", Price: 1500},
+							},
+						},
+						{
+							ID:   2,
+							Name: "Extras",
+							Options: []*models.Option{
+								{ID: 4, Name: "Extra queso", Price: 800},
+							},
+						},
+					},
+				},
+				Quantity:  1,
+				UnitPrice: 15000, // Wrong: should be 12300
+			},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
+			Variants: []*models.Variant{
+				{ID: 1, Name: "Tamaño", Options: []*models.Option{{ID: 2, Name: "Grande", Price: 1500}}},
+				{ID: 2, Name: "Extras", Options: []*models.Option{{ID: 4, Name: "Extra queso", Price: 800}}},
+			},
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.UnitPriceMismatch, validationErr.Message)
+	})
+
+	t.Run("when unit price matches with options then passes validation", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		// Unit price = 10000 + 1500 + 800 = 12300
+		items := []*models.OrderItem{
+			{
+				Product: &models.Product{
+					ID:    1,
+					Name:  "Big Mac",
+					Price: 10000,
+					Variants: []*models.Variant{
+						{
+							ID:   1,
+							Name: "Tamaño",
+							Options: []*models.Option{
+								{ID: 2, Name: "Grande", Price: 1500},
+							},
+						},
+						{
+							ID:   2,
+							Name: "Extras",
+							Options: []*models.Option{
+								{ID: 4, Name: "Extra queso", Price: 800},
+							},
+						},
+					},
+				},
+				Quantity:  1,
+				UnitPrice: 12300, // Correct: 10000 + 1500 + 800
+			},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
+			Variants: []*models.Variant{
+				{ID: 1, Name: "Tamaño", Options: []*models.Option{{ID: 2, Name: "Grande", Price: 1500}}},
+				{ID: 2, Name: "Extras", Options: []*models.Option{{ID: 4, Name: "Extra queso", Price: 800}}},
+			},
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when promotional product unit price matches then passes validation", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		// Unit price = promotional 8000 + 1500 = 9500
+		items := []*models.OrderItem{
+			{
+				Product: &models.Product{
+					ID:               1,
+					Name:             "Big Mac",
+					Price:            10000,
+					IsPromotional:    true,
+					PromotionalPrice: 8000,
+					Variants: []*models.Variant{
+						{
+							ID:   1,
+							Name: "Tamaño",
+							Options: []*models.Option{
+								{ID: 2, Name: "Grande", Price: 1500},
+							},
+						},
+					},
+				},
+				Quantity:  1,
+				UnitPrice: 9500, // Correct: promotional 8000 + 1500
+			},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    true,
+			PromotionalPrice: 8000,
+			IsActive:         true,
+			IsStockeable:     true,
+			Stock:            10,
+			Variants: []*models.Variant{
+				{ID: 1, Name: "Tamaño", Options: []*models.Option{{ID: 2, Name: "Grande", Price: 1500}}},
+			},
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when insufficient stock then returns business rule error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 1, Name: "Big Mac", Price: 10000}, Quantity: 100, UnitPrice: 10000},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        5, // Only 5 in stock
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.Error(t, err)
+		var businessErr *errors.BusinessRuleError
+		assert.True(t, stdErrors.As(err, &businessErr))
+		assert.Equal(t, errors.InsufficientStock, businessErr.Message)
+	})
+
+	t.Run("when all validations pass then returns nil", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		items := []*models.OrderItem{
+			{Product: &models.Product{ID: 1, Name: "Big Mac", Price: 10000}, Quantity: 2, UnitPrice: 10000},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:           1,
+			Name:         "Big Mac",
+			Price:        10000,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.NoError(t, err)
 	})
 }

@@ -182,6 +182,7 @@ func TestProduct_Validate_MinimumStock(t *testing.T) {
 
 	t.Run("when minimum stock equals stock then validation passes", func(t *testing.T) {
 		product := newValidProduct()
+		product.IsStockeable = true
 		product.Stock = 10
 		product.MinimumStock = 10
 
@@ -192,6 +193,7 @@ func TestProduct_Validate_MinimumStock(t *testing.T) {
 
 	t.Run("when minimum stock is negative then returns validation error", func(t *testing.T) {
 		product := newValidProduct()
+		product.IsStockeable = true
 		product.MinimumStock = -1
 
 		err := product.Validate()
@@ -204,6 +206,7 @@ func TestProduct_Validate_MinimumStock(t *testing.T) {
 
 	t.Run("when minimum stock is set but stock is zero then returns validation error", func(t *testing.T) {
 		product := newValidProduct()
+		product.IsStockeable = true
 		product.Stock = 0
 		product.MinimumStock = 5
 
@@ -217,6 +220,7 @@ func TestProduct_Validate_MinimumStock(t *testing.T) {
 
 	t.Run("when minimum stock is greater than stock then returns validation error", func(t *testing.T) {
 		product := newValidProduct()
+		product.IsStockeable = true
 		product.Stock = 5
 		product.MinimumStock = 10
 
@@ -326,28 +330,41 @@ func TestProduct_Validate_PromotionalPrice(t *testing.T) {
 // =============================================================================
 
 func TestProduct_CanBeSold(t *testing.T) {
-	t.Run("when active and has stock then can be sold", func(t *testing.T) {
+	t.Run("when active and stockeable with stock then can be sold", func(t *testing.T) {
 		product := &Product{
-			IsActive: true,
-			Stock:    10,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        10,
 		}
 
 		assert.True(t, product.CanBeSold())
 	})
 
-	t.Run("when active but no stock then cannot be sold", func(t *testing.T) {
+	t.Run("when active and stockeable but no stock then cannot be sold", func(t *testing.T) {
 		product := &Product{
-			IsActive: true,
-			Stock:    0,
+			IsActive:     true,
+			IsStockeable: true,
+			Stock:        0,
 		}
 
 		assert.False(t, product.CanBeSold())
 	})
 
+	t.Run("when active and not stockeable then can always be sold", func(t *testing.T) {
+		product := &Product{
+			IsActive:     true,
+			IsStockeable: false,
+			Stock:        0,
+		}
+
+		assert.True(t, product.CanBeSold())
+	})
+
 	t.Run("when inactive with stock then cannot be sold", func(t *testing.T) {
 		product := &Product{
-			IsActive: false,
-			Stock:    10,
+			IsActive:     false,
+			IsStockeable: true,
+			Stock:        10,
 		}
 
 		assert.False(t, product.CanBeSold())
@@ -355,8 +372,9 @@ func TestProduct_CanBeSold(t *testing.T) {
 
 	t.Run("when inactive and no stock then cannot be sold", func(t *testing.T) {
 		product := &Product{
-			IsActive: false,
-			Stock:    0,
+			IsActive:     false,
+			IsStockeable: true,
+			Stock:        0,
 		}
 
 		assert.False(t, product.CanBeSold())
@@ -368,8 +386,9 @@ func TestProduct_CanBeSold(t *testing.T) {
 // =============================================================================
 
 func TestProduct_IsLowStock(t *testing.T) {
-	t.Run("when stock equals minimum stock then is low stock", func(t *testing.T) {
+	t.Run("when stockeable and stock equals minimum stock then is low stock", func(t *testing.T) {
 		product := &Product{
+			IsStockeable: true,
 			Stock:        5,
 			MinimumStock: 5,
 		}
@@ -377,8 +396,9 @@ func TestProduct_IsLowStock(t *testing.T) {
 		assert.True(t, product.IsLowStock())
 	})
 
-	t.Run("when stock is below minimum stock then is low stock", func(t *testing.T) {
+	t.Run("when stockeable and stock is below minimum stock then is low stock", func(t *testing.T) {
 		product := &Product{
+			IsStockeable: true,
 			Stock:        3,
 			MinimumStock: 5,
 		}
@@ -386,8 +406,9 @@ func TestProduct_IsLowStock(t *testing.T) {
 		assert.True(t, product.IsLowStock())
 	})
 
-	t.Run("when stock is above minimum stock then is not low stock", func(t *testing.T) {
+	t.Run("when stockeable and stock is above minimum stock then is not low stock", func(t *testing.T) {
 		product := &Product{
+			IsStockeable: true,
 			Stock:        10,
 			MinimumStock: 5,
 		}
@@ -395,18 +416,19 @@ func TestProduct_IsLowStock(t *testing.T) {
 		assert.False(t, product.IsLowStock())
 	})
 
-	t.Run("when no minimum stock set then stock zero is low stock", func(t *testing.T) {
+	t.Run("when not stockeable then is never low stock", func(t *testing.T) {
 		product := &Product{
+			IsStockeable: false,
 			Stock:        0,
-			MinimumStock: 0,
+			MinimumStock: 5,
 		}
 
-		// Stock (0) <= MinimumStock (0) is true
-		assert.True(t, product.IsLowStock())
+		assert.False(t, product.IsLowStock())
 	})
 
-	t.Run("when no minimum stock set and has stock then not low stock", func(t *testing.T) {
+	t.Run("when stockeable with no minimum stock set and has stock then not low stock", func(t *testing.T) {
 		product := &Product{
+			IsStockeable: true,
 			Stock:        10,
 			MinimumStock: 0,
 		}
@@ -459,7 +481,7 @@ func TestProduct_GetEffectivePrice(t *testing.T) {
 
 func TestProduct_DecrementStock(t *testing.T) {
 	t.Run("when quantity is valid and stock is sufficient then decrements stock", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.DecrementStock(3)
 
@@ -468,7 +490,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 	})
 
 	t.Run("when decrementing entire stock then stock becomes zero", func(t *testing.T) {
-		product := &Product{Stock: 5}
+		product := &Product{Stock: 5, IsStockeable: true}
 
 		err := product.DecrementStock(5)
 
@@ -477,7 +499,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 	})
 
 	t.Run("when quantity is zero then returns validation error", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.DecrementStock(0)
 
@@ -489,7 +511,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 	})
 
 	t.Run("when quantity is negative then returns validation error", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.DecrementStock(-5)
 
@@ -501,7 +523,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 	})
 
 	t.Run("when insufficient stock then returns business rule error", func(t *testing.T) {
-		product := &Product{Stock: 5}
+		product := &Product{Stock: 5, IsStockeable: true}
 
 		err := product.DecrementStock(10)
 
@@ -513,7 +535,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 	})
 
 	t.Run("when stock is zero and trying to decrement then returns business rule error", func(t *testing.T) {
-		product := &Product{Stock: 0}
+		product := &Product{Stock: 0, IsStockeable: true}
 
 		err := product.DecrementStock(1)
 
@@ -521,6 +543,15 @@ func TestProduct_DecrementStock(t *testing.T) {
 		var businessErr *errors.BusinessRuleError
 		assert.True(t, stdErrors.As(err, &businessErr))
 		assert.Equal(t, "insufficient_stock", businessErr.Message)
+	})
+
+	t.Run("when product is not stockeable then does nothing and returns no error", func(t *testing.T) {
+		product := &Product{Stock: 10, IsStockeable: false}
+
+		err := product.DecrementStock(5)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 10, product.Stock) // Stock unchanged
 	})
 }
 
@@ -530,7 +561,7 @@ func TestProduct_DecrementStock(t *testing.T) {
 
 func TestProduct_IncrementStock(t *testing.T) {
 	t.Run("when quantity is valid then increments stock", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.IncrementStock(5)
 
@@ -539,7 +570,7 @@ func TestProduct_IncrementStock(t *testing.T) {
 	})
 
 	t.Run("when stock is zero then increments correctly", func(t *testing.T) {
-		product := &Product{Stock: 0}
+		product := &Product{Stock: 0, IsStockeable: true}
 
 		err := product.IncrementStock(10)
 
@@ -548,7 +579,7 @@ func TestProduct_IncrementStock(t *testing.T) {
 	})
 
 	t.Run("when quantity is zero then returns validation error", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.IncrementStock(0)
 
@@ -560,7 +591,7 @@ func TestProduct_IncrementStock(t *testing.T) {
 	})
 
 	t.Run("when quantity is negative then returns validation error", func(t *testing.T) {
-		product := &Product{Stock: 10}
+		product := &Product{Stock: 10, IsStockeable: true}
 
 		err := product.IncrementStock(-5)
 
@@ -568,6 +599,15 @@ func TestProduct_IncrementStock(t *testing.T) {
 		var validationErr *errors.ValidationError
 		assert.True(t, stdErrors.As(err, &validationErr))
 		assert.Equal(t, "quantity_must_be_positive", validationErr.Message)
+		assert.Equal(t, 10, product.Stock) // Stock unchanged
+	})
+
+	t.Run("when product is not stockeable then does nothing and returns no error", func(t *testing.T) {
+		product := &Product{Stock: 10, IsStockeable: false}
+
+		err := product.IncrementStock(5)
+
+		assert.NoError(t, err)
 		assert.Equal(t, 10, product.Stock) // Stock unchanged
 	})
 }
@@ -619,9 +659,10 @@ func TestProduct_EdgeCases(t *testing.T) {
 
 	t.Run("multiple operations on same product work correctly", func(t *testing.T) {
 		product := &Product{
-			Price:    100.00,
-			Stock:    10,
-			IsActive: true,
+			Price:        100.00,
+			Stock:        10,
+			IsActive:     true,
+			IsStockeable: true,
 		}
 
 		// Initial state

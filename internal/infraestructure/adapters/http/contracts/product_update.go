@@ -14,7 +14,7 @@ import (
 )
 
 type ProductUpdateRequest struct {
-	Product   models.Product          `json:"product"`
+	Product   ProductRequest          `json:"product"`
 	NewImages []*multipart.FileHeader `json:"-"` // Optional new images to upload
 }
 
@@ -27,7 +27,7 @@ func NewProductUpdateRequest(r *http.Request) (*ProductUpdateRequest, error) {
 	}
 
 	// Parse product JSON (includes existing images with IDs)
-	var product models.Product
+	var product ProductRequest
 	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
 		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
 	}
@@ -49,6 +49,11 @@ func NewProductUpdateRequest(r *http.Request) (*ProductUpdateRequest, error) {
 		Product:   product,
 		NewImages: newImages,
 	}, nil
+}
+
+// ToModel converts the request's product to a domain model.
+func (r *ProductUpdateRequest) ToModel() *models.Product {
+	return r.Product.ToModel()
 }
 
 func (r *ProductUpdateRequest) Validate() error {
@@ -132,7 +137,7 @@ func (r *ProductUpdateRequest) validateVariants() error {
 	return nil
 }
 
-func (r *ProductUpdateRequest) validateVariantOptions(variant *models.Variant, variantIndex int) error {
+func (r *ProductUpdateRequest) validateVariantOptions(variant *ProductVariantRequest, variantIndex int) error {
 	for j, option := range variant.Options {
 		if strings.TrimSpace(option.Name) == "" {
 			return &httpErrors.BadRequestError{Message: "option_name_is_required"}

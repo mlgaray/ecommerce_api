@@ -401,6 +401,7 @@ func (p *ProductSteps) iHaveProductDataWithNegativeMinimumStock() error {
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
+		IsStockeable: true, // Required for minimum_stock validation
 		Stock:        10,
 		MinimumStock: -5, // Negative minimum stock
 		Category:     &models.Category{ID: 1},
@@ -422,8 +423,9 @@ func (p *ProductSteps) iHaveProductDataWithMinimumStockButNoStock() error {
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
-		Stock:        0, // No stock
-		MinimumStock: 5, // But has minimum stock
+		IsStockeable: true, // Required for minimum_stock validation
+		Stock:        0,    // No stock
+		MinimumStock: 5,    // But has minimum stock
 		Category:     &models.Category{ID: 1},
 	}
 
@@ -443,8 +445,9 @@ func (p *ProductSteps) iHaveProductDataWithMinimumStockGreaterThanStock() error 
 		Name:         "Test Product",
 		Description:  "Test Description",
 		Price:        99.99,
-		Stock:        10, // Stock is 10
-		MinimumStock: 20, // But minimum stock is 20
+		IsStockeable: true, // Required for minimum_stock validation
+		Stock:        10,   // Stock is 10
+		MinimumStock: 20,   // But minimum stock is 20
 		Category:     &models.Category{ID: 1},
 	}
 

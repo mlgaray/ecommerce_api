@@ -21,6 +21,7 @@ type router struct {
 	categoryHandler ports.CategoryHandler
 	shopHandler     ports.ShopHandler
 	storeHandler    ports.StoreHandler
+	orderHandler    ports.OrderHandler
 	authMiddleware  *middleware.AuthMiddleware
 }
 
@@ -31,6 +32,7 @@ func NewRouter(
 	categoryHandler ports.CategoryHandler,
 	shopHandler ports.ShopHandler,
 	storeHandler ports.StoreHandler,
+	orderHandler ports.OrderHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *router {
 	r := mux.NewRouter()
@@ -44,6 +46,7 @@ func NewRouter(
 		categoryHandler: categoryHandler,
 		shopHandler:     shopHandler,
 		storeHandler:    storeHandler,
+		orderHandler:    orderHandler,
 		authMiddleware:  authMiddleware,
 	}
 }
@@ -124,6 +127,8 @@ func (r *router) storeRoutes() {
 	sub.HandleFunc("/{slug}/products", r.storeHandler.GetProducts).Methods(http.MethodGet)
 	// GET /stores/{slug}/categories - Get store categories (public)
 	sub.HandleFunc("/{slug}/categories", r.storeHandler.GetCategories).Methods(http.MethodGet)
+	// POST /stores/{slug}/orders - Create order (public)
+	sub.HandleFunc("/{slug}/orders", r.orderHandler.Create).Methods(http.MethodPost)
 	// GET /stores/{slug} - Get store by slug (public)
 	sub.HandleFunc("/{slug}", r.storeHandler.GetBySlug).Methods(http.MethodGet)
 }

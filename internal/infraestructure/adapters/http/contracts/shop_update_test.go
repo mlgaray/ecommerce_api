@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -205,7 +204,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 	t.Run("when name is empty then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "",
 				Slug: "test-shop",
 			},
@@ -224,7 +223,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 	t.Run("when name is whitespace only then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "   ",
 				Slug: "test-shop",
 			},
@@ -243,7 +242,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 	t.Run("when slug is empty then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "",
 			},
@@ -262,7 +261,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 	t.Run("when slug is whitespace only then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "   ",
 			},
@@ -281,7 +280,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 	t.Run("when name and slug are valid then returns no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
 			},
@@ -303,10 +302,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has no ID then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 0, URL: "https://example.com/logo.jpg", Type: "logo"},
 				},
 			},
@@ -325,10 +324,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has negative ID then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: -1, URL: "https://example.com/logo.jpg", Type: "logo"},
 				},
 			},
@@ -347,10 +346,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has empty URL then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "", Type: "logo"},
 				},
 			},
@@ -369,10 +368,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has whitespace URL then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "   ", Type: "logo"},
 				},
 			},
@@ -391,10 +390,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has invalid type then returns error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "https://example.com/image.jpg", Type: "banner"},
 				},
 			},
@@ -413,10 +412,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has type logo then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "https://example.com/logo.jpg", Type: "logo"},
 				},
 			},
@@ -432,10 +431,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when existing image has type cover then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "https://example.com/cover.jpg", Type: "cover"},
 				},
 			},
@@ -451,10 +450,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when multiple valid existing images then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
-				Images: []*models.Image{
+				Images: []*ShopImageRequest{
 					{ID: 1, URL: "https://example.com/logo.jpg", Type: "logo"},
 					{ID: 2, URL: "https://example.com/cover.jpg", Type: "cover"},
 				},
@@ -471,7 +470,7 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when no existing images then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name:   "Test Shop",
 				Slug:   "test-shop",
 				Images: nil,
@@ -488,10 +487,10 @@ func TestShopUpdateRequest_Validate_ExistingImages(t *testing.T) {
 	t.Run("when empty images array then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name:   "Test Shop",
 				Slug:   "test-shop",
-				Images: []*models.Image{},
+				Images: []*ShopImageRequest{},
 			},
 		}
 
@@ -511,7 +510,7 @@ func TestShopUpdateRequest_ToLogoBuffer(t *testing.T) {
 	t.Run("when no new logo then returns nil", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop:    models.Shop{Name: "Test", Slug: "test"},
+			Shop:    ShopRequest{Name: "Test", Slug: "test"},
 			NewLogo: nil,
 		}
 
@@ -532,7 +531,7 @@ func TestShopUpdateRequest_ToCoverBuffer(t *testing.T) {
 	t.Run("when no new cover then returns nil", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop:     models.Shop{Name: "Test", Slug: "test"},
+			Shop:     ShopRequest{Name: "Test", Slug: "test"},
 			NewCover: nil,
 		}
 
@@ -556,7 +555,7 @@ func TestShopUpdateRequest_ValidateImage(t *testing.T) {
 	t.Run("when shop has valid basic fields and no new images then no error", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Test Shop",
 				Slug: "test-shop",
 			},
@@ -620,7 +619,7 @@ func TestShopUpdateRequest_EdgeCases(t *testing.T) {
 		// Arrange
 		longName := strings.Repeat("a", 500)
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: longName,
 				Slug: "test-shop",
 			},
@@ -636,7 +635,7 @@ func TestShopUpdateRequest_EdgeCases(t *testing.T) {
 	t.Run("when shop has unicode characters then accepts them", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Tienda de Ropa",
 				Slug: "tienda-de-ropa",
 			},
@@ -652,7 +651,7 @@ func TestShopUpdateRequest_EdgeCases(t *testing.T) {
 	t.Run("when shop has special characters in name then accepts them", func(t *testing.T) {
 		// Arrange
 		request := &ShopUpdateRequest{
-			Shop: models.Shop{
+			Shop: ShopRequest{
 				Name: "Shop & Co. - The Best!",
 				Slug: "shop-and-co",
 			},

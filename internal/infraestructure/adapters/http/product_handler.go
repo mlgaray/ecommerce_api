@@ -128,7 +128,7 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Create product via use case
 	stepStart = time.Now()
-	createdProduct, err := p.createProduct.Execute(ctx, &request.Product, imageBuffers, request.ShopID)
+	createdProduct, err := p.createProduct.Execute(ctx, request.ToModel(), imageBuffers, request.ShopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":         ProductHandlerField,
@@ -152,7 +152,7 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(createdProduct); err != nil {
+	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(createdProduct)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": CreateProductFunctionField,
@@ -260,12 +260,7 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 	}
 
 	// Build HTTP response (handler constructs response DTO)
-	response := contracts.PaginatedProductsResponse{
-		Products:   products,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-		TotalCount: totalCount, // Only on first page, nil on subsequent pages
-	}
+	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, totalCount)
 
 	// Log successful search
 	logs.WithFields(map[string]interface{}{
@@ -312,10 +307,10 @@ func (p *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return product directly (no DTO wrapper needed for single product)
+	// Return product response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(product); err != nil {
+	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(product)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": GetByIDFunctionField,
@@ -424,7 +419,7 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update product via use case
-	err = p.updateProduct.Execute(ctx, productID, &request.Product, imageBuffers, shopID)
+	err = p.updateProduct.Execute(ctx, productID, request.ToModel(), imageBuffers, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":         ProductHandlerField,

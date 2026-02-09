@@ -85,7 +85,7 @@ func (u *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute business logic
-	err = u.signUp.Execute(ctx, &req.User, &req.Shop)
+	err = u.signUp.Execute(ctx, req.ToUserModel(), req.ToShopModel())
 	if err != nil {
 		httpErrors.HandleError(w, err)
 		return
