@@ -13,6 +13,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
@@ -121,6 +122,16 @@ var Module = fx.Options(
 		fx.Annotate(store.NewGetStoreProductByIDUseCase, fx.As(new(ports.GetStoreProductByIDUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewStoreHandler, fx.As(new(ports.StoreHandler))),
+
+		// ORDER (public storefront endpoint for creating orders)
+		// Repository first (no dependencies)
+		fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+		// Service depends on Repositories
+		fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+		// Use Cases depend on Services
+		fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
+		// Handler depends on Use Cases
+		fx.Annotate(http.NewOrderHandler, fx.As(new(ports.OrderHandler))),
 
 		// SERVER
 		server.NewServer,

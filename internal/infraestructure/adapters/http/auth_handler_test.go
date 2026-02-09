@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
@@ -193,14 +192,14 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, signUpMock)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john@example.com",
 				Password: "password123",
 				Phone:    "+54 11 1234-5678",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -246,13 +245,13 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, nil)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "",
 				Password: "password123",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name: "John's Shop",
 				Slug: "johns-shop",
 			},
@@ -275,13 +274,13 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, nil)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john@example.com",
 				Password: "",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name: "John's Shop",
 				Slug: "johns-shop",
 			},
@@ -309,14 +308,14 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, signUpMock)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "existing@example.com",
 				Password: "password123",
 				Phone:    "+54 11 1234-5678",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -341,13 +340,13 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, nil)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john@example.com",
 				Password: "password123",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name: "",
 				Slug: "johns-shop",
 			},
@@ -370,13 +369,13 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, nil)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john@example.com",
 				Password: "password123",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name: "John's Shop",
 				Slug: "",
 			},
@@ -404,14 +403,14 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		handler := NewAuthHandler(nil, signUpMock)
 
 		body := contracts.SignUpRequest{
-			User: models.User{
+			User: contracts.UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john@example.com",
 				Password: "password123",
 				Phone:    "+54 11 1234-5678",
 			},
-			Shop: models.Shop{
+			Shop: contracts.SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",

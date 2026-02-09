@@ -13,8 +13,125 @@ import (
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
+// ProductRequest represents product data in HTTP requests.
+type ProductRequest struct {
+	ID               int                      `json:"id,omitempty"`
+	Name             string                   `json:"name"`
+	Description      string                   `json:"description"`
+	Price            float64                  `json:"price"`
+	Category         *ProductCategoryRequest  `json:"category,omitempty"`
+	Variants         []*ProductVariantRequest `json:"variants,omitempty"`
+	IsActive         bool                     `json:"is_active"`
+	IsPromotional    bool                     `json:"is_promotional"`
+	PromotionalPrice float64                  `json:"promotional_price,omitempty"`
+	IsHighlighted    bool                     `json:"is_highlighted"`
+	IsStockeable     bool                     `json:"is_stockeable"`
+	Stock            int                      `json:"stock"`
+	MinimumStock     int                      `json:"minimum_stock,omitempty"`
+	Images           []*ProductImageRequest   `json:"images,omitempty"`
+}
+
+// ProductCategoryRequest represents category reference in product requests.
+type ProductCategoryRequest struct {
+	ID int `json:"id"`
+}
+
+// ProductVariantRequest represents variant data in product requests.
+type ProductVariantRequest struct {
+	ID            int                     `json:"id,omitempty"`
+	Name          string                  `json:"name"`
+	Order         int                     `json:"order,omitempty"`
+	SelectionType string                  `json:"selection_type"`
+	MaxSelections int                     `json:"max_selections,omitempty"`
+	IsRequired    bool                    `json:"is_required,omitempty"`
+	Options       []*ProductOptionRequest `json:"options,omitempty"`
+}
+
+// ProductOptionRequest represents option data in variant requests.
+type ProductOptionRequest struct {
+	ID    int     `json:"id,omitempty"`
+	Name  string  `json:"name"`
+	Price float64 `json:"price,omitempty"`
+	Order int     `json:"order,omitempty"`
+}
+
+// ProductImageRequest represents image data in product requests.
+type ProductImageRequest struct {
+	ID    int    `json:"id,omitempty"`
+	URL   string `json:"url,omitempty"`
+	Order int    `json:"order,omitempty"`
+}
+
+// ToModel converts ProductRequest to a domain model.
+func (p *ProductRequest) ToModel() *models.Product {
+	product := &models.Product{
+		ID:               p.ID,
+		Name:             p.Name,
+		Description:      p.Description,
+		Price:            p.Price,
+		IsActive:         p.IsActive,
+		IsPromotional:    p.IsPromotional,
+		PromotionalPrice: p.PromotionalPrice,
+		IsHighlighted:    p.IsHighlighted,
+		IsStockeable:     p.IsStockeable,
+		Stock:            p.Stock,
+		MinimumStock:     p.MinimumStock,
+	}
+
+	if p.Category != nil {
+		product.Category = &models.Category{ID: p.Category.ID}
+	}
+
+	// Convert variants
+	if len(p.Variants) > 0 {
+		product.Variants = make([]*models.Variant, len(p.Variants))
+		for i, v := range p.Variants {
+			product.Variants[i] = v.ToModel()
+		}
+	}
+
+	// Convert images
+	if len(p.Images) > 0 {
+		product.Images = make([]*models.Image, len(p.Images))
+		for i, img := range p.Images {
+			product.Images[i] = &models.Image{
+				ID:  img.ID,
+				URL: img.URL,
+			}
+		}
+	}
+
+	return product
+}
+
+// ToModel converts ProductVariantRequest to a domain model.
+func (v *ProductVariantRequest) ToModel() *models.Variant {
+	variant := &models.Variant{
+		ID:            v.ID,
+		Name:          v.Name,
+		Order:         v.Order,
+		SelectionType: models.SelectionType(v.SelectionType),
+		MaxSelections: v.MaxSelections,
+		IsRequired:    v.IsRequired,
+	}
+
+	if len(v.Options) > 0 {
+		variant.Options = make([]*models.Option, len(v.Options))
+		for i, opt := range v.Options {
+			variant.Options[i] = &models.Option{
+				ID:    opt.ID,
+				Name:  opt.Name,
+				Price: opt.Price,
+				Order: opt.Order,
+			}
+		}
+	}
+
+	return variant
+}
+
 type ProductCreateRequest struct {
-	Product models.Product          `json:"product"`
+	Product ProductRequest          `json:"product"`
 	ShopID  int                     `json:"shop_id"`
 	Images  []*multipart.FileHeader `json:"-"` // Not part of JSON, set manually
 }
@@ -28,7 +145,7 @@ func NewProductCreateRequest(r *http.Request, shopID int) (*ProductCreateRequest
 		return nil, &httpErrors.BadRequestError{Message: "product_json_required"}
 	}
 
-	var product models.Product
+	var product ProductRequest
 	if err := json.Unmarshal([]byte(productJSON), &product); err != nil {
 		return nil, &httpErrors.BadRequestError{Message: "invalid_product_json_format"}
 	}
@@ -54,6 +171,11 @@ func NewProductCreateRequest(r *http.Request, shopID int) (*ProductCreateRequest
 		ShopID:  shopID,
 		Images:  images,
 	}, nil
+}
+
+// ToModel converts the request's product to a domain model.
+func (r *ProductCreateRequest) ToModel() *models.Product {
+	return r.Product.ToModel()
 }
 
 func (r *ProductCreateRequest) Validate() error {
@@ -129,16 +251,16 @@ func (r *ProductCreateRequest) validateVariants() error {
 	return nil
 }
 
-func isValidSelectionType(selectionType models.SelectionType) bool {
+func isValidSelectionType(selectionType string) bool {
 	switch selectionType {
-	case models.Single, models.Multiple, models.Custom:
+	case "single", "multiple", "custom":
 		return true
 	default:
 		return false
 	}
 }
 
-func (r *ProductCreateRequest) validateVariantOptions(variant *models.Variant, variantIndex int) error {
+func (r *ProductCreateRequest) validateVariantOptions(variant *ProductVariantRequest, variantIndex int) error {
 	for j, option := range variant.Options {
 		if strings.TrimSpace(option.Name) == "" {
 			return &httpErrors.BadRequestError{Message: "option_name_is_required"}

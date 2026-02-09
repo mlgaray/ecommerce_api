@@ -244,9 +244,9 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 	ctx := GetTestContext()
 
 	// Columns returned by GetAllByShopIDWithFilters (lightweight - no variants)
-	// Must match the exact SELECT order from product_repository.go:280-296
+	// Must match the exact SELECT order from product_repository.go:339-354
 	columns := []string{
-		"p.id", "p.name", "p.description", "p.price", "p.stock", "p.minimum_stock",
+		"p.id", "p.name", "p.description", "p.price", "p.is_stockeable", "p.stock", "p.minimum_stock",
 		"p.is_active", "p.is_highlighted", "p.is_promotional", "p.promotional_price",
 		"p.created_at",
 		"c.id", "c.name", "c.description", // category fields
@@ -264,9 +264,9 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock products query returning sample data (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(15, "Product 15", "Description 15", 99.99, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(14, "Product 14", "Description 14", 199.99, 20, 10, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(13, "Product 13", "Description 13", 299.99, 30, 15, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(15, "Product 15", "Description 15", 99.99, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(14, "Product 14", "Description 14", 199.99, false, 20, 10, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(13, "Product 13", "Description 13", 299.99, false, 30, 15, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -274,8 +274,8 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 	case scenarioShopWithProductsCursor:
 		// Mock products query with cursor (second page)
 		rows := sqlmock.NewRows(columns).
-			AddRow(9, "Product 9", "Description 9", 99.99, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(8, "Product 8", "Description 8", 199.99, 20, 10, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(9, "Product 9", "Description 9", 99.99, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(8, "Product 8", "Description 8", 199.99, false, 20, 10, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -299,8 +299,8 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock search results (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Gaming Laptop", "Description", 999.99, 5, 2, true, false, false, 0.0, now, 1, "Electronics", "", "[]").
-			AddRow(2, "Laptop Stand", "Description", 49.99, 10, 5, true, false, false, 0.0, now, 1, "Accessories", "", "[]")
+			AddRow(1, "Gaming Laptop", "Description", 999.99, false, 5, 2, true, false, false, 0.0, now, 1, "Electronics", "", "[]").
+			AddRow(2, "Laptop Stand", "Description", 49.99, false, 10, 5, true, false, false, 0.0, now, 1, "Accessories", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -313,8 +313,8 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock category filtered results (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Product A", "Description", 100.0, 10, 5, true, false, false, 0.0, now, 2, "Category 2", "", "[]").
-			AddRow(2, "Product B", "Description", 200.0, 10, 5, true, false, false, 0.0, now, 2, "Category 2", "", "[]")
+			AddRow(1, "Product A", "Description", 100.0, false, 10, 5, true, false, false, 0.0, now, 2, "Category 2", "", "[]").
+			AddRow(2, "Product B", "Description", 200.0, false, 10, 5, true, false, false, 0.0, now, 2, "Category 2", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -327,9 +327,9 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock price range filtered results (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Product 1", "Description", 150.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(2, "Product 2", "Description", 300.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(3, "Product 3", "Description", 450.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(1, "Product 1", "Description", 150.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(2, "Product 2", "Description", 300.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(3, "Product 3", "Description", 450.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -342,8 +342,8 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock only active products (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Active Product 1", "Description", 100.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(2, "Active Product 2", "Description", 200.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(1, "Active Product 1", "Description", 100.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(2, "Active Product 2", "Description", 200.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -356,9 +356,9 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock sorted results (price ascending) (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Cheap Product", "Description", 10.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(2, "Medium Product", "Description", 50.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(3, "Expensive Product", "Description", 100.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(1, "Cheap Product", "Description", 10.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(2, "Medium Product", "Description", 50.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(3, "Expensive Product", "Description", 100.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)
@@ -371,8 +371,8 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 		// Mock combined filter results (executed SECOND)
 		rows := sqlmock.NewRows(columns).
-			AddRow(1, "Product 1", "Description", 100.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
-			AddRow(2, "Product 2", "Description", 200.0, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
+			AddRow(1, "Product 1", "Description", 100.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]").
+			AddRow(2, "Product 2", "Description", 200.0, false, 10, 5, true, false, false, 0.0, now, 1, "Category 1", "", "[]")
 
 		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
 			WillReturnRows(rows)

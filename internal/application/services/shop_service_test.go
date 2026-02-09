@@ -911,6 +911,36 @@ func TestShopService_Update(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("when active payment method has nil transfer config then validation passes", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		shop := newValidShopForUpdate()
+		shop.PaymentMethods = []*models.PaymentMethod{
+			{
+				IsActive:       true,
+				TransferConfig: nil, // No transfer config - should be fine
+			},
+		}
+		var logoBuffer []byte
+		var coverBuffer []byte
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			Update(ctx, shopID, shop).
+			Return([]string{}, nil)
+
+		assetMock := mocks.NewAssetService(t)
+
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.Update(ctx, shopID, shop, logoBuffer, coverBuffer)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
 	t.Run("when uploading both images with existing images then filters out both old images", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
@@ -987,5 +1017,505 @@ func TestShopService_Update(t *testing.T) {
 
 		// Assert
 		assert.NoError(t, err)
+	})
+}
+
+// =============================================================================
+// GetBySlug Tests
+// =============================================================================
+
+func TestShopService_GetBySlug(t *testing.T) {
+	t.Run("when shop exists then returns shop", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "test-shop"
+		expectedShop := &models.Shop{
+			ID:   1,
+			Name: "Test Shop",
+			Slug: slug,
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			GetBySlug(ctx, slug).
+			Return(expectedShop, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetBySlug(ctx, slug)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, expectedShop.ID, result.ID)
+		assert.Equal(t, expectedShop.Slug, result.Slug)
+	})
+
+	t.Run("when shop not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "non-existent"
+		notFoundError := &errors.RecordNotFoundError{Message: errors.ShopNotFound}
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			GetBySlug(ctx, slug).
+			Return(nil, notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetBySlug(ctx, slug)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "test-shop"
+		expectedError := stdErrors.New("database error")
+
+		repoMock := mocks.NewShopRepository(t)
+		repoMock.EXPECT().
+			GetBySlug(ctx, slug).
+			Return(nil, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetBySlug(ctx, slug)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, expectedError, err)
+	})
+}
+
+// =============================================================================
+// GetActivePaymentMethod Tests
+// =============================================================================
+
+func TestShopService_GetActivePaymentMethod(t *testing.T) {
+	t.Run("when payment method found and active then returns it", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			PaymentMethods: []*models.PaymentMethod{
+				{ID: 1, Name: "Cash", Code: "cash", IsActive: true},
+				{ID: 2, Name: "Transfer", Code: "transfer", IsActive: true},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActivePaymentMethod(shop, 1)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, 1, result.ID)
+		assert.Equal(t, "Cash", result.Name)
+	})
+
+	t.Run("when payment method found but inactive then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			PaymentMethods: []*models.PaymentMethod{
+				{ID: 1, Name: "Cash", Code: "cash", IsActive: false},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActivePaymentMethod(shop, 1)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.PaymentMethodNotFound, validationErr.Message)
+	})
+
+	t.Run("when payment method not found then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			PaymentMethods: []*models.PaymentMethod{
+				{ID: 1, Name: "Cash", Code: "cash", IsActive: true},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActivePaymentMethod(shop, 999)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.PaymentMethodNotFound, validationErr.Message)
+	})
+
+	t.Run("when shop has no payment methods then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			PaymentMethods: []*models.PaymentMethod{},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActivePaymentMethod(shop, 1)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.PaymentMethodNotFound, validationErr.Message)
+	})
+}
+
+// =============================================================================
+// GetActiveDeliveryMethod Tests
+// =============================================================================
+
+func TestShopService_GetActiveDeliveryMethod(t *testing.T) {
+	t.Run("when delivery method found and active then returns it", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			DeliveryMethods: []*models.DeliveryMethod{
+				{ID: 1, Name: "Delivery", Code: "delivery", IsActive: true},
+				{ID: 2, Name: "Pickup", Code: "pickup", IsActive: true},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActiveDeliveryMethod(shop, 2)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, 2, result.ID)
+		assert.Equal(t, "Pickup", result.Name)
+	})
+
+	t.Run("when delivery method found but inactive then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			DeliveryMethods: []*models.DeliveryMethod{
+				{ID: 1, Name: "Delivery", Code: "delivery", IsActive: false},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActiveDeliveryMethod(shop, 1)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.DeliveryMethodNotFound, validationErr.Message)
+	})
+
+	t.Run("when delivery method not found then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			DeliveryMethods: []*models.DeliveryMethod{
+				{ID: 1, Name: "Delivery", Code: "delivery", IsActive: true},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActiveDeliveryMethod(shop, 999)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.DeliveryMethodNotFound, validationErr.Message)
+	})
+
+	t.Run("when shop has no delivery methods then returns validation error", func(t *testing.T) {
+		// Arrange
+		shop := &models.Shop{
+			DeliveryMethods: []*models.DeliveryMethod{},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetActiveDeliveryMethod(shop, 1)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.DeliveryMethodNotFound, validationErr.Message)
+	})
+}
+
+// =============================================================================
+// ValidateShippingCost Tests
+// =============================================================================
+
+func TestShopService_ValidateShippingCost(t *testing.T) {
+	t.Run("when pickup with zero cost then passes", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: models.DeliveryMethodPickup,
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(0, method, 0)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when pickup with non-zero cost then returns error", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: models.DeliveryMethodPickup,
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(500, method, 0)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.PickupShouldHaveZeroCost, validationErr.Message)
+	})
+
+	t.Run("when fixed price matches then passes", func(t *testing.T) {
+		// Arrange
+		fixedPrice := 500.0
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryConfig: &models.DeliveryConfig{
+				FixedPrice: &fixedPrice,
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(500, method, 0)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when fixed price mismatch then returns error", func(t *testing.T) {
+		// Arrange
+		fixedPrice := 500.0
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryConfig: &models.DeliveryConfig{
+				FixedPrice: &fixedPrice,
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(999, method, 0)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.ShippingCostMismatch, validationErr.Message)
+	})
+
+	t.Run("when zone-based and price matches then passes", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryZones: []*models.DeliveryZone{
+				{ID: 1, Name: "Zone A", Price: 300},
+				{ID: 2, Name: "Zone B", Price: 500},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(500, method, 2)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when zone-based and no zone selected then returns error", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryZones: []*models.DeliveryZone{
+				{ID: 1, Name: "Zone A", Price: 300},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(300, method, 0)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.DeliveryZoneRequired, validationErr.Message)
+	})
+
+	t.Run("when zone-based and zone not found then returns error", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryZones: []*models.DeliveryZone{
+				{ID: 1, Name: "Zone A", Price: 300},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(300, method, 999)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.DeliveryZoneNotFound, validationErr.Message)
+	})
+
+	t.Run("when zone-based and price mismatch then returns error", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			DeliveryZones: []*models.DeliveryZone{
+				{ID: 1, Name: "Zone A", Price: 300},
+			},
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(999, method, 1)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.ShippingCostMismatch, validationErr.Message)
+	})
+
+	t.Run("when no config and zero cost then passes (free delivery)", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			// No DeliveryConfig, no DeliveryZones
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(0, method, 0)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when no config and non-zero cost then returns error", func(t *testing.T) {
+		// Arrange
+		method := &models.DeliveryMethod{
+			ID:   1,
+			Code: "delivery",
+			// No DeliveryConfig, no DeliveryZones
+		}
+
+		repoMock := mocks.NewShopRepository(t)
+		assetMock := mocks.NewAssetService(t)
+		service := NewShopService(repoMock, assetMock)
+
+		// Act
+		err := service.ValidateShippingCost(500, method, 0)
+
+		// Assert
+		assert.Error(t, err)
+		var validationErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &validationErr))
+		assert.Equal(t, errors.ShippingCostMismatch, validationErr.Message)
 	})
 }

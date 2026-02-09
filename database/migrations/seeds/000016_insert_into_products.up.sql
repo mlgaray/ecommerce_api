@@ -8,7 +8,7 @@ SELECT id INTO shop_id FROM public.shops WHERE email = 'mcdonalds@mc.com' LIMIT 
 SELECT id INTO category_id FROM public.categories WHERE name = 'Hamburguesas' LIMIT 1;
 
 -- Inserta los datos en la tabla products
-INSERT INTO products (name, description, price, is_active, category_id, shop_id, is_promotional, promotional_price, is_highlighted, stock, minimum_stock)
+INSERT INTO products (name, description, price, is_active, category_id, shop_id, is_promotional, promotional_price, is_highlighted, is_stockeable, stock, minimum_stock)
 VALUES ('Big Mac',
         'La perfección hecha hamburguesa que te hace agua la boca comienza con dos patties de 100% carne y la salsa Big Mac.',
         10000,
@@ -17,6 +17,7 @@ VALUES ('Big Mac',
         shop_id,
         true,
         8500,
+        true,
         true,
         50,
         10);

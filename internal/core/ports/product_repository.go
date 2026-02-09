@@ -31,4 +31,10 @@ type ProductRepository interface {
 	// Used by public store endpoints where shop ID comes from slug lookup.
 	// Returns RecordNotFoundError if product doesn't exist or doesn't belong to shop.
 	GetByIDAndShopID(ctx context.Context, productID, shopID int) (*models.Product, error)
+
+	// GetByIDsAndShopID retrieves multiple products by IDs and validates shop ownership.
+	// Returns a map of productID -> Product for O(1) lookup during validation.
+	// Used by StoreService.ValidateOrderItems for batch validation.
+	// Products not found are simply not included in the returned map.
+	GetByIDsAndShopID(ctx context.Context, ids []int, shopID int) (map[int]*models.Product, error)
 }

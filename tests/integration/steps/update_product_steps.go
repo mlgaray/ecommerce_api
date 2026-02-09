@@ -360,6 +360,7 @@ func (u *UpdateProductSteps) iHaveAProductWithIDAndNegativeMinimumStock(productI
 		Name:         "Updated Product",
 		Description:  "Updated Description",
 		Price:        149.99,
+		IsStockeable: true, // Required for minimum_stock validation
 		Stock:        20,
 		MinimumStock: -5, // Negative minimum stock
 		Category:     &models.Category{ID: 1},
@@ -385,8 +386,9 @@ func (u *UpdateProductSteps) iHaveAProductWithIDWithMinimumStockButNoStock(produ
 		Name:         "Updated Product",
 		Description:  "Updated Description",
 		Price:        149.99,
-		Stock:        0, // No stock
-		MinimumStock: 5, // But has minimum stock
+		IsStockeable: true, // Required for minimum_stock validation
+		Stock:        0,    // No stock
+		MinimumStock: 5,    // But has minimum stock
 		Category:     &models.Category{ID: 1},
 		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},
@@ -410,8 +412,9 @@ func (u *UpdateProductSteps) iHaveAProductWithIDWithMinimumStockGreaterThanStock
 		Name:         "Updated Product",
 		Description:  "Updated Description",
 		Price:        149.99,
-		Stock:        10, // Stock is 10
-		MinimumStock: 20, // But minimum stock is 20
+		IsStockeable: true, // Required for minimum_stock validation
+		Stock:        10,   // Stock is 10
+		MinimumStock: 20,   // But minimum stock is 20
 		Category:     &models.Category{ID: 1},
 		Images: []*models.Image{
 			{ID: 1, URL: "https://existing.com/image1.jpg"},

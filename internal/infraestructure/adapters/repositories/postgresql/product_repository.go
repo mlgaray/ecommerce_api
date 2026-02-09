@@ -113,6 +113,7 @@ func (r *ProductRepository) GetByID(ctx context.Context, productID int) (*models
 			p.name,
 			p.description,
 			p.price,
+			p.is_stockeable,
 			p.stock,
 			COALESCE(p.minimum_stock, 0),
 			p.is_active,
@@ -142,6 +143,7 @@ func (r *ProductRepository) GetByID(ctx context.Context, productID int) (*models
 		&product.Name,
 		&product.Description,
 		&product.Price,
+		&product.IsStockeable,
 		&product.Stock,
 		&product.MinimumStock,
 		&product.IsActive,
@@ -236,11 +238,12 @@ func (r *ProductRepository) Create(ctx context.Context, product *models.Product,
 	queryStart := time.Now()
 	err = r.db.QueryRowContext(ctx, `
 		SELECT create_product(
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 		)`,
 		product.Name,
 		product.Description,
 		product.Price,
+		product.IsStockeable,
 		product.Stock,
 		product.MinimumStock,
 		product.IsActive,
@@ -334,7 +337,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, shopI
 	// Variants come as empty array [] for listing views (full details in GetByID)
 	baseQuery := `
 		SELECT
-			p.id, p.name, p.description, p.price, p.stock, COALESCE(p.minimum_stock, 0),
+			p.id, p.name, p.description, p.price, p.is_stockeable, p.stock, COALESCE(p.minimum_stock, 0),
 			p.is_active, p.is_highlighted, p.is_promotional, COALESCE(p.promotional_price, 0),
 			p.created_at,
 			c.id, c.name, COALESCE(c.description, ''),
@@ -524,6 +527,7 @@ func (r *ProductRepository) GetAllByShopIDWithFilters(ctx context.Context, shopI
 			&product.Name,
 			&product.Description,
 			&product.Price,
+			&product.IsStockeable,
 			&product.Stock,
 			&product.MinimumStock,
 			&product.IsActive,
@@ -757,12 +761,13 @@ func (r *ProductRepository) Update(ctx context.Context, productID int, product *
 	spStart := time.Now()
 	var deletedRefs []string
 	err = r.db.QueryRowContext(ctx, `
-		SELECT update_product($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+		SELECT update_product($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 		productID,
 		shopID,
 		product.Name,
 		product.Description,
 		product.Price,
+		product.IsStockeable,
 		product.Stock,
 		product.MinimumStock,
 		product.IsActive,
@@ -957,6 +962,7 @@ func (r *ProductRepository) GetByIDAndShopID(ctx context.Context, productID, sho
 			p.name,
 			p.description,
 			p.price,
+			p.is_stockeable,
 			p.stock,
 			COALESCE(p.minimum_stock, 0),
 			p.is_active,
@@ -986,6 +992,7 @@ func (r *ProductRepository) GetByIDAndShopID(ctx context.Context, productID, sho
 		&product.Name,
 		&product.Description,
 		&product.Price,
+		&product.IsStockeable,
 		&product.Stock,
 		&product.MinimumStock,
 		&product.IsActive,
@@ -1047,4 +1054,131 @@ func (r *ProductRepository) GetByIDAndShopID(ctx context.Context, productID, sho
 	}
 
 	return product, nil
+}
+
+// GetByIDsAndShopID retrieves multiple products by IDs and validates shop ownership.
+// Returns a map of productID -> Product for O(1) lookup during validation.
+// Used by StoreService.ValidateOrderItems for batch validation.
+//
+// Query optimization:
+// - Pre-aggregates variant_options in subquery (single scan)
+// - Uses LEFT JOIN instead of correlated subqueries
+// - FILTER clause handles NULL from LEFT JOIN cleanly
+// - Groups by product.id at the end
+func (r *ProductRepository) GetByIDsAndShopID(ctx context.Context, ids []int, shopID int) (map[int]*models.Product, error) {
+	if len(ids) == 0 {
+		return make(map[int]*models.Product), nil
+	}
+
+	query := `
+		SELECT
+			p.id,
+			p.name,
+			p.price,
+			p.is_stockeable,
+			p.stock,
+			p.is_active,
+			p.is_promotional,
+			COALESCE(p.promotional_price, 0),
+			COALESCE(
+				jsonb_agg(
+					DISTINCT jsonb_build_object(
+						'id', pv.id,
+						'name', pv.name,
+						'order', pv."order",
+						'selection_type', pv.selection_type,
+						'max_selections', pv.max_selections,
+						'is_required', pv.is_required,
+						'options', COALESCE(vo.options, '[]'::jsonb)
+					)
+				) FILTER (WHERE pv.id IS NOT NULL),
+				'[]'::jsonb
+			) AS variants
+		FROM products p
+		LEFT JOIN product_variants pv ON pv.product_id = p.id
+		LEFT JOIN (
+			SELECT
+				variant_id,
+				jsonb_agg(
+					jsonb_build_object(
+						'id', id,
+						'name', name,
+						'price', price,
+						'order', "order"
+					)
+					ORDER BY "order"
+				) AS options
+			FROM variant_options
+			GROUP BY variant_id
+		) vo ON vo.variant_id = pv.id
+		WHERE p.id = ANY($1) AND p.shop_id = $2
+		GROUP BY p.id`
+
+	rows, err := r.db.QueryContext(ctx, query, pq.Array(ids), shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductRepositoryField,
+			"function": "get_by_ids_and_shop_id",
+			"ids":      ids,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Failed to query products by IDs")
+		return nil, fmt.Errorf("database operation failed")
+	}
+	defer rows.Close()
+
+	products := make(map[int]*models.Product, len(ids))
+
+	for rows.Next() {
+		product := &models.Product{}
+		var variantsJSON []byte
+
+		err := rows.Scan(
+			&product.ID,
+			&product.Name,
+			&product.Price,
+			&product.IsStockeable,
+			&product.Stock,
+			&product.IsActive,
+			&product.IsPromotional,
+			&product.PromotionalPrice,
+			&variantsJSON,
+		)
+
+		if err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":     ProductRepositoryField,
+				"function": "get_by_ids_and_shop_id",
+				"sub_func": ScanField,
+				"error":    err.Error(),
+			}).Error("Failed to scan product row")
+			return nil, fmt.Errorf("database operation failed")
+		}
+
+		// Parse variants JSON
+		if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":       ProductRepositoryField,
+				"function":   "get_by_ids_and_shop_id",
+				"sub_func":   UnmarshallField,
+				"product_id": product.ID,
+				"error":      err.Error(),
+			}).Error("Failed to unmarshal product variants")
+			return nil, fmt.Errorf("database operation failed")
+		}
+
+		products[product.ID] = product
+	}
+
+	if err := rows.Err(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ProductRepositoryField,
+			"function": "get_by_ids_and_shop_id",
+			"sub_func": NextField,
+			"error":    err.Error(),
+		}).Error("Error iterating product rows")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	return products, nil
 }
