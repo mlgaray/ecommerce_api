@@ -105,3 +105,129 @@ func (_c *StoreService_GetBySlug_Call) RunAndReturn(run func(ctx context.Context
 	_c.Call.Return(run)
 	return _c
 }
+
+// ValidateDeliveryMethod provides a mock function for the type StoreService
+func (_mock *StoreService) ValidateDeliveryMethod(store *models.Store, deliveryMethod *models.DeliveryMethod, shippingCost float64) error {
+	ret := _mock.Called(store, deliveryMethod, shippingCost)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateDeliveryMethod")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Store, *models.DeliveryMethod, float64) error); ok {
+		r0 = returnFunc(store, deliveryMethod, shippingCost)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// StoreService_ValidateDeliveryMethod_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateDeliveryMethod'
+type StoreService_ValidateDeliveryMethod_Call struct {
+	*mock.Call
+}
+
+// ValidateDeliveryMethod is a helper method to define mock.On call
+//   - store *models.Store
+//   - deliveryMethod *models.DeliveryMethod
+//   - shippingCost float64
+func (_e *StoreService_Expecter) ValidateDeliveryMethod(store interface{}, deliveryMethod interface{}, shippingCost interface{}) *StoreService_ValidateDeliveryMethod_Call {
+	return &StoreService_ValidateDeliveryMethod_Call{Call: _e.mock.On("ValidateDeliveryMethod", store, deliveryMethod, shippingCost)}
+}
+
+func (_c *StoreService_ValidateDeliveryMethod_Call) Run(run func(store *models.Store, deliveryMethod *models.DeliveryMethod, shippingCost float64)) *StoreService_ValidateDeliveryMethod_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Store
+		if args[0] != nil {
+			arg0 = args[0].(*models.Store)
+		}
+		var arg1 *models.DeliveryMethod
+		if args[1] != nil {
+			arg1 = args[1].(*models.DeliveryMethod)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_ValidateDeliveryMethod_Call) Return(err error) *StoreService_ValidateDeliveryMethod_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *StoreService_ValidateDeliveryMethod_Call) RunAndReturn(run func(store *models.Store, deliveryMethod *models.DeliveryMethod, shippingCost float64) error) *StoreService_ValidateDeliveryMethod_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateOrderItems provides a mock function for the type StoreService
+func (_mock *StoreService) ValidateOrderItems(ctx context.Context, items []*models.OrderItem, storeID int) error {
+	ret := _mock.Called(ctx, items, storeID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateOrderItems")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []*models.OrderItem, int) error); ok {
+		r0 = returnFunc(ctx, items, storeID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// StoreService_ValidateOrderItems_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateOrderItems'
+type StoreService_ValidateOrderItems_Call struct {
+	*mock.Call
+}
+
+// ValidateOrderItems is a helper method to define mock.On call
+//   - ctx context.Context
+//   - items []*models.OrderItem
+//   - storeID int
+func (_e *StoreService_Expecter) ValidateOrderItems(ctx interface{}, items interface{}, storeID interface{}) *StoreService_ValidateOrderItems_Call {
+	return &StoreService_ValidateOrderItems_Call{Call: _e.mock.On("ValidateOrderItems", ctx, items, storeID)}
+}
+
+func (_c *StoreService_ValidateOrderItems_Call) Run(run func(ctx context.Context, items []*models.OrderItem, storeID int)) *StoreService_ValidateOrderItems_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []*models.OrderItem
+		if args[1] != nil {
+			arg1 = args[1].([]*models.OrderItem)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_ValidateOrderItems_Call) Return(err error) *StoreService_ValidateOrderItems_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *StoreService_ValidateOrderItems_Call) RunAndReturn(run func(ctx context.Context, items []*models.OrderItem, storeID int) error) *StoreService_ValidateOrderItems_Call {
+	_c.Call.Return(run)
+	return _c
+}

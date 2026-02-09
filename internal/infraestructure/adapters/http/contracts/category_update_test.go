@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -15,10 +14,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when request is valid with existing image then returns no error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -43,7 +42,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("image.png", imageContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -61,10 +60,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when name is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -85,10 +84,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when name is only whitespace then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "   ",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -109,10 +108,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when description is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -133,10 +132,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when description is only whitespace then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "   ",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -157,7 +156,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when no existing image and no new image then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -178,10 +177,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when existing image has invalid ID then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  0, // Invalid ID
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -202,10 +201,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when existing image has negative ID then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  -1, // Negative ID
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -226,10 +225,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when existing image has empty URL then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "",
 				},
@@ -250,10 +249,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when existing image has whitespace URL then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "   ",
 				},
@@ -278,7 +277,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("large_image.jpg", largeContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -303,7 +302,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("document.txt", textContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -330,7 +329,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("image.jpg", imageContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -354,7 +353,7 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("image.png", imageContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 				Image:       nil,
@@ -378,10 +377,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 		fileHeader := createTestFileHeader("new_image.png", imageContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/old_image.jpg",
 				},
@@ -399,10 +398,10 @@ func TestCategoryUpdateRequest_Validate(t *testing.T) {
 	t.Run("when both name and description are empty then returns name error first", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "",
 				Description: "",
-				Image: &models.Image{
+				Image: &CategoryImageRequest{
 					ID:  1,
 					URL: "https://cloudinary.com/image.jpg",
 				},
@@ -428,7 +427,7 @@ func TestCategoryUpdateRequest_ToImageBuffer(t *testing.T) {
 		fileHeader := createTestFileHeader("image.jpg", imageContent)
 
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 			},
@@ -447,7 +446,7 @@ func TestCategoryUpdateRequest_ToImageBuffer(t *testing.T) {
 	t.Run("when no new image then returns nil", func(t *testing.T) {
 		// Arrange
 		request := &CategoryUpdateRequest{
-			Category: models.Category{
+			Category: CategoryRequest{
 				Name:        "Electronics",
 				Description: "Electronic products",
 			},

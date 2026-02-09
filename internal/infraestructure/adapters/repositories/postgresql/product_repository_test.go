@@ -91,6 +91,7 @@ func TestProductRepository_Create(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -204,6 +205,7 @@ func TestProductRepository_Create(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -260,6 +262,7 @@ func TestProductRepository_Create(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -337,6 +340,7 @@ func TestProductRepository_Update(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -474,6 +478,7 @@ func TestProductRepository_Update(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -531,6 +536,7 @@ func TestProductRepository_Update(t *testing.T) {
 				product.Name,
 				product.Description,
 				product.Price,
+				product.IsStockeable,
 				product.Stock,
 				product.MinimumStock,
 				product.IsActive,
@@ -721,12 +727,12 @@ func TestProductRepository_GetByID(t *testing.T) {
 		variantsJSON := `[{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"is_required":true,"options":[{"id":1,"name":"Small","price":0,"order":1}]}]`
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			1, "Test Product", "Test Description", 99.99, 10, 5,
+			1, "Test Product", "Test Description", 99.99, true, 10, 5,
 			true, false, false, 0.0,
 			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
@@ -749,6 +755,7 @@ func TestProductRepository_GetByID(t *testing.T) {
 		assert.Equal(t, "Test Product", product.Name)
 		assert.Equal(t, 99.99, product.Price)
 		assert.True(t, product.IsActive)
+		assert.True(t, product.IsStockeable)
 		assert.NotNil(t, product.Category)
 		assert.Equal(t, 1, product.Category.ID)
 		assert.Len(t, product.Images, 1)
@@ -767,7 +774,7 @@ func TestProductRepository_GetByID(t *testing.T) {
 		productID := 999
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
@@ -830,12 +837,12 @@ func TestProductRepository_GetByID(t *testing.T) {
 		variantsJSON := `[]`
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			2, "Simple Product", "No variants", 49.99, 20, 10,
+			2, "Simple Product", "No variants", 49.99, false, 20, 10,
 			true, false, false, 0.0,
 			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
@@ -871,12 +878,12 @@ func TestProductRepository_GetByID(t *testing.T) {
 		variantsJSON := `[]`
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			3, "No Images Product", "No images", 29.99, 15, 5,
+			3, "No Images Product", "No images", 29.99, false, 15, 5,
 			true, false, false, 0.0,
 			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
@@ -915,12 +922,12 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		variantsJSON := `[{"id":1,"name":"Size","order":1,"selection_type":"single","max_selections":1,"is_required":true,"options":[{"id":1,"name":"Small","price":0,"order":1}]}]`
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			1, "Test Product", "Test Description", 99.99, 10, 5,
+			1, "Test Product", "Test Description", 99.99, true, 10, 5,
 			true, false, false, 0.0,
 			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
@@ -959,7 +966,7 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		shopID := 1
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
@@ -994,7 +1001,7 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		shopID := 2 // Product belongs to shop 1, not shop 2
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
@@ -1060,12 +1067,12 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 
 		// Note: Repository returns inactive products - filtering is done at use case layer
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			1, "Inactive Product", "This product is inactive", 99.99, 10, 5,
+			1, "Inactive Product", "This product is inactive", 99.99, false, 10, 5,
 			false, false, false, 0.0, // is_active = false
 			time.Now(), 1, "Electronics", "Electronics category",
 			imagesJSON, variantsJSON,
@@ -1112,12 +1119,12 @@ func TestProductRepository_GetByIDAndShopID(t *testing.T) {
 		]`
 
 		rows := sqlmock.NewRows([]string{
-			"id", "name", "description", "price", "stock", "minimum_stock",
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
 			"is_active", "is_highlighted", "is_promotional", "promotional_price",
 			"created_at", "category_id", "category_name", "category_description",
 			"images", "variants",
 		}).AddRow(
-			1, "Complex Product", "Product with multiple variants", 99.99, 10, 5,
+			1, "Complex Product", "Product with multiple variants", 99.99, true, 10, 5,
 			true, true, false, 0.0,
 			time.Now(), 1, "Food", "Food category",
 			imagesJSON, variantsJSON,

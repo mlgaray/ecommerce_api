@@ -38,6 +38,142 @@ func (_m *ShopService) EXPECT() *ShopService_Expecter {
 	return &ShopService_Expecter{mock: &_m.Mock}
 }
 
+// GetActiveDeliveryMethod provides a mock function for the type ShopService
+func (_mock *ShopService) GetActiveDeliveryMethod(shop *models.Shop, deliveryMethodID int) (*models.DeliveryMethod, error) {
+	ret := _mock.Called(shop, deliveryMethodID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetActiveDeliveryMethod")
+	}
+
+	var r0 *models.DeliveryMethod
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Shop, int) (*models.DeliveryMethod, error)); ok {
+		return returnFunc(shop, deliveryMethodID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*models.Shop, int) *models.DeliveryMethod); ok {
+		r0 = returnFunc(shop, deliveryMethodID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.DeliveryMethod)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*models.Shop, int) error); ok {
+		r1 = returnFunc(shop, deliveryMethodID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopService_GetActiveDeliveryMethod_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetActiveDeliveryMethod'
+type ShopService_GetActiveDeliveryMethod_Call struct {
+	*mock.Call
+}
+
+// GetActiveDeliveryMethod is a helper method to define mock.On call
+//   - shop *models.Shop
+//   - deliveryMethodID int
+func (_e *ShopService_Expecter) GetActiveDeliveryMethod(shop interface{}, deliveryMethodID interface{}) *ShopService_GetActiveDeliveryMethod_Call {
+	return &ShopService_GetActiveDeliveryMethod_Call{Call: _e.mock.On("GetActiveDeliveryMethod", shop, deliveryMethodID)}
+}
+
+func (_c *ShopService_GetActiveDeliveryMethod_Call) Run(run func(shop *models.Shop, deliveryMethodID int)) *ShopService_GetActiveDeliveryMethod_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Shop
+		if args[0] != nil {
+			arg0 = args[0].(*models.Shop)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopService_GetActiveDeliveryMethod_Call) Return(deliveryMethod *models.DeliveryMethod, err error) *ShopService_GetActiveDeliveryMethod_Call {
+	_c.Call.Return(deliveryMethod, err)
+	return _c
+}
+
+func (_c *ShopService_GetActiveDeliveryMethod_Call) RunAndReturn(run func(shop *models.Shop, deliveryMethodID int) (*models.DeliveryMethod, error)) *ShopService_GetActiveDeliveryMethod_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetActivePaymentMethod provides a mock function for the type ShopService
+func (_mock *ShopService) GetActivePaymentMethod(shop *models.Shop, paymentMethodID int) (*models.PaymentMethod, error) {
+	ret := _mock.Called(shop, paymentMethodID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetActivePaymentMethod")
+	}
+
+	var r0 *models.PaymentMethod
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Shop, int) (*models.PaymentMethod, error)); ok {
+		return returnFunc(shop, paymentMethodID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*models.Shop, int) *models.PaymentMethod); ok {
+		r0 = returnFunc(shop, paymentMethodID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.PaymentMethod)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*models.Shop, int) error); ok {
+		r1 = returnFunc(shop, paymentMethodID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopService_GetActivePaymentMethod_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetActivePaymentMethod'
+type ShopService_GetActivePaymentMethod_Call struct {
+	*mock.Call
+}
+
+// GetActivePaymentMethod is a helper method to define mock.On call
+//   - shop *models.Shop
+//   - paymentMethodID int
+func (_e *ShopService_Expecter) GetActivePaymentMethod(shop interface{}, paymentMethodID interface{}) *ShopService_GetActivePaymentMethod_Call {
+	return &ShopService_GetActivePaymentMethod_Call{Call: _e.mock.On("GetActivePaymentMethod", shop, paymentMethodID)}
+}
+
+func (_c *ShopService_GetActivePaymentMethod_Call) Run(run func(shop *models.Shop, paymentMethodID int)) *ShopService_GetActivePaymentMethod_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Shop
+		if args[0] != nil {
+			arg0 = args[0].(*models.Shop)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopService_GetActivePaymentMethod_Call) Return(paymentMethod *models.PaymentMethod, err error) *ShopService_GetActivePaymentMethod_Call {
+	_c.Call.Return(paymentMethod, err)
+	return _c
+}
+
+func (_c *ShopService_GetActivePaymentMethod_Call) RunAndReturn(run func(shop *models.Shop, paymentMethodID int) (*models.PaymentMethod, error)) *ShopService_GetActivePaymentMethod_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByID provides a mock function for the type ShopService
 func (_mock *ShopService) GetByID(ctx context.Context, shopID int) (*models.Shop, error) {
 	ret := _mock.Called(ctx, shopID)
@@ -102,6 +238,74 @@ func (_c *ShopService_GetByID_Call) Return(shop *models.Shop, err error) *ShopSe
 }
 
 func (_c *ShopService_GetByID_Call) RunAndReturn(run func(ctx context.Context, shopID int) (*models.Shop, error)) *ShopService_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetBySlug provides a mock function for the type ShopService
+func (_mock *ShopService) GetBySlug(ctx context.Context, slug string) (*models.Shop, error) {
+	ret := _mock.Called(ctx, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBySlug")
+	}
+
+	var r0 *models.Shop
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*models.Shop, error)); ok {
+		return returnFunc(ctx, slug)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *models.Shop); ok {
+		r0 = returnFunc(ctx, slug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Shop)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopService_GetBySlug_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBySlug'
+type ShopService_GetBySlug_Call struct {
+	*mock.Call
+}
+
+// GetBySlug is a helper method to define mock.On call
+//   - ctx context.Context
+//   - slug string
+func (_e *ShopService_Expecter) GetBySlug(ctx interface{}, slug interface{}) *ShopService_GetBySlug_Call {
+	return &ShopService_GetBySlug_Call{Call: _e.mock.On("GetBySlug", ctx, slug)}
+}
+
+func (_c *ShopService_GetBySlug_Call) Run(run func(ctx context.Context, slug string)) *ShopService_GetBySlug_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopService_GetBySlug_Call) Return(shop *models.Shop, err error) *ShopService_GetBySlug_Call {
+	_c.Call.Return(shop, err)
+	return _c
+}
+
+func (_c *ShopService_GetBySlug_Call) RunAndReturn(run func(ctx context.Context, slug string) (*models.Shop, error)) *ShopService_GetBySlug_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -177,6 +381,69 @@ func (_c *ShopService_Update_Call) Return(err error) *ShopService_Update_Call {
 }
 
 func (_c *ShopService_Update_Call) RunAndReturn(run func(ctx context.Context, shopID int, shop *models.Shop, newLogoBuffer []byte, newCoverBuffer []byte) error) *ShopService_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateShippingCost provides a mock function for the type ShopService
+func (_mock *ShopService) ValidateShippingCost(shippingCost float64, method *models.DeliveryMethod, selectedZoneID int) error {
+	ret := _mock.Called(shippingCost, method, selectedZoneID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateShippingCost")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(float64, *models.DeliveryMethod, int) error); ok {
+		r0 = returnFunc(shippingCost, method, selectedZoneID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ShopService_ValidateShippingCost_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateShippingCost'
+type ShopService_ValidateShippingCost_Call struct {
+	*mock.Call
+}
+
+// ValidateShippingCost is a helper method to define mock.On call
+//   - shippingCost float64
+//   - method *models.DeliveryMethod
+//   - selectedZoneID int
+func (_e *ShopService_Expecter) ValidateShippingCost(shippingCost interface{}, method interface{}, selectedZoneID interface{}) *ShopService_ValidateShippingCost_Call {
+	return &ShopService_ValidateShippingCost_Call{Call: _e.mock.On("ValidateShippingCost", shippingCost, method, selectedZoneID)}
+}
+
+func (_c *ShopService_ValidateShippingCost_Call) Run(run func(shippingCost float64, method *models.DeliveryMethod, selectedZoneID int)) *ShopService_ValidateShippingCost_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 float64
+		if args[0] != nil {
+			arg0 = args[0].(float64)
+		}
+		var arg1 *models.DeliveryMethod
+		if args[1] != nil {
+			arg1 = args[1].(*models.DeliveryMethod)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopService_ValidateShippingCost_Call) Return(err error) *ShopService_ValidateShippingCost_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ShopService_ValidateShippingCost_Call) RunAndReturn(run func(shippingCost float64, method *models.DeliveryMethod, selectedZoneID int) error) *ShopService_ValidateShippingCost_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -12,9 +12,39 @@ import (
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
+// CategoryRequest represents category data in HTTP requests.
+type CategoryRequest struct {
+	ID          int                   `json:"id,omitempty"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Image       *CategoryImageRequest `json:"image,omitempty"`
+}
+
+// CategoryImageRequest represents image data in category requests.
+type CategoryImageRequest struct {
+	ID  int    `json:"id,omitempty"`
+	URL string `json:"url,omitempty"`
+}
+
+// ToModel converts CategoryRequest to a domain model.
+func (c *CategoryRequest) ToModel() *models.Category {
+	category := &models.Category{
+		ID:          c.ID,
+		Name:        c.Name,
+		Description: c.Description,
+	}
+	if c.Image != nil {
+		category.Image = &models.Image{
+			ID:  c.Image.ID,
+			URL: c.Image.URL,
+		}
+	}
+	return category
+}
+
 // CategoryCreateRequest represents the HTTP request for creating a category.
 type CategoryCreateRequest struct {
-	Category models.Category       `json:"category"`
+	Category CategoryRequest       `json:"category"`
 	ShopID   int                   `json:"shop_id"`
 	Image    *multipart.FileHeader `json:"-"`
 }
@@ -29,7 +59,7 @@ func NewCategoryCreateRequest(r *http.Request, shopID int) (*CategoryCreateReque
 	}
 
 	// Parse category JSON
-	var category models.Category
+	var category CategoryRequest
 	if err := json.Unmarshal([]byte(categoryJSON), &category); err != nil {
 		return nil, &httpErrors.BadRequestError{Message: "invalid_category_json_format"}
 	}
@@ -50,6 +80,11 @@ func NewCategoryCreateRequest(r *http.Request, shopID int) (*CategoryCreateReque
 		ShopID:   shopID,
 		Image:    imageHeader,
 	}, nil
+}
+
+// ToModel converts the request's category to a domain model.
+func (r *CategoryCreateRequest) ToModel() *models.Category {
+	return r.Category.ToModel()
 }
 
 // Validate validates the HTTP request for creating a category.

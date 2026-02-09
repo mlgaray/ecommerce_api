@@ -14,7 +14,7 @@ import (
 
 // CategoryUpdateRequest represents the HTTP request for updating a category.
 type CategoryUpdateRequest struct {
-	Category models.Category       `json:"category"`
+	Category CategoryRequest       `json:"category"`
 	NewImage *multipart.FileHeader `json:"-"` // Optional new image to replace existing
 }
 
@@ -27,7 +27,7 @@ func NewCategoryUpdateRequest(r *http.Request) (*CategoryUpdateRequest, error) {
 	}
 
 	// Parse category JSON
-	var category models.Category
+	var category CategoryRequest
 	if err := json.Unmarshal([]byte(categoryJSON), &category); err != nil {
 		return nil, &httpErrors.BadRequestError{Message: "invalid_category_json_format"}
 	}
@@ -44,6 +44,11 @@ func NewCategoryUpdateRequest(r *http.Request) (*CategoryUpdateRequest, error) {
 		Category: category,
 		NewImage: newImageHeader,
 	}, nil
+}
+
+// ToModel converts the request's category to a domain model.
+func (r *CategoryUpdateRequest) ToModel() *models.Category {
+	return r.Category.ToModel()
 }
 
 // Validate validates the HTTP request for updating a category.

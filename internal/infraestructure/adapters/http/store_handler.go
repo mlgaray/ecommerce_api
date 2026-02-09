@@ -144,11 +144,7 @@ func (h *StoreHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't use pagination UI)
-	response := contracts.PaginatedCategoriesResponse{
-		Categories: categories,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}
+	response := contracts.NewPaginatedCategoriesResponse(categories, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
@@ -226,17 +222,13 @@ func (h *StoreHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't need it)
-	response := contracts.PaginatedProductsResponse{
-		Products:   products,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}
+	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
 		"function":     GetStoreProductsFunctionField,
 		"slug":         slug,
-		"result_count": len(products),
+		"result_count": len(response.Products),
 		"has_more":     hasMore,
 	}).Debug("Store products retrieved successfully")
 
@@ -307,17 +299,13 @@ func (h *StoreHandler) GetFeaturedProducts(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't need it)
-	response := contracts.PaginatedProductsResponse{
-		Products:   products,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}
+	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
 		"function":     GetStoreFeaturedProductsFunctionField,
 		"slug":         slug,
-		"result_count": len(products),
+		"result_count": len(response.Products),
 		"has_more":     hasMore,
 	}).Debug("Store featured products retrieved successfully")
 
@@ -383,7 +371,7 @@ func (h *StoreHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(product); err != nil {
+	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(product)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
 			"function": GetStoreProductByIDFunctionField,

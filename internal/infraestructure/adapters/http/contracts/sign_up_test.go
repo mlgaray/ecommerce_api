@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -13,14 +12,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when all fields are valid then returns no error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -38,14 +37,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user name is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -66,14 +65,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user name is only whitespace then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "   ",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -94,14 +93,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user last name is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -122,14 +121,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user email is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -150,14 +149,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user email format is invalid then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "invalid-email-format",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -178,14 +177,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user phone is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -206,14 +205,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when user password is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -234,14 +233,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when shop name is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -262,14 +261,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when shop slug is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "",
 				Email: "shop@example.com",
@@ -290,14 +289,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when shop email is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "",
@@ -318,14 +317,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 	t.Run("when shop phone is empty then returns bad request error", func(t *testing.T) {
 		// Arrange
 		request := SignUpRequest{
-			User: models.User{
+			User: UserRequest{
 				Name:     "John",
 				LastName: "Doe",
 				Email:    "john.doe@example.com",
 				Password: "SecurePassword123!",
 				Phone:    "+1234567890",
 			},
-			Shop: models.Shop{
+			Shop: SignUpShopRequest{
 				Name:  "John's Shop",
 				Slug:  "johns-shop",
 				Email: "shop@example.com",
@@ -357,14 +356,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 			t.Run("email: "+email, func(t *testing.T) {
 				// Arrange
 				request := SignUpRequest{
-					User: models.User{
+					User: UserRequest{
 						Name:     "John",
 						LastName: "Doe",
 						Email:    email,
 						Password: "SecurePassword123!",
 						Phone:    "+1234567890",
 					},
-					Shop: models.Shop{
+					Shop: SignUpShopRequest{
 						Name:  "John's Shop",
 						Slug:  "johns-shop",
 						Email: "shop@example.com",
@@ -398,14 +397,14 @@ func TestSignUpRequest_Validate(t *testing.T) {
 			t.Run("email: "+email, func(t *testing.T) {
 				// Arrange
 				request := SignUpRequest{
-					User: models.User{
+					User: UserRequest{
 						Name:     "John",
 						LastName: "Doe",
 						Email:    email,
 						Password: "SecurePassword123!",
 						Phone:    "+1234567890",
 					},
-					Shop: models.Shop{
+					Shop: SignUpShopRequest{
 						Name:  "John's Shop",
 						Slug:  "johns-shop",
 						Email: "shop@example.com",

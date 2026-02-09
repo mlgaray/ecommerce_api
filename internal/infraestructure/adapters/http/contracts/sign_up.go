@@ -8,9 +8,27 @@ import (
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
+// SignUpRequest represents the HTTP request for user registration.
 type SignUpRequest struct {
-	User models.User `json:"user"`
-	Shop models.Shop `json:"shop"`
+	User UserRequest       `json:"user"`
+	Shop SignUpShopRequest `json:"shop"`
+}
+
+// UserRequest represents user data in sign up requests.
+type UserRequest struct {
+	Name     string `json:"name"`
+	LastName string `json:"last_name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Phone    string `json:"phone"`
+}
+
+// SignUpShopRequest represents shop data in sign up requests.
+type SignUpShopRequest struct {
+	Name  string `json:"name"`
+	Slug  string `json:"slug"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
 }
 
 // signUpEmailRegex is a regex pattern for email validation (HTTP layer validation)
@@ -81,4 +99,25 @@ func (r *SignUpRequest) validateShop() error {
 	}
 
 	return nil
+}
+
+// ToUserModel converts the sign up user to a domain model.
+func (r *SignUpRequest) ToUserModel() *models.User {
+	return &models.User{
+		Name:     r.User.Name,
+		LastName: r.User.LastName,
+		Email:    r.User.Email,
+		Password: r.User.Password,
+		Phone:    r.User.Phone,
+	}
+}
+
+// ToShopModel converts the sign up shop to a domain model.
+func (r *SignUpRequest) ToShopModel() *models.Shop {
+	return &models.Shop{
+		Name:  r.Shop.Name,
+		Slug:  r.Shop.Slug,
+		Email: r.Shop.Email,
+		Phone: r.Shop.Phone,
+	}
 }

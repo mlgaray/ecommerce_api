@@ -161,7 +161,7 @@ code-quality: fmt lint
 # Order matters: seeds -> functions -> tables (respect dependencies)
 drop-db:
 	@echo "=========================================="
-	@echo "DROPPING DATABASE (All Objects)"
+	@echo "DROPPING DATABASE"
 	@echo "=========================================="
 	@echo ""
 	@echo "Step 1/3: Dropping seeds..."

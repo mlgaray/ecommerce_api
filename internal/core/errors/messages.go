@@ -100,4 +100,29 @@ const (
 	InvalidTimeRange   = "close_time_must_be_after_open_time"
 	ShopClosed         = "shop_is_closed"
 	ShopHasNoSchedules = "shop_has_no_operating_schedules_configured"
+
+	// Order related error messages
+	OrderNotFound               = "order_not_found"
+	OrderMustHaveItems          = "order_must_have_items"
+	OrderCustomerNameRequired   = "order_customer_name_required"
+	OrderItemQuantityInvalid    = "order_item_quantity_must_be_positive"
+	OrderItemProductRequired    = "order_item_product_required"
+	OrderPaymentMethodRequired  = "order_payment_method_required"
+	OrderDeliveryMethodRequired = "order_delivery_method_required"
+
+	// Shipping cost validation errors
+	ShippingCostMismatch     = "shipping_cost_does_not_match_delivery_configuration"
+	DeliveryZoneNotFound     = "delivery_zone_not_found"
+	DeliveryZoneRequired     = "delivery_zone_required_for_zone_based_delivery"
+	PickupShouldHaveZeroCost = "pickup_delivery_should_have_zero_shipping_cost"
+
+	// Price validation errors
+	UnitPriceMismatch = "unit_price_does_not_match_calculated_price"
+	SubtotalMismatch  = "subtotal_does_not_match_calculated_subtotal"
+	TotalMismatch     = "total_does_not_match_calculated_total"
+
+	// Order item validation errors
+	ProductDataMismatch = "product_data_does_not_match_current_data"
+	ProductNotActive    = "product_is_not_active"
+	OutOfStock          = "product_is_out_of_stock"
 )

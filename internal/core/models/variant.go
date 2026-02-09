@@ -17,3 +17,30 @@ type Variant struct {
 	IsRequired    bool          `json:"is_required,omitempty"`
 	Options       []*Option     `json:"options,omitempty"`
 }
+
+// OptionsEqualForOrder compares selected options from frontend with database options
+// Only compares options that were selected (present in frontendOptions)
+func (v *Variant) OptionsEqualForOrder(frontendOptions []*Option) bool {
+	for _, fo := range frontendOptions {
+		// Find matching option in DB variant by ID
+		dbOption := v.findOptionByID(fo.ID)
+		if dbOption == nil {
+			return false
+		}
+		// Compare option name and price
+		if dbOption.Name != fo.Name || dbOption.Price != fo.Price {
+			return false
+		}
+	}
+	return true
+}
+
+// findOptionByID finds an option by ID in the variant's options
+func (v *Variant) findOptionByID(id int) *Option {
+	for _, o := range v.Options {
+		if o.ID == id {
+			return o
+		}
+	}
+	return nil
+}

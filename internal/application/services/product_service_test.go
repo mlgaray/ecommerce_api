@@ -184,7 +184,8 @@ func TestProductService_Create(t *testing.T) {
 		ctx := context.Background()
 		shopID := 1
 		product := newValidProduct()
-		product.MinimumStock = -1 // Invalid
+		product.IsStockeable = true // Enable stock management
+		product.MinimumStock = -1   // Invalid
 
 		repoMock := mocks.NewProductRepository(t)
 		assetMock := mocks.NewAssetService(t)
@@ -206,6 +207,7 @@ func TestProductService_Create(t *testing.T) {
 		ctx := context.Background()
 		shopID := 1
 		product := newValidProduct()
+		product.IsStockeable = true // Enable stock management
 		product.Stock = 5
 		product.MinimumStock = 10 // Invalid: greater than stock
 
@@ -229,6 +231,7 @@ func TestProductService_Create(t *testing.T) {
 		ctx := context.Background()
 		shopID := 1
 		product := newValidProduct()
+		product.IsStockeable = true // Enable stock management
 		product.Stock = 0
 		product.MinimumStock = 5 // Invalid: requires stock
 

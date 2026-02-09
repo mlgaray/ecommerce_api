@@ -212,7 +212,7 @@ func (h *ShopHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Execute use case
-	err = h.updateShop.Execute(ctx, shopID, &request.Shop, logoBuffer, coverBuffer)
+	err = h.updateShop.Execute(ctx, shopID, request.ToModel(), logoBuffer, coverBuffer)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ShopHandlerField,
