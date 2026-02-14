@@ -147,6 +147,27 @@ func TestHub_Unregister(t *testing.T) {
 		// Act & Assert (no panic)
 		hub.Unregister(999, conn)
 	})
+
+	t.Run("when unregistering one connection then keeps remaining connections", func(t *testing.T) {
+		// Arrange
+		hub := NewHub()
+		conn1, cleanup1 := createTestWSConnection(t)
+		defer cleanup1()
+		conn2, cleanup2 := createTestWSConnection(t)
+		defer cleanup2()
+
+		hub.Register(1, conn1)
+		hub.Register(1, conn2)
+
+		// Act
+		hub.Unregister(1, conn1)
+
+		// Assert
+		hub.mu.RLock()
+		defer hub.mu.RUnlock()
+		assert.Len(t, hub.connections[1], 1)
+		assert.Equal(t, conn2, hub.connections[1][0])
+	})
 }
 
 // =============================================================================
@@ -258,6 +279,43 @@ func TestHub_NotifyNewOrder(t *testing.T) {
 		connsShop1 := hub.connections[1]
 		hub.mu.RUnlock()
 		assert.Empty(t, connsShop1) // No connections for shop 1
+	})
+
+	t.Run("when connection is dead then removes it from hub", func(t *testing.T) {
+		// Arrange
+		hub := NewHub()
+		order := newTestOrder() // store ID = 1
+
+		serverConn := make(chan *ws.Conn, 1)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			upgrader := ws.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				return
+			}
+			serverConn <- conn
+		}))
+		defer server.Close()
+
+		wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+		clientConn, _, err := ws.DefaultDialer.Dial(wsURL, nil)
+		require.NoError(t, err)
+		defer clientConn.Close()
+
+		sConn := <-serverConn
+		hub.Register(order.Store.ID, sConn)
+
+		// Close the server-side connection so WriteMessage will fail
+		sConn.Close()
+
+		// Act
+		hub.NotifyNewOrder(context.Background(), order)
+
+		// Assert - dead connection should have been removed
+		hub.mu.RLock()
+		defer hub.mu.RUnlock()
+		_, exists := hub.connections[order.Store.ID]
+		assert.False(t, exists, "dead connection should be removed from hub")
 	})
 }
 

@@ -502,3 +502,126 @@ func TestGetAllOrdersByShopIDUseCase_Execute_Pagination(t *testing.T) {
 		assert.Equal(t, 50, *totalCount)
 	})
 }
+
+// =============================================================================
+// GetAllOrdersByShopIDUseCase ShopService Error Fallback Tests
+// =============================================================================
+
+func TestGetAllOrdersByShopIDUseCase_Execute_ShopServiceError(t *testing.T) {
+	// when shopService.GetByID returns error then dates stay in UTC and orders are returned
+	// Arrange
+	shopID := 1
+	ctx := context.Background()
+	dateFrom := time.Date(2025, 2, 10, 0, 0, 0, 0, time.UTC)
+	dateTo := time.Date(2025, 2, 15, 0, 0, 0, 0, time.UTC)
+	filters := models.OrderFilters{
+		DateFrom: &dateFrom,
+		DateTo:   &dateTo,
+	}
+
+	expectedOrders := newTestOrders()
+
+	shopServiceMock := mocks.NewShopService(t)
+	shopServiceMock.EXPECT().
+		GetByID(mock.Anything, mock.Anything).
+		Return(nil, stdErrors.New("shop not found"))
+
+	orderServiceMock := mocks.NewOrderService(t)
+	orderServiceMock.EXPECT().
+		CountByShopIDWithFilters(mock.Anything, mock.Anything, mock.Anything).
+		Return(len(expectedOrders), nil)
+	orderServiceMock.EXPECT().
+		GetAllByShopIDWithFilters(mock.Anything, mock.Anything, mock.Anything).
+		Return(expectedOrders, nil)
+
+	paginationServiceMock := mocks.NewPaginationService[*models.Order](t)
+	paginationServiceMock.EXPECT().
+		ApplyPagination(expectedOrders, models.DefaultLimit, models.SortByCreatedAt).
+		Return(expectedOrders, "", false)
+
+	useCase := NewGetAllOrdersByShopIDUseCase(shopServiceMock, orderServiceMock, paginationServiceMock)
+
+	// Act
+	orders, _, _, _, err := useCase.Execute(ctx, shopID, filters)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, expectedOrders, orders)
+}
+
+func TestGetAllOrdersByShopIDUseCase_Execute_InvalidShopTzIdentifier(t *testing.T) {
+	// when shop has an invalid timezone identifier then dates stay in UTC and orders are returned
+	// Arrange
+	shopID := 1
+	ctx := context.Background()
+	dateFrom := time.Date(2025, 2, 10, 0, 0, 0, 0, time.UTC)
+	dateTo := time.Date(2025, 2, 15, 0, 0, 0, 0, time.UTC)
+	filters := models.OrderFilters{
+		DateFrom: &dateFrom,
+		DateTo:   &dateTo,
+	}
+
+	expectedOrders := newTestOrders()
+	matcher := dateMatcherFor(dateFrom, dateTo)
+
+	shopServiceMock := mocks.NewShopService(t)
+	shopServiceMock.EXPECT().
+		GetByID(mock.Anything, mock.Anything).
+		Return(newTestShopWithTimezone("Not/A/Real/Timezone"), nil)
+
+	orderServiceMock := setupOrderServiceWithDateMatcher(t, matcher, expectedOrders)
+
+	paginationServiceMock := mocks.NewPaginationService[*models.Order](t)
+	paginationServiceMock.EXPECT().
+		ApplyPagination(expectedOrders, models.DefaultLimit, models.SortByCreatedAt).
+		Return(expectedOrders, "", false)
+
+	useCase := NewGetAllOrdersByShopIDUseCase(shopServiceMock, orderServiceMock, paginationServiceMock)
+
+	// Act
+	orders, _, _, _, err := useCase.Execute(ctx, shopID, filters)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, expectedOrders, orders)
+}
+
+// =============================================================================
+// GetAllOrdersByShopIDUseCase Count Error Tests
+// =============================================================================
+
+func TestGetAllOrdersByShopIDUseCase_Execute_CountError(t *testing.T) {
+	// when CountByShopIDWithFilters returns error then orders are still returned with nil totalCount
+	// Arrange
+	shopID := 1
+	ctx := context.Background()
+	filters := defaultFilters() // LastID is nil = first page
+
+	expectedOrders := newTestOrders()
+
+	shopServiceMock := mocks.NewShopService(t)
+	orderServiceMock := mocks.NewOrderService(t)
+	orderServiceMock.EXPECT().
+		CountByShopIDWithFilters(mock.Anything, mock.Anything, mock.Anything).
+		Return(0, stdErrors.New("count query failed"))
+	orderServiceMock.EXPECT().
+		GetAllByShopIDWithFilters(mock.Anything, mock.Anything, mock.Anything).
+		Return(expectedOrders, nil)
+
+	paginationServiceMock := mocks.NewPaginationService[*models.Order](t)
+	paginationServiceMock.EXPECT().
+		ApplyPagination(expectedOrders, models.DefaultLimit, models.SortByCreatedAt).
+		Return(expectedOrders, "", false)
+
+	useCase := NewGetAllOrdersByShopIDUseCase(shopServiceMock, orderServiceMock, paginationServiceMock)
+
+	// Act
+	orders, nextCursor, hasMore, totalCount, err := useCase.Execute(ctx, shopID, filters)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, expectedOrders, orders)
+	assert.Empty(t, nextCursor)
+	assert.False(t, hasMore)
+	assert.Nil(t, totalCount)
+}
