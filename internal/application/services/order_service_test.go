@@ -234,3 +234,109 @@ func TestOrderService_Create(t *testing.T) {
 		assert.Equal(t, 150.00, order.Items[1].TotalPrice)
 	})
 }
+
+// =============================================================================
+// OrderService.GetAllByShopIDWithFilters Tests
+// =============================================================================
+
+func TestOrderService_GetAllByShopIDWithFilters(t *testing.T) {
+	t.Run("when repository returns orders then returns orders", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.OrderFilters{Limit: 20, SortBy: "created_at", SortOrder: "desc"}
+		expectedOrders := []*models.Order{
+			{ID: 1, OrderNumber: "ORD-001", Total: 210.00},
+			{ID: 2, OrderNumber: "ORD-002", Total: 150.00},
+		}
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return(expectedOrders, nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedOrders, result)
+		assert.Len(t, result, 2)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.OrderFilters{Limit: 20, SortBy: "created_at", SortOrder: "desc"}
+		expectedError := stdErrors.New("database error")
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			GetAllByShopIDWithFilters(ctx, shopID, filters).
+			Return(nil, expectedError)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.GetAllByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, expectedError, err)
+	})
+}
+
+// =============================================================================
+// OrderService.CountByShopIDWithFilters Tests
+// =============================================================================
+
+func TestOrderService_CountByShopIDWithFilters(t *testing.T) {
+	t.Run("when repository returns count then returns count", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.OrderFilters{Limit: 20, SortBy: "created_at", SortOrder: "desc"}
+		expectedCount := 42
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, filters).
+			Return(expectedCount, nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedCount, result)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		filters := models.OrderFilters{Limit: 20, SortBy: "created_at", SortOrder: "desc"}
+		expectedError := stdErrors.New("database error")
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			CountByShopIDWithFilters(ctx, shopID, filters).
+			Return(0, expectedError)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.CountByShopIDWithFilters(ctx, shopID, filters)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, 0, result)
+		assert.Equal(t, expectedError, err)
+	})
+}

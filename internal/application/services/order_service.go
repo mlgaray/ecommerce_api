@@ -51,6 +51,18 @@ func (s *OrderService) Create(ctx context.Context, order *models.Order, store *m
 	return s.orderRepository.Create(ctx, order)
 }
 
+// GetAllByShopIDWithFilters retrieves orders with filters.
+// Delegates to repository - service adds no extra business logic for reads.
+func (s *OrderService) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) ([]*models.Order, error) {
+	return s.orderRepository.GetAllByShopIDWithFilters(ctx, shopID, filters)
+}
+
+// CountByShopIDWithFilters returns total count of orders matching filters.
+// Delegates to repository.
+func (s *OrderService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) (int, error) {
+	return s.orderRepository.CountByShopIDWithFilters(ctx, shopID, filters)
+}
+
 // calculateAndValidateTotals calculates item total prices, subtotal, and total.
 // Then validates that the frontend-sent values match the backend calculations.
 // Backend is the source of truth for all monetary calculations.

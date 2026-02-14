@@ -102,7 +102,7 @@ func TestOrderHandler_Create(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -133,7 +133,7 @@ func TestOrderHandler_Create(t *testing.T) {
 func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores//orders", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -148,7 +148,7 @@ func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 
 	t.Run("when slug is whitespace then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/whitespace/orders", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "   "})
@@ -169,7 +169,7 @@ func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 func TestOrderHandler_Create_InvalidJSON(t *testing.T) {
 	t.Run("when body is not valid JSON then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer([]byte("invalid json")))
 		req.Header.Set("Content-Type", "application/json")
@@ -185,7 +185,7 @@ func TestOrderHandler_Create_InvalidJSON(t *testing.T) {
 
 	t.Run("when body is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", nil)
 		req.Header.Set("Content-Type", "application/json")
@@ -210,7 +210,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.Customer.Name = ""
 
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -230,7 +230,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.PaymentMethod.ID = 0
 
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -250,7 +250,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.Items = []contracts.OrderItemRequest{}
 
-		handler := NewOrderHandler(nil)
+		handler := NewOrderHandler(nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -280,7 +280,7 @@ func TestOrderHandler_Create_StoreNotFound(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "non-existent-store").
 			Return(nil, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/non-existent-store/orders", bytes.NewBuffer(body))
@@ -310,7 +310,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.PaymentMethodNotFound})
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -334,7 +334,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.BusinessRuleError{Message: domainErrors.InsufficientStock})
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -358,7 +358,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.ShippingCostMismatch})
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -406,7 +406,7 @@ func TestOrderHandler_Create_WithSelectedOptions(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -443,7 +443,7 @@ func TestOrderHandler_Create_WithCustomerAddress(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -480,7 +480,7 @@ func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock)
+		handler := NewOrderHandler(useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))

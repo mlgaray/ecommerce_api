@@ -28,7 +28,7 @@ BEGIN
     SELECT id INTO v_bacon_option_id FROM variant_options WHERE name = 'Extra bacon' AND variant_id = v_ingredientes_variant_id LIMIT 1;
     SELECT id INTO v_coca_option_id FROM variant_options WHERE name = 'Coca Cola' AND variant_id = v_bebida_variant_id LIMIT 1;
 
-    -- Insert selections (note: table was renamed to order_item_selections)
+    -- Insert selections
     INSERT INTO order_item_selections (
         order_item_id,
         variant_id,

@@ -25,6 +25,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
+	websocketAdapter "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/websocket"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/server"
 )
 
@@ -69,6 +70,7 @@ var Module = fx.Options(
 		// PAGINATION (shared services for cursor-based pagination)
 		fx.Annotate(services.NewPaginationService[*models.Product], fx.As(new(ports.PaginationService[*models.Product]))),
 		fx.Annotate(services.NewPaginationService[*models.Category], fx.As(new(ports.PaginationService[*models.Category]))),
+		fx.Annotate(services.NewPaginationService[*models.Order], fx.As(new(ports.PaginationService[*models.Order]))),
 
 		// PRODUCT
 		// Repository first (no dependencies)
@@ -123,13 +125,22 @@ var Module = fx.Options(
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewStoreHandler, fx.As(new(ports.StoreHandler))),
 
-		// ORDER (public storefront endpoint for creating orders)
+		// WEBSOCKET
+		// Hub manages WebSocket connections (concrete type for OrderWSHandler)
+		websocketAdapter.NewHub,
+		// OrderEventNotifier port (Hub implements this interface)
+		func(hub *websocketAdapter.Hub) ports.OrderEventNotifier { return hub },
+		// WebSocket handler for order notifications
+		http.NewOrderWSHandler,
+
+		// ORDER
 		// Repository first (no dependencies)
 		fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
 		// Service depends on Repositories
 		fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
 		// Use Cases depend on Services
 		fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
+		fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewOrderHandler, fx.As(new(ports.OrderHandler))),
 
@@ -171,13 +182,14 @@ func InitializeLogger() {
 	logs.Init()
 }
 
-func RegisterHooks(lc fx.Lifecycle, server *server.Server) {
+func RegisterHooks(lc fx.Lifecycle, server *server.Server, hub *websocketAdapter.Hub) {
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			server.Initialize()
 			return nil
 		},
 		OnStop: func(context.Context) error {
+			hub.CloseAll()
 			return nil
 		},
 	})

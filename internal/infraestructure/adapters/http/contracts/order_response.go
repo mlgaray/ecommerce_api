@@ -7,18 +7,22 @@ import (
 )
 
 // OrderResponse represents an order in HTTP responses.
+// Used by all order endpoints (Create, Update, List, GetByID).
+// List endpoints populate partial data (no items, minimal nested objects).
+// Detail endpoints populate all fields.
 type OrderResponse struct {
-	ID             int                         `json:"id"`
-	OrderNumber    string                      `json:"order_number"`
-	Status         string                      `json:"status"`
-	Customer       OrderCustomerResponse       `json:"customer"`
-	PaymentMethod  OrderPaymentMethodResponse  `json:"payment_method"`
-	DeliveryMethod OrderDeliveryMethodResponse `json:"delivery_method"`
-	Items          []*OrderItemResponse        `json:"items"`
-	Subtotal       float64                     `json:"subtotal"`
-	ShippingCost   float64                     `json:"shipping_cost"`
-	Total          float64                     `json:"total"`
-	CreatedAt      time.Time                   `json:"created_at"`
+	ID             int                          `json:"id"`
+	OrderNumber    string                       `json:"order_number"`
+	Status         string                       `json:"status"`
+	Customer       OrderCustomerResponse        `json:"customer"`
+	PaymentMethod  *OrderPaymentMethodResponse  `json:"payment_method,omitempty"`
+	DeliveryMethod *OrderDeliveryMethodResponse `json:"delivery_method,omitempty"`
+	Items          []*OrderItemResponse         `json:"items"`
+	ItemsCount     int                          `json:"items_count"`
+	Subtotal       float64                      `json:"subtotal"`
+	ShippingCost   float64                      `json:"shipping_cost"`
+	Total          float64                      `json:"total"`
+	CreatedAt      time.Time                    `json:"created_at"`
 }
 
 // OrderCustomerResponse represents customer data in order responses.
@@ -39,16 +43,16 @@ type OrderAddressResponse struct {
 
 // OrderPaymentMethodResponse represents payment method data in order responses.
 type OrderPaymentMethodResponse struct {
-	ID   int    `json:"id"`
+	ID   int    `json:"id,omitempty"`
 	Name string `json:"name"`
-	Code string `json:"code"`
+	Code string `json:"code,omitempty"`
 }
 
 // OrderDeliveryMethodResponse represents delivery method data in order responses.
 type OrderDeliveryMethodResponse struct {
-	ID           int                        `json:"id"`
+	ID           int                        `json:"id,omitempty"`
 	Name         string                     `json:"name"`
-	Code         string                     `json:"code"`
+	Code         string                     `json:"code,omitempty"`
 	DeliveryZone *OrderDeliveryZoneResponse `json:"delivery_zone,omitempty"`
 }
 
@@ -99,6 +103,7 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 		ID:           order.ID,
 		OrderNumber:  order.OrderNumber,
 		Status:       string(order.Status),
+		ItemsCount:   order.ItemsCount,
 		Subtotal:     order.Subtotal,
 		ShippingCost: order.ShippingCost,
 		Total:        order.Total,
@@ -124,7 +129,7 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 
 	// Convert payment method
 	if order.PaymentMethod != nil {
-		response.PaymentMethod = OrderPaymentMethodResponse{
+		response.PaymentMethod = &OrderPaymentMethodResponse{
 			ID:   order.PaymentMethod.ID,
 			Name: order.PaymentMethod.Name,
 			Code: string(order.PaymentMethod.Code),
@@ -133,18 +138,19 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 
 	// Convert delivery method
 	if order.DeliveryMethod != nil {
-		response.DeliveryMethod = OrderDeliveryMethodResponse{
+		dm := &OrderDeliveryMethodResponse{
 			ID:   order.DeliveryMethod.ID,
 			Name: order.DeliveryMethod.Name,
 			Code: string(order.DeliveryMethod.Code),
 		}
 		if len(order.DeliveryMethod.DeliveryZones) > 0 && order.DeliveryMethod.DeliveryZones[0] != nil {
-			response.DeliveryMethod.DeliveryZone = &OrderDeliveryZoneResponse{
+			dm.DeliveryZone = &OrderDeliveryZoneResponse{
 				ID:    order.DeliveryMethod.DeliveryZones[0].ID,
 				Name:  order.DeliveryMethod.DeliveryZones[0].Name,
 				Price: order.DeliveryMethod.DeliveryZones[0].Price,
 			}
 		}
+		response.DeliveryMethod = dm
 	}
 
 	// Convert items with flattened selected options
@@ -190,4 +196,40 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 	}
 
 	return response
+}
+
+// OrderResponsesFromModels converts a slice of domain Orders to OrderResponses.
+func OrderResponsesFromModels(orders []*models.Order) []*OrderResponse {
+	if orders == nil {
+		return nil
+	}
+
+	responses := make([]*OrderResponse, len(orders))
+	for i, o := range orders {
+		responses[i] = OrderResponseFromModel(o)
+	}
+	return responses
+}
+
+// PaginatedOrdersResponse represents the HTTP response for paginated orders.
+type PaginatedOrdersResponse struct {
+	Orders     []*OrderResponse `json:"orders"`
+	NextCursor string           `json:"next_cursor,omitempty"`
+	HasMore    bool             `json:"has_more"`
+	TotalCount *int             `json:"total_count,omitempty"`
+}
+
+// NewPaginatedOrdersResponse creates a PaginatedOrdersResponse from domain models.
+func NewPaginatedOrdersResponse(
+	orders []*models.Order,
+	nextCursor string,
+	hasMore bool,
+	totalCount *int,
+) *PaginatedOrdersResponse {
+	return &PaginatedOrdersResponse{
+		Orders:     OrderResponsesFromModels(orders),
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+		TotalCount: totalCount,
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -16,8 +17,10 @@ import (
 
 // Order repository log field constants
 const (
-	OrderRepositoryField     = "order_repository"
-	OrderCreateFunctionField = "create"
+	OrderRepositoryField                    = "order_repository"
+	OrderCreateFunctionField                = "create"
+	OrderGetAllByShopIDWithFiltersFuncField = "get_all_by_shop_id_with_filters"
+	OrderCountByShopIDWithFiltersFuncField  = "count_by_shop_id_with_filters"
 )
 
 type OrderSQLRepository struct {
@@ -266,4 +269,315 @@ func (r *OrderSQLRepository) handleCreateError(err error, storeID int) (*models.
 	}
 
 	return nil, fmt.Errorf("database operation failed: %w", err)
+}
+
+// GetAllByShopIDWithFilters returns orders for a shop with filters applied.
+// Lightweight query - NO items included (for real-time dashboard performance).
+// Items count is fetched via efficient subquery.
+// Returns limit+1 items for pagination (LIMIT+1 strategy).
+//
+//nolint:gocyclo // Dynamic query building requires multiple conditional branches
+func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) ([]*models.Order, error) {
+	startTime := time.Now()
+
+	// Lightweight query - NO items included (for dashboard performance)
+	// Items come from separate GetByID call for full order details
+	baseQuery := `
+		SELECT
+			o.id, o.order_number, o.status,
+			o.customer_name, o.customer_phone, o.customer_email, o.customer_address_name,
+			o.payment_method_id, o.payment_method_code, o.payment_method_name,
+			o.delivery_method_id, o.delivery_method_code, o.delivery_method_name,
+			o.subtotal, o.shipping_cost, o.total,
+			o.created_at,
+			(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
+		FROM orders o
+		WHERE o.store_id = $1`
+
+	// Build dynamic WHERE conditions
+	conditions := []string{}
+	args := []interface{}{shopID}
+	argPos := 2
+
+	// Status filter
+	if filters.Status != nil {
+		conditions = append(conditions, fmt.Sprintf("o.status = $%d", argPos))
+		args = append(args, *filters.Status)
+		argPos++
+	}
+
+	// Date range filters
+	if filters.DateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("o.created_at >= $%d", argPos))
+		args = append(args, *filters.DateFrom)
+		argPos++
+	}
+
+	if filters.DateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("o.created_at <= $%d", argPos))
+		args = append(args, *filters.DateTo)
+		argPos++
+	}
+
+	// Search: ILIKE on order_number and customer_name
+	// Uses trigram indexes (pg_trgm) for fast partial matching
+	if filters.Search != nil && *filters.Search != "" {
+		searchTerm := *filters.Search
+		conditions = append(conditions, fmt.Sprintf(
+			"(o.order_number ILIKE $%d OR o.customer_name ILIKE $%d)",
+			argPos, argPos,
+		))
+		args = append(args, "%"+searchTerm+"%")
+		argPos++
+	}
+
+	// Keyset pagination: use LastID and LastSortValue for cursor-based pagination
+	// These values come from the decoded cursor (decoded in contract layer)
+	if filters.LastID != nil {
+		sortField := fmt.Sprintf("o.%s", filters.SortBy)
+
+		if filters.SortOrder == models.SortOrderDesc {
+			if filters.LastSortValue != nil {
+				conditions = append(conditions, fmt.Sprintf(
+					"(%s < $%d OR (%s = $%d AND o.id < $%d))",
+					sortField, argPos, sortField, argPos, argPos+1,
+				))
+				args = append(args, filters.LastSortValue, *filters.LastID)
+				argPos += 2
+			} else {
+				conditions = append(conditions, fmt.Sprintf("o.id < $%d", argPos))
+				args = append(args, *filters.LastID)
+				argPos++
+			}
+		} else {
+			if filters.LastSortValue != nil {
+				conditions = append(conditions, fmt.Sprintf(
+					"(%s > $%d OR (%s = $%d AND o.id > $%d))",
+					sortField, argPos, sortField, argPos, argPos+1,
+				))
+				args = append(args, filters.LastSortValue, *filters.LastID)
+				argPos += 2
+			} else {
+				conditions = append(conditions, fmt.Sprintf("o.id > $%d", argPos))
+				args = append(args, *filters.LastID)
+				argPos++
+			}
+		}
+	}
+
+	// Append all WHERE conditions
+	if len(conditions) > 0 {
+		baseQuery += " AND " + strings.Join(conditions, " AND ")
+	}
+
+	// ORDER BY with validated and sanitized fields
+	// Always include id as secondary sort for stable pagination
+	baseQuery += fmt.Sprintf(" ORDER BY o.%s %s, o.id %s",
+		filters.SortBy,
+		strings.ToUpper(filters.SortOrder),
+		strings.ToUpper(filters.SortOrder))
+
+	// LIMIT - request limit + 1 to detect if there are more pages
+	baseQuery += fmt.Sprintf(" LIMIT $%d", argPos)
+	args = append(args, filters.Limit+1)
+
+	// Execute query
+	logs.WithFields(map[string]interface{}{
+		"file":       OrderRepositoryField,
+		"function":   OrderGetAllByShopIDWithFiltersFuncField,
+		"shop_id":    shopID,
+		"sort_by":    filters.SortBy,
+		"sort_order": filters.SortOrder,
+		"has_search": filters.Search != nil,
+		"has_status": filters.Status != nil,
+		"has_date":   filters.DateFrom != nil || filters.DateTo != nil,
+		"limit":      filters.Limit,
+		"last_id":    filters.LastID,
+	}).Debug("Executing lightweight order search query (no items)")
+
+	rows, err := r.db.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":        OrderRepositoryField,
+			"function":    OrderGetAllByShopIDWithFiltersFuncField,
+			"duration_ms": time.Since(startTime).Milliseconds(),
+			"error":       err.Error(),
+		}).Error("Failed to query orders with filters")
+		return nil, fmt.Errorf("database operation failed")
+	}
+	defer rows.Close()
+
+	var orders []*models.Order
+
+	for rows.Next() {
+		order := &models.Order{
+			Customer:       &models.Customer{},
+			PaymentMethod:  &models.PaymentMethod{},
+			DeliveryMethod: &models.DeliveryMethod{},
+		}
+
+		var customerName string
+		var customerPhone, customerEmail, customerAddressName sql.NullString
+		var paymentMethodID sql.NullInt64
+		var paymentMethodCode, paymentMethodName sql.NullString
+		var deliveryMethodID sql.NullInt64
+		var deliveryMethodCode, deliveryMethodName sql.NullString
+
+		err := rows.Scan(
+			&order.ID,
+			&order.OrderNumber,
+			&order.Status,
+			&customerName,
+			&customerPhone,
+			&customerEmail,
+			&customerAddressName,
+			&paymentMethodID,
+			&paymentMethodCode,
+			&paymentMethodName,
+			&deliveryMethodID,
+			&deliveryMethodCode,
+			&deliveryMethodName,
+			&order.Subtotal,
+			&order.ShippingCost,
+			&order.Total,
+			&order.CreatedAt,
+			&order.ItemsCount,
+		)
+		if err != nil {
+			logs.WithFields(map[string]interface{}{
+				"file":     OrderRepositoryField,
+				"function": OrderGetAllByShopIDWithFiltersFuncField,
+				"error":    err.Error(),
+			}).Error("Failed to scan order row")
+			return nil, fmt.Errorf("database operation failed")
+		}
+
+		order.Customer.Name = customerName
+		if customerPhone.Valid {
+			order.Customer.Phone = customerPhone.String
+		}
+		if customerEmail.Valid {
+			order.Customer.Email = customerEmail.String
+		}
+		if customerAddressName.Valid {
+			order.Customer.Address = &models.Address{Name: customerAddressName.String}
+		}
+		if paymentMethodName.Valid {
+			order.PaymentMethod.ID = int(paymentMethodID.Int64)
+			order.PaymentMethod.Code = models.PaymentMethodCode(paymentMethodCode.String)
+			order.PaymentMethod.Name = paymentMethodName.String
+		} else {
+			order.PaymentMethod = nil
+		}
+		if deliveryMethodName.Valid {
+			order.DeliveryMethod.ID = int(deliveryMethodID.Int64)
+			order.DeliveryMethod.Code = models.DeliveryMethodCode(deliveryMethodCode.String)
+			order.DeliveryMethod.Name = deliveryMethodName.String
+		} else {
+			order.DeliveryMethod = nil
+		}
+
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderGetAllByShopIDWithFiltersFuncField,
+			"error":    err.Error(),
+		}).Error("Error iterating order rows")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	queryDuration := time.Since(startTime).Milliseconds()
+
+	if queryDuration > 50 {
+		logs.WithFields(map[string]interface{}{
+			"file":         OrderRepositoryField,
+			"function":     OrderGetAllByShopIDWithFiltersFuncField,
+			"duration_ms":  queryDuration,
+			"result_count": len(orders),
+			"shop_id":      shopID,
+		}).Warn("Slow order query detected")
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":         OrderRepositoryField,
+		"function":     OrderGetAllByShopIDWithFiltersFuncField,
+		"duration_ms":  queryDuration,
+		"result_count": len(orders),
+		"shop_id":      shopID,
+	}).Debug("Orders query with filters completed")
+
+	return orders, nil
+}
+
+// CountByShopIDWithFilters returns total count of orders matching filters.
+// Same filter conditions as GetAllByShopIDWithFilters, without cursor/ORDER BY/LIMIT.
+func (r *OrderSQLRepository) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) (int, error) {
+	startTime := time.Now()
+
+	countQuery := "SELECT COUNT(*) FROM orders o WHERE o.store_id = $1"
+	args := []interface{}{shopID}
+	argPos := 2
+
+	var conditions []string
+
+	// Status filter
+	if filters.Status != nil {
+		conditions = append(conditions, fmt.Sprintf("o.status = $%d", argPos))
+		args = append(args, *filters.Status)
+		argPos++
+	}
+
+	// Date range filters
+	if filters.DateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("o.created_at >= $%d", argPos))
+		args = append(args, *filters.DateFrom)
+		argPos++
+	}
+
+	if filters.DateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("o.created_at <= $%d", argPos))
+		args = append(args, *filters.DateTo)
+		argPos++
+	}
+
+	// Search filter
+	if filters.Search != nil && *filters.Search != "" {
+		searchTerm := *filters.Search
+		conditions = append(conditions, fmt.Sprintf(
+			"(o.order_number ILIKE $%d OR o.customer_name ILIKE $%d)",
+			argPos, argPos,
+		))
+		args = append(args, "%"+searchTerm+"%")
+	}
+
+	// Append conditions
+	if len(conditions) > 0 {
+		countQuery += " AND " + strings.Join(conditions, " AND ")
+	}
+
+	var count int
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&count)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderCountByShopIDWithFiltersFuncField,
+			"error":    err.Error(),
+		}).Error("Failed to count orders")
+		return 0, fmt.Errorf("database operation failed")
+	}
+
+	queryDuration := time.Since(startTime).Milliseconds()
+
+	logs.WithFields(map[string]interface{}{
+		"file":        OrderRepositoryField,
+		"function":    OrderCountByShopIDWithFiltersFuncField,
+		"duration_ms": queryDuration,
+		"count":       count,
+		"shop_id":     shopID,
+	}).Debug("Orders count completed")
+
+	return count, nil
 }

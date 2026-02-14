@@ -38,6 +38,78 @@ func (_m *OrderRepository) EXPECT() *OrderRepository_Expecter {
 	return &OrderRepository_Expecter{mock: &_m.Mock}
 }
 
+// CountByShopIDWithFilters provides a mock function for the type OrderRepository
+func (_mock *OrderRepository) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) (int, error) {
+	ret := _mock.Called(ctx, shopID, filters)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByShopIDWithFilters")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.OrderFilters) (int, error)); ok {
+		return returnFunc(ctx, shopID, filters)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.OrderFilters) int); ok {
+		r0 = returnFunc(ctx, shopID, filters)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.OrderFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// OrderRepository_CountByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByShopIDWithFilters'
+type OrderRepository_CountByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// CountByShopIDWithFilters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - filters models.OrderFilters
+func (_e *OrderRepository_Expecter) CountByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *OrderRepository_CountByShopIDWithFilters_Call {
+	return &OrderRepository_CountByShopIDWithFilters_Call{Call: _e.mock.On("CountByShopIDWithFilters", ctx, shopID, filters)}
+}
+
+func (_c *OrderRepository_CountByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.OrderFilters)) *OrderRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 models.OrderFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.OrderFilters)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderRepository_CountByShopIDWithFilters_Call) Return(n int, err error) *OrderRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *OrderRepository_CountByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.OrderFilters) (int, error)) *OrderRepository_CountByShopIDWithFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type OrderRepository
 func (_mock *OrderRepository) Create(ctx context.Context, order *models.Order) (*models.Order, error) {
 	ret := _mock.Called(ctx, order)
@@ -102,6 +174,80 @@ func (_c *OrderRepository_Create_Call) Return(order1 *models.Order, err error) *
 }
 
 func (_c *OrderRepository_Create_Call) RunAndReturn(run func(ctx context.Context, order *models.Order) (*models.Order, error)) *OrderRepository_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllByShopIDWithFilters provides a mock function for the type OrderRepository
+func (_mock *OrderRepository) GetAllByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) ([]*models.Order, error) {
+	ret := _mock.Called(ctx, shopID, filters)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllByShopIDWithFilters")
+	}
+
+	var r0 []*models.Order
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.OrderFilters) ([]*models.Order, error)); ok {
+		return returnFunc(ctx, shopID, filters)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, models.OrderFilters) []*models.Order); ok {
+		r0 = returnFunc(ctx, shopID, filters)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Order)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, models.OrderFilters) error); ok {
+		r1 = returnFunc(ctx, shopID, filters)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// OrderRepository_GetAllByShopIDWithFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllByShopIDWithFilters'
+type OrderRepository_GetAllByShopIDWithFilters_Call struct {
+	*mock.Call
+}
+
+// GetAllByShopIDWithFilters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - filters models.OrderFilters
+func (_e *OrderRepository_Expecter) GetAllByShopIDWithFilters(ctx interface{}, shopID interface{}, filters interface{}) *OrderRepository_GetAllByShopIDWithFilters_Call {
+	return &OrderRepository_GetAllByShopIDWithFilters_Call{Call: _e.mock.On("GetAllByShopIDWithFilters", ctx, shopID, filters)}
+}
+
+func (_c *OrderRepository_GetAllByShopIDWithFilters_Call) Run(run func(ctx context.Context, shopID int, filters models.OrderFilters)) *OrderRepository_GetAllByShopIDWithFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 models.OrderFilters
+		if args[2] != nil {
+			arg2 = args[2].(models.OrderFilters)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderRepository_GetAllByShopIDWithFilters_Call) Return(orders []*models.Order, err error) *OrderRepository_GetAllByShopIDWithFilters_Call {
+	_c.Call.Return(orders, err)
+	return _c
+}
+
+func (_c *OrderRepository_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.OrderFilters) ([]*models.Order, error)) *OrderRepository_GetAllByShopIDWithFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -15,6 +15,7 @@ CREATE TABLE public.products (
     is_highlighted boolean NOT NULL DEFAULT false,
     stock integer NOT NULL DEFAULT 0,
     minimum_stock integer NULL,
+    is_stockeable boolean NOT NULL DEFAULT false,
     CONSTRAINT products_pkey PRIMARY KEY (id),
     CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES categories (id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT products_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES shops (id) ON UPDATE CASCADE ON DELETE CASCADE

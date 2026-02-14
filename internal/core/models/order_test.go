@@ -3,6 +3,7 @@ package models
 import (
 	stdErrors "errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -182,5 +183,80 @@ func TestOrderStatus_Constants(t *testing.T) {
 
 	t.Run("cancelled status has correct value", func(t *testing.T) {
 		assert.Equal(t, OrderStatus("cancelled"), OrderStatusCancelled)
+	})
+}
+
+// =============================================================================
+// GetID Tests
+// =============================================================================
+
+func TestOrder_GetID(t *testing.T) {
+	t.Run("when order has ID then returns correct ID", func(t *testing.T) {
+		// Arrange
+		order := &Order{ID: 42}
+
+		// Act
+		result := order.GetID()
+
+		// Assert
+		assert.Equal(t, 42, result)
+	})
+
+	t.Run("when order has zero ID then returns zero", func(t *testing.T) {
+		// Arrange
+		order := &Order{}
+
+		// Act
+		result := order.GetID()
+
+		// Assert
+		assert.Equal(t, 0, result)
+	})
+}
+
+// =============================================================================
+// GetSortValue Tests
+// =============================================================================
+
+func TestOrder_GetSortValue(t *testing.T) {
+	now := time.Now()
+
+	order := &Order{
+		ID:          1,
+		OrderNumber: "ORD-001",
+		Total:       150.75,
+		CreatedAt:   now,
+	}
+
+	t.Run("when sortBy is total then returns Total", func(t *testing.T) {
+		// Act
+		result := order.GetSortValue(OrderSortByTotal)
+
+		// Assert
+		assert.Equal(t, 150.75, result)
+	})
+
+	t.Run("when sortBy is order_number then returns OrderNumber", func(t *testing.T) {
+		// Act
+		result := order.GetSortValue(OrderSortByOrderNumber)
+
+		// Assert
+		assert.Equal(t, "ORD-001", result)
+	})
+
+	t.Run("when sortBy is created_at then returns CreatedAt", func(t *testing.T) {
+		// Act
+		result := order.GetSortValue(SortByCreatedAt)
+
+		// Assert
+		assert.Equal(t, now, result)
+	})
+
+	t.Run("when sortBy is unknown then returns nil", func(t *testing.T) {
+		// Act
+		result := order.GetSortValue("unknown_field")
+
+		// Assert
+		assert.Nil(t, result)
 	})
 }

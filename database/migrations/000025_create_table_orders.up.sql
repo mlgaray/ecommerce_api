@@ -84,6 +84,28 @@ CREATE INDEX idx_orders_delivery_method_id ON public.orders (delivery_method_id)
 CREATE INDEX idx_orders_customer_email ON public.orders (customer_email)
     WHERE customer_email IS NOT NULL;
 
+-- Search by order number (customer support, tracking)
+CREATE INDEX idx_orders_order_number ON public.orders (order_number);
+
+-- Search by customer phone
+CREATE INDEX idx_orders_customer_phone ON public.orders (customer_phone)
+    WHERE customer_phone IS NOT NULL;
+
+-- Dashboard: pending orders requiring attention (partial index)
+CREATE INDEX idx_orders_store_pending ON public.orders (store_id, created_at DESC)
+    WHERE status IN ('pending', 'confirmed');
+
+-- Date range queries without store filter (admin reports)
+CREATE INDEX idx_orders_created_at ON public.orders (created_at DESC);
+
+-- Completed orders for revenue reports (partial index)
+CREATE INDEX idx_orders_store_completed ON public.orders (store_id, created_at DESC)
+    WHERE status = 'completed';
+
+-- Trigram indexes for fast ILIKE search (order_number and customer_name)
+CREATE INDEX idx_orders_order_number_trgm ON public.orders USING gin (order_number gin_trgm_ops);
+CREATE INDEX idx_orders_customer_name_trgm ON public.orders USING gin (customer_name gin_trgm_ops);
+
 -- Comentarios de documentación
 COMMENT ON TABLE orders IS 'Órdenes del sistema. Contiene snapshots desnormalizados de store, cliente, dirección y métodos para preservar datos históricos.';
 COMMENT ON COLUMN orders.status IS 'Estados: draft (borrador), pending (pendiente), confirmed (confirmada), completed (completada), cancelled (cancelada)';

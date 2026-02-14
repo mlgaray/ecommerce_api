@@ -125,4 +125,8 @@ const (
 	ProductDataMismatch = "product_data_does_not_match_current_data"
 	ProductNotActive    = "product_is_not_active"
 	OutOfStock          = "product_is_out_of_stock"
+
+	// Order filters related error messages
+	DateFromCannotBeAfterDateTo = "date_from_cannot_be_after_date_to"
+	InvalidOrderStatus          = "invalid_order_status"
 )

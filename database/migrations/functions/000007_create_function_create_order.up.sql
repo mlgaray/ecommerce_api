@@ -108,7 +108,7 @@ BEGIN
                AND jsonb_array_length(v_item->'selected_options') > 0 THEN
                 FOR v_option IN SELECT * FROM jsonb_array_elements(v_item->'selected_options')
                 LOOP
-                    INSERT INTO order_item_selected_options (
+                    INSERT INTO order_item_selections (
                         order_item_id,
                         variant_id,
                         option_id,
