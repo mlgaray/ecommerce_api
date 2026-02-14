@@ -9,9 +9,16 @@ DROP FUNCTION IF EXISTS create_product(
     INTEGER, INTEGER, TEXT[], JSONB
 );
 
--- Drop new signature (JSONB for images)
+-- Drop old signature (JSONB for images, without is_stockeable)
 DROP FUNCTION IF EXISTS create_product(
     VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
+    BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL,
+    INTEGER, INTEGER, JSONB, JSONB
+);
+
+-- Drop current signature (JSONB for images, with is_stockeable)
+DROP FUNCTION IF EXISTS create_product(
+    VARCHAR, TEXT, DECIMAL, BOOLEAN, INTEGER, INTEGER,
     BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL,
     INTEGER, INTEGER, JSONB, JSONB
 );
@@ -20,6 +27,7 @@ CREATE OR REPLACE FUNCTION create_product(
     p_name VARCHAR(255),
     p_description TEXT,
     p_price DECIMAL(10,2),
+    p_is_stockeable BOOLEAN,
     p_stock INTEGER,
     p_minimum_stock INTEGER,
     p_is_active BOOLEAN,
@@ -51,11 +59,11 @@ BEGIN
 
     -- 1. Insert product
     INSERT INTO products (
-        name, description, price, stock, minimum_stock,
+        name, description, price, is_stockeable, stock, minimum_stock,
         is_active, is_highlighted, is_promotional, promotional_price,
         category_id, shop_id
     ) VALUES (
-        p_name, p_description, p_price, p_stock, p_minimum_stock,
+        p_name, p_description, p_price, p_is_stockeable, p_stock, p_minimum_stock,
         p_is_active, p_is_highlighted, p_is_promotional, p_promotional_price,
         p_category_id, p_shop_id
     ) RETURNING id INTO v_product_id;

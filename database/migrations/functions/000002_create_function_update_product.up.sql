@@ -2,14 +2,23 @@
 -- Returns deleted storage_refs for Cloudinary cleanup
 -- Clean, maintainable, scalable approach with best practices
 
+-- Drop old signature (without shop_id)
 DROP FUNCTION IF EXISTS update_product(
     INTEGER, VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
     BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL, INTEGER,
     JSONB, JSONB
 );
 
+-- Drop old signature (with shop_id, without is_stockeable)
 DROP FUNCTION IF EXISTS update_product(
     INTEGER, INTEGER, VARCHAR, TEXT, DECIMAL, INTEGER, INTEGER,
+    BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL, INTEGER,
+    JSONB, JSONB
+);
+
+-- Drop current signature (with shop_id + is_stockeable)
+DROP FUNCTION IF EXISTS update_product(
+    INTEGER, INTEGER, VARCHAR, TEXT, DECIMAL, BOOLEAN, INTEGER, INTEGER,
     BOOLEAN, BOOLEAN, BOOLEAN, DECIMAL, INTEGER,
     JSONB, JSONB
 );
@@ -20,6 +29,7 @@ CREATE OR REPLACE FUNCTION update_product(
     p_name VARCHAR(255),
     p_description TEXT,
     p_price DECIMAL(10,2),
+    p_is_stockeable BOOLEAN,
     p_stock INTEGER,
     p_minimum_stock INTEGER,
     p_is_active BOOLEAN,
@@ -47,6 +57,7 @@ BEGIN
     SET name = p_name,
         description = p_description,
         price = p_price,
+        is_stockeable = p_is_stockeable,
         stock = p_stock,
         minimum_stock = p_minimum_stock,
         is_active = p_is_active,

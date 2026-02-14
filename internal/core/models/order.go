@@ -32,6 +32,28 @@ type Order struct {
 	Total          float64         `json:"total"`
 	CreatedAt      time.Time       `json:"created_at,omitempty"`
 	UpdatedAt      time.Time       `json:"updated_at,omitempty"`
+
+	// Transient field for list views (not persisted)
+	ItemsCount int `json:"items_count,omitempty"`
+}
+
+// GetID implements Identifiable interface for pagination
+func (o *Order) GetID() int {
+	return o.ID
+}
+
+// GetSortValue implements Sortable interface for pagination
+func (o *Order) GetSortValue(sortBy string) interface{} {
+	switch sortBy {
+	case OrderSortByTotal:
+		return o.Total
+	case OrderSortByOrderNumber:
+		return o.OrderNumber
+	case SortByCreatedAt:
+		return o.CreatedAt
+	default:
+		return nil
+	}
 }
 
 // Validate validates business rules for the Order domain model

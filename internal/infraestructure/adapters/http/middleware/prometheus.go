@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bufio"
+	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -78,6 +81,14 @@ func (prw *prometheusResponseWriter) Write(b []byte) (int, error) {
 	size, err := prw.ResponseWriter.Write(b)
 	prw.size += size
 	return size, err
+}
+
+// Hijack implements http.Hijacker, required for WebSocket upgrades.
+func (prw *prometheusResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := prw.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("upstream ResponseWriter does not implement http.Hijacker")
 }
 
 func getStatusFamily(statusCode int) string {

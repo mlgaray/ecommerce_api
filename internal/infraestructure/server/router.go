@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	httpAdapter "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
 )
 
@@ -22,6 +23,7 @@ type router struct {
 	shopHandler     ports.ShopHandler
 	storeHandler    ports.StoreHandler
 	orderHandler    ports.OrderHandler
+	orderWSHandler  *httpAdapter.OrderWSHandler
 	authMiddleware  *middleware.AuthMiddleware
 }
 
@@ -33,6 +35,7 @@ func NewRouter(
 	shopHandler ports.ShopHandler,
 	storeHandler ports.StoreHandler,
 	orderHandler ports.OrderHandler,
+	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *router {
 	r := mux.NewRouter()
@@ -47,6 +50,7 @@ func NewRouter(
 		shopHandler:     shopHandler,
 		storeHandler:    storeHandler,
 		orderHandler:    orderHandler,
+		orderWSHandler:  orderWSHandler,
 		authMiddleware:  authMiddleware,
 	}
 }
@@ -59,6 +63,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.metricsRoutes()
 	r.shopRoutes()
 	r.storeRoutes()
+	r.websocketRoutes()
 	return r.router
 }
 
@@ -105,6 +110,8 @@ func (r *router) shopRoutes() {
 	// Protected routes (auth required)
 	protected := r.router.PathPrefix("/shops").Subrouter()
 	protected.Use(r.authMiddleware.Authenticate)
+	// GET /shops/{shop_id}/orders - Get orders by shop (owner only)
+	protected.HandleFunc("/{shop_id}/orders", r.orderHandler.GetAll).Methods(http.MethodGet)
 	// GET /shops/{shop_id} - Get shop by ID (owner only)
 	protected.HandleFunc("/{shop_id}", r.shopHandler.GetByID).Methods(http.MethodGet)
 	// PUT /shops/{shop_id} - Update shop (owner only)
@@ -131,4 +138,11 @@ func (r *router) storeRoutes() {
 	sub.HandleFunc("/{slug}/orders", r.orderHandler.Create).Methods(http.MethodPost)
 	// GET /stores/{slug} - Get store by slug (public)
 	sub.HandleFunc("/{slug}", r.storeHandler.GetBySlug).Methods(http.MethodGet)
+}
+
+func (r *router) websocketRoutes() {
+	// WebSocket endpoint for real-time order notifications.
+	// Authentication is handled inside the handler via token query param.
+	// GET /shops/{shop_id}/orders/ws?token=<jwt>
+	r.router.HandleFunc("/shops/{shop_id}/orders/ws", r.orderWSHandler.Connect).Methods(http.MethodGet)
 }

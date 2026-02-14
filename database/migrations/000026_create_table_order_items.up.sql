@@ -47,6 +47,14 @@ CREATE INDEX idx_order_items_order_id ON public.order_items (order_id);
 CREATE INDEX idx_order_items_product_id ON public.order_items (product_id)
     WHERE product_id IS NOT NULL;
 
+-- Product sales analytics: which products sell most in a period
+CREATE INDEX idx_order_items_product_added ON public.order_items (product_id, added_at DESC)
+    WHERE product_id IS NOT NULL;
+
+-- Promotional items tracking
+CREATE INDEX idx_order_items_promotional ON public.order_items (added_at DESC)
+    WHERE is_promotional = true;
+
 -- Comentarios
 COMMENT ON TABLE order_items IS 'Items de la orden. Snapshot completo del producto para preservar datos históricos independiente de cambios en el catálogo.';
 COMMENT ON COLUMN order_items.unit_price IS 'Precio efectivo por unidad: precio base o promocional + suma de opciones seleccionadas.';

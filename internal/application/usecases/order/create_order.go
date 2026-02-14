@@ -8,19 +8,23 @@ import (
 )
 
 // CreateOrderUseCase orchestrates creating a new order.
-// Uses StoreService for validation and OrderService for persistence.
+// Uses StoreService for validation, OrderService for persistence,
+// and OrderEventNotifier for real-time notifications.
 type CreateOrderUseCase struct {
 	storeService ports.StoreService
 	orderService ports.OrderService
+	notifier     ports.OrderEventNotifier
 }
 
 func NewCreateOrderUseCase(
 	storeService ports.StoreService,
 	orderService ports.OrderService,
+	notifier ports.OrderEventNotifier,
 ) ports.CreateOrderUseCase {
 	return &CreateOrderUseCase{
 		storeService: storeService,
 		orderService: orderService,
+		notifier:     notifier,
 	}
 }
 
@@ -48,5 +52,13 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, order *models.Order, 
 	}
 
 	// 4. Persist order
-	return uc.orderService.Create(ctx, order, store)
+	createdOrder, err := uc.orderService.Create(ctx, order, store)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Notify listeners (fire-and-forget)
+	uc.notifier.NotifyNewOrder(ctx, createdOrder)
+
+	return createdOrder, nil
 }

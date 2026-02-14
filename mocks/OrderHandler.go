@@ -82,3 +82,49 @@ func (_c *OrderHandler_Create_Call) RunAndReturn(run func(responseWriter http.Re
 	_c.Run(run)
 	return _c
 }
+
+// GetAll provides a mock function for the type OrderHandler
+func (_mock *OrderHandler) GetAll(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// OrderHandler_GetAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAll'
+type OrderHandler_GetAll_Call struct {
+	*mock.Call
+}
+
+// GetAll is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *OrderHandler_Expecter) GetAll(responseWriter interface{}, request interface{}) *OrderHandler_GetAll_Call {
+	return &OrderHandler_GetAll_Call{Call: _e.mock.On("GetAll", responseWriter, request)}
+}
+
+func (_c *OrderHandler_GetAll_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_GetAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderHandler_GetAll_Call) Return() *OrderHandler_GetAll_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *OrderHandler_GetAll_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_GetAll_Call {
+	_c.Run(run)
+	return _c
+}

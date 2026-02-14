@@ -70,7 +70,7 @@ func newTestStore() *models.Store {
 // =============================================================================
 
 func TestCreateOrderUseCase_Execute(t *testing.T) {
-	t.Run("when all validations pass then creates order", func(t *testing.T) {
+	t.Run("when all validations pass then creates order and notifies", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "test-store"
@@ -95,7 +95,11 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Create(ctx, order, store).
 			Return(expectedOrder, nil)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		notifierMock := mocks.NewOrderEventNotifier(t)
+		notifierMock.EXPECT().
+			NotifyNewOrder(ctx, expectedOrder)
+
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -106,7 +110,7 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		assert.Equal(t, expectedOrder.ID, result.ID)
 	})
 
-	t.Run("when store not found then returns error", func(t *testing.T) {
+	t.Run("when store not found then returns error and does not notify", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "non-existent-store"
@@ -119,8 +123,9 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Return(nil, notFoundError)
 
 		orderServiceMock := mocks.NewOrderService(t)
+		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -132,7 +137,7 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		assert.True(t, stdErrors.As(err, &notFound))
 	})
 
-	t.Run("when order items validation fails then returns error", func(t *testing.T) {
+	t.Run("when order items validation fails then returns error and does not notify", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "test-store"
@@ -149,8 +154,9 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Return(validationError)
 
 		orderServiceMock := mocks.NewOrderService(t)
+		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -162,7 +168,7 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		assert.True(t, stdErrors.As(err, &valErr))
 	})
 
-	t.Run("when delivery method validation fails then returns error", func(t *testing.T) {
+	t.Run("when delivery method validation fails then returns error and does not notify", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "test-store"
@@ -182,8 +188,9 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Return(validationError)
 
 		orderServiceMock := mocks.NewOrderService(t)
+		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -195,7 +202,7 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		assert.True(t, stdErrors.As(err, &valErr))
 	})
 
-	t.Run("when order service returns error then propagates error", func(t *testing.T) {
+	t.Run("when order service returns error then propagates error and does not notify", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "test-store"
@@ -219,7 +226,9 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Create(ctx, order, store).
 			Return(nil, expectedError)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		notifierMock := mocks.NewOrderEventNotifier(t)
+
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -230,7 +239,7 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		assert.Equal(t, expectedError, err)
 	})
 
-	t.Run("when insufficient stock then returns business rule error", func(t *testing.T) {
+	t.Run("when insufficient stock then returns business rule error and does not notify", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()
 		storeSlug := "test-store"
@@ -247,8 +256,9 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 			Return(businessError)
 
 		orderServiceMock := mocks.NewOrderService(t)
+		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock)
+		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
