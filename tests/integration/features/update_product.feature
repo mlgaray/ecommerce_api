@@ -7,19 +7,19 @@ Feature: Product Update
     Given I have a product with id 1 and valid update data
     When I send an update product request
     Then the response status should be 200
-    And the user should receive a success message "product_updated_successfully"
+    And the user should receive the updated product
 
   Scenario: Update product keeping existing images only
     Given I have a product with id 1 and keep existing images
     When I send an update product request
     Then the response status should be 200
-    And the user should receive a success message "product_updated_successfully"
+    And the user should receive the updated product
 
   Scenario: Update product adding new images
     Given I have a product with id 1 and add new images
     When I send an update product request
     Then the response status should be 200
-    And the user should receive a success message "product_updated_successfully"
+    And the user should receive the updated product
 
   # HTTP Validations (Infrastructure layer)
   Scenario: Update product removing all images without adding new ones

@@ -9,7 +9,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 type AuthSteps struct {
@@ -66,7 +67,7 @@ func (a *AuthSteps) setupSQLExpectations() {
 func (a *AuthSteps) iHaveValidUserCredentials() error {
 	ctx := GetTestContext()
 	ctx.scenario = "valid-user"
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "user@example.com",
 		Password: "password123",
 	}
@@ -76,7 +77,7 @@ func (a *AuthSteps) iHaveValidUserCredentials() error {
 
 func (a *AuthSteps) iHaveCredentialsWithEmptyEmail() error {
 	ctx := GetTestContext()
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "",
 		Password: "password123",
 	}
@@ -85,7 +86,7 @@ func (a *AuthSteps) iHaveCredentialsWithEmptyEmail() error {
 
 func (a *AuthSteps) iHaveCredentialsWithEmptyPassword() error {
 	ctx := GetTestContext()
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "user@example.com",
 		Password: "",
 	}
@@ -95,7 +96,7 @@ func (a *AuthSteps) iHaveCredentialsWithEmptyPassword() error {
 func (a *AuthSteps) iHaveCredentialsForANonExistentUser() error {
 	ctx := GetTestContext()
 	ctx.scenario = "non-existent-user"
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "nonexistent@example.com",
 		Password: "password123",
 	}
@@ -105,7 +106,7 @@ func (a *AuthSteps) iHaveCredentialsForANonExistentUser() error {
 func (a *AuthSteps) iHaveCredentialsWithWrongPassword() error {
 	ctx := GetTestContext()
 	ctx.scenario = "wrong-password"
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "user@example.com",
 		Password: "wrongpassword",
 	}
@@ -114,7 +115,7 @@ func (a *AuthSteps) iHaveCredentialsWithWrongPassword() error {
 
 func (a *AuthSteps) iHaveCredentialsWithInvalidEmailFormat() error {
 	ctx := GetTestContext()
-	ctx.requestBody = contracts.SignInRequest{
+	ctx.requestBody = requests.SignInRequest{
 		Email:    "invalid-email-format",
 		Password: "password123",
 	}
@@ -159,7 +160,7 @@ func (a *AuthSteps) iSendASignInRequest() error {
 			}
 		} else {
 			// Parse success response
-			var responseBody contracts.SignInResponse
+			var responseBody responses.SignInResponse
 			if err := json.NewDecoder(resp.Body).Decode(&responseBody); err == nil {
 				ctx.responseBody = responseBody
 			}
@@ -171,11 +172,11 @@ func (a *AuthSteps) iSendASignInRequest() error {
 
 func (a *AuthSteps) iShouldReceiveAToken() error {
 	ctx := GetTestContext()
-	signInResponse, ok := ctx.responseBody.(contracts.SignInResponse)
+	signInResponse, ok := ctx.responseBody.(responses.SignInResponse)
 	if !ok {
 		return fmt.Errorf("expected SignInResponse in responseBody, got: %T", ctx.responseBody)
 	}
-	if signInResponse.Token == "" {
+	if signInResponse.Auth.Token == "" {
 		return fmt.Errorf("expected token in response, got: %v", signInResponse)
 	}
 	return nil

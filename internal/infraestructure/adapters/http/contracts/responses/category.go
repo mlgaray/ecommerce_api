@@ -1,4 +1,4 @@
-package contracts
+package responses
 
 import (
 	"time"
@@ -57,22 +57,37 @@ func CategoryResponsesFromModels(categories []*models.Category) []*CategoryRespo
 	return responses
 }
 
-// PaginatedCategoriesResponse represents the HTTP response for paginated categories.
-type PaginatedCategoriesResponse struct {
+// CreateCategoryResponse represents the response for category creation.
+type CreateCategoryResponse struct {
+	Category *CategoryResponse `json:"category"`
+}
+
+// GetCategoryResponse represents the response for category retrieval.
+type GetCategoryResponse struct {
+	Category *CategoryResponse `json:"category"`
+}
+
+// UpdateCategoryResponse represents the response for a category update.
+type UpdateCategoryResponse struct {
+	Category *CategoryResponse `json:"category"`
+}
+
+// ListCategoriesResponse represents the HTTP response for list categories.
+type ListCategoriesResponse struct {
 	Categories []*CategoryResponse `json:"categories"`
 	NextCursor string              `json:"next_cursor,omitempty"`
 	HasMore    bool                `json:"has_more"`
 	TotalCount *int                `json:"total_count,omitempty"`
 }
 
-// NewPaginatedCategoriesResponse creates a PaginatedCategoriesResponse from domain models.
-func NewPaginatedCategoriesResponse(
+// NewListCategoriesResponse creates a ListCategoriesResponse from domain models.
+func NewListCategoriesResponse(
 	categories []*models.Category,
 	nextCursor string,
 	hasMore bool,
 	totalCount *int,
-) *PaginatedCategoriesResponse {
-	return &PaginatedCategoriesResponse{
+) *ListCategoriesResponse {
+	return &ListCategoriesResponse{
 		Categories: CategoryResponsesFromModels(categories),
 		NextCursor: nextCursor,
 		HasMore:    hasMore,

@@ -6,7 +6,8 @@ import (
 	"net/http"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -25,7 +26,7 @@ type AuthHandler struct {
 
 func (u *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var req contracts.SignInRequest
+	var req requests.SignInRequest
 
 	// Parse JSON request
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -49,7 +50,11 @@ func (u *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build response
-	response := contracts.SignInResponse{Token: token}
+	response := responses.SignInResponse{
+		Auth: responses.AuthResponse{
+			Token: token,
+		},
+	}
 	responseData, err := json.Marshal(response)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -69,7 +74,7 @@ func (u *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 func (u *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var req contracts.SignUpRequest
+	var req requests.SignUpRequest
 
 	// Parse JSON request
 	err := json.NewDecoder(r.Body).Decode(&req)

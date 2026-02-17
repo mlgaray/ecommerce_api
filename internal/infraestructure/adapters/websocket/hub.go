@@ -9,7 +9,7 @@ import (
 	ws "github.com/gorilla/websocket"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
@@ -28,7 +28,7 @@ const (
 // NewOrderNotification is the WebSocket message payload for new orders.
 type NewOrderNotification struct {
 	Event string                   `json:"event"`
-	Order *contracts.OrderResponse `json:"order"`
+	Order *responses.OrderResponse `json:"order"`
 }
 
 // Hub manages WebSocket connections grouped by shop ID.
@@ -96,7 +96,7 @@ func (h *Hub) NotifyNewOrder(_ context.Context, order *models.Order) {
 
 	payload := NewOrderNotification{
 		Event: "new_order",
-		Order: contracts.OrderResponseFromModel(order),
+		Order: responses.OrderResponseFromModel(order),
 	}
 
 	data, err := json.Marshal(payload)

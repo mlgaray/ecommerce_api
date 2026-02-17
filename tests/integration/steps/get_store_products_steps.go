@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -387,7 +387,7 @@ func (g *GetStoreProductsSteps) parseStoreProductsResponse(ctx *TestContext, res
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var response contracts.PaginatedProductsResponse
+		var response responses.ListProductsResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
 			ctx.responseBody = response
 		}
@@ -398,9 +398,9 @@ func (g *GetStoreProductsSteps) parseStoreProductsResponse(ctx *TestContext, res
 
 func (g *GetStoreProductsSteps) theResponseShouldContainProducts() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(response.Products) == 0 {
 		return fmt.Errorf("expected products in response, got empty")
@@ -410,9 +410,9 @@ func (g *GetStoreProductsSteps) theResponseShouldContainProducts() error {
 
 func (g *GetStoreProductsSteps) allReturnedProductsShouldHaveIsActiveTrue() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 
 	for _, product := range response.Products {

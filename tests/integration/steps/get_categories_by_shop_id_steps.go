@@ -10,7 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -175,7 +175,7 @@ func (g *GetCategoriesByShopIDSteps) parseResponse(ctx *TestContext, resp *http.
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var paginatedResponse contracts.PaginatedCategoriesResponse
+		var paginatedResponse responses.ListCategoriesResponse
 		if err := json.NewDecoder(resp.Body).Decode(&paginatedResponse); err == nil {
 			ctx.responseBody = paginatedResponse
 		}
@@ -266,9 +266,9 @@ func (g *GetCategoriesByShopIDSteps) setupGetCategoriesSQLExpectations() {
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAListOfCategories() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.Categories == nil {
 		return fmt.Errorf("expected categories list, got nil")
@@ -278,9 +278,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAListOfCategories()
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoryPaginationMetadata() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	// Verify that the response has the pagination fields
 	_ = paginatedResponse.NextCursor
@@ -290,9 +290,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoryPaginationM
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoryTotalCountOnFirstPage() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.TotalCount == nil {
 		return fmt.Errorf("expected total_count on first page, got nil")
@@ -302,9 +302,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoryTotalCountO
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldNotContainCategoryTotalCount() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.TotalCount != nil {
 		return fmt.Errorf("expected no total_count on subsequent pages, got: %v", *paginatedResponse.TotalCount)
@@ -314,9 +314,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldNotContainCategoryTotalCou
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAtMostNCategories(maxCount int) error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) > maxCount {
 		return fmt.Errorf("expected at most %d categories, got %d", maxCount, len(paginatedResponse.Categories))
@@ -326,9 +326,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAtMostNCategories(m
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoriesFromNextPage() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) == 0 {
 		return fmt.Errorf("expected categories from next page, got empty list")
@@ -342,9 +342,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoriesFromNextP
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAnEmptyListOfCategories() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) != 0 {
 		return fmt.Errorf("expected empty categories list, got %d categories", len(paginatedResponse.Categories))
@@ -354,9 +354,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainAnEmptyListOfCatego
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldHaveCategoryHasMoreAsFalse() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.HasMore {
 		return fmt.Errorf("expected hasMore to be false, got true")
@@ -366,9 +366,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldHaveCategoryHasMoreAsFalse
 
 func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoriesMatchingSearchTerm() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) == 0 {
 		return fmt.Errorf("expected categories matching search term, got empty list")
@@ -378,9 +378,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseShouldContainCategoriesMatchingS
 
 func (g *GetCategoriesByShopIDSteps) theResponseCategoriesShouldBeSortedByNameAscending() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) < 2 {
 		return nil // Can't verify sorting with less than 2 categories
@@ -396,9 +396,9 @@ func (g *GetCategoriesByShopIDSteps) theResponseCategoriesShouldBeSortedByNameAs
 
 func (g *GetCategoriesByShopIDSteps) theResponseCategoriesShouldBeSortedByCreatedAtDescending() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Categories) < 2 {
 		return nil // Can't verify sorting with less than 2 categories

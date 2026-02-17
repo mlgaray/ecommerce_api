@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -254,9 +254,9 @@ func (g *GetShopByIDSteps) parseShopResponse(ctx *TestContext, resp *http.Respon
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var shop models.Shop
-		if err := json.NewDecoder(resp.Body).Decode(&shop); err == nil {
-			ctx.responseBody = shop
+		var response responses.GetShopResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			ctx.responseBody = response.Shop
 		}
 	}
 }
@@ -265,11 +265,11 @@ func (g *GetShopByIDSteps) parseShopResponse(ctx *TestContext, resp *http.Respon
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopDetails() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
-	if shop.ID == 0 {
+	if shop == nil || shop.ID == 0 {
 		return fmt.Errorf("expected shop with ID, got ID 0")
 	}
 	if shop.Name == "" {
@@ -283,9 +283,9 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopDetails() error {
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopImages() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if len(shop.Images) == 0 {
 		return fmt.Errorf("expected shop with images, got nil or empty images")
@@ -295,9 +295,9 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopImages() error {
 
 func (g *GetShopByIDSteps) theResponseShouldNotContainShopImages() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if len(shop.Images) > 0 {
 		return fmt.Errorf("expected shop without images, got %d images", len(shop.Images))
@@ -307,9 +307,9 @@ func (g *GetShopByIDSteps) theResponseShouldNotContainShopImages() error {
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopAddress() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if shop.Address == nil {
 		return fmt.Errorf("expected shop with address, got nil address")
@@ -319,9 +319,9 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopAddress() error {
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopPaymentMethods() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if len(shop.PaymentMethods) == 0 {
 		return fmt.Errorf("expected shop with payment methods, got nil or empty")
@@ -331,9 +331,9 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopPaymentMethods() error
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopDeliveryMethods() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if len(shop.DeliveryMethods) == 0 {
 		return fmt.Errorf("expected shop with delivery methods, got nil or empty")
@@ -343,9 +343,9 @@ func (g *GetShopByIDSteps) theResponseShouldContainTheShopDeliveryMethods() erro
 
 func (g *GetShopByIDSteps) theResponseShouldContainTheShopTimezone() error {
 	ctx := GetTestContext()
-	shop, ok := ctx.responseBody.(models.Shop)
+	shop, ok := ctx.responseBody.(*responses.ShopResponse)
 	if !ok {
-		return fmt.Errorf("expected Shop, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ShopResponse, got: %T", ctx.responseBody)
 	}
 	if shop.Timezone == nil {
 		return fmt.Errorf("expected shop with timezone, got nil timezone")

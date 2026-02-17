@@ -9,7 +9,8 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -86,7 +87,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build CategoryCreateRequest
-	request, err := contracts.NewCategoryCreateRequest(r, shopID)
+	request, err := requests.NewCategoryCreateRequest(r, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
@@ -147,7 +148,11 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(contracts.CategoryResponseFromModel(createdCategory)); err != nil {
+	response := responses.CreateCategoryResponse{
+		Category: responses.CategoryResponseFromModel(createdCategory),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": CreateCategoryFunctionField,
@@ -169,7 +174,7 @@ func (h *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *ht
 	}
 
 	// Parse query parameters into CategoryFiltersRequest
-	filtersRequest, err := contracts.NewCategoryFiltersRequest(r.URL.Query())
+	filtersRequest, err := requests.NewCategoryFiltersRequest(r.URL.Query())
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
@@ -213,7 +218,7 @@ func (h *CategoryHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *ht
 	}
 
 	// Build HTTP response
-	response := contracts.NewPaginatedCategoriesResponse(categories, nextCursor, hasMore, totalCount)
+	response := responses.NewListCategoriesResponse(categories, nextCursor, hasMore, totalCount)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         CategoryHandlerField,
@@ -263,7 +268,11 @@ func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	// Return category response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(contracts.CategoryResponseFromModel(category)); err != nil {
+	response := responses.GetCategoryResponse{
+		Category: responses.CategoryResponseFromModel(category),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": GetByIDCategoryFunctionField,
@@ -310,7 +319,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build CategoryUpdateRequest
-	request, err := contracts.NewCategoryUpdateRequest(r)
+	request, err := requests.NewCategoryUpdateRequest(r)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
@@ -367,6 +376,19 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	updatedCategory, err := h.getByID.Execute(ctx, categoryID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":        CategoryHandlerField,
+			"function":    UpdateCategoryFunctionField,
+			"category_id": categoryID,
+			"shop_id":     shopID,
+			"error":       err.Error(),
+		}).Error("Error retrieving updated category")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
 	logs.WithFields(map[string]interface{}{
 		"file":        CategoryHandlerField,
 		"function":    UpdateCategoryFunctionField,
@@ -374,14 +396,13 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		"shop_id":     shopID,
 	}).Info("Category updated successfully")
 
-	// Return success message
-	type UpdateSuccessResponse struct {
-		Message string `json:"message"`
+	response := responses.UpdateCategoryResponse{
+		Category: responses.CategoryResponseFromModel(updatedCategory),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(UpdateSuccessResponse{Message: "category_updated_successfully"}); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     CategoryHandlerField,
 			"function": UpdateCategoryFunctionField,

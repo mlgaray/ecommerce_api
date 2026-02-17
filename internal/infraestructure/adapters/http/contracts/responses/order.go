@@ -1,4 +1,4 @@
-package contracts
+package responses
 
 import (
 	"time"
@@ -211,22 +211,27 @@ func OrderResponsesFromModels(orders []*models.Order) []*OrderResponse {
 	return responses
 }
 
-// PaginatedOrdersResponse represents the HTTP response for paginated orders.
-type PaginatedOrdersResponse struct {
+// CreateOrderResponse represents the response for order creation.
+type CreateOrderResponse struct {
+	Order *OrderResponse `json:"order"`
+}
+
+// ListOrdersResponse represents the HTTP response for list orders.
+type ListOrdersResponse struct {
 	Orders     []*OrderResponse `json:"orders"`
 	NextCursor string           `json:"next_cursor,omitempty"`
 	HasMore    bool             `json:"has_more"`
 	TotalCount *int             `json:"total_count,omitempty"`
 }
 
-// NewPaginatedOrdersResponse creates a PaginatedOrdersResponse from domain models.
-func NewPaginatedOrdersResponse(
+// NewListOrdersResponse creates a ListOrdersResponse from domain models.
+func NewListOrdersResponse(
 	orders []*models.Order,
 	nextCursor string,
 	hasMore bool,
 	totalCount *int,
-) *PaginatedOrdersResponse {
-	return &PaginatedOrdersResponse{
+) *ListOrdersResponse {
+	return &ListOrdersResponse{
 		Orders:     OrderResponsesFromModels(orders),
 		NextCursor: nextCursor,
 		HasMore:    hasMore,

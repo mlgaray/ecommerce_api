@@ -7,11 +7,13 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -34,6 +36,26 @@ func (u *UpdateProductSteps) setupSQLExpectations() {
 			AddRow("{}") // Empty array - no images deleted
 		ctx.mockSQLMock.ExpectQuery("SELECT update_product").
 			WillReturnRows(rows)
+
+		// Mock getByID query that handler calls after update to return updated product
+		productID := 1
+		if id, ok := ctx.pathParams["product_id"]; ok {
+			_, _ = fmt.Sscanf(id, "%d", &productID)
+		}
+
+		getByIDColumns := []string{
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}
+		imagesJSON := `[{"id": 1, "url": "https://existing.com/image1.jpg"}]`
+		getByIDRows := sqlmock.NewRows(getByIDColumns).
+			AddRow(productID, "Updated Product", "Updated Description", 149.99, false, 20, 5,
+				true, false, false, 0.0, time.Now(), 1, "Category 1", "", imagesJSON, "[]")
+		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
+			WithArgs(productID).
+			WillReturnRows(getByIDRows)
 	}
 }
 
@@ -616,12 +638,27 @@ func (u *UpdateProductSteps) parseResponse(ctx *TestContext, resp *http.Response
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var successResponse map[string]string
+		var successResponse responses.UpdateProductResponse
 		if err := json.NewDecoder(resp.Body).Decode(&successResponse); err == nil {
-			ctx.successMessage = successResponse["message"]
+			ctx.responseBody = successResponse.Product
 		}
 	}
 
+	return nil
+}
+
+func (u *UpdateProductSteps) theUserShouldReceiveTheUpdatedProduct() error {
+	ctx := GetTestContext()
+	product, ok := ctx.responseBody.(*responses.ProductResponse)
+	if !ok {
+		return fmt.Errorf("expected ProductResponse, got: %T", ctx.responseBody)
+	}
+	if product == nil || product.ID == 0 {
+		return fmt.Errorf("expected product with ID, got: %v", product)
+	}
+	if product.Name == "" {
+		return fmt.Errorf("expected product with name, got empty name")
+	}
 	return nil
 }
 
@@ -653,4 +690,5 @@ func (u *UpdateProductSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	// Action steps
 	sc.Step(`^I send an update product request$`, u.iSendAnUpdateProductRequest)
 	sc.Step(`^I send an update product request with invalid id$`, u.iSendAnUpdateProductRequestWithInvalidID)
+	sc.Step(`^the user should receive the updated product$`, u.theUserShouldReceiveTheUpdatedProduct)
 }

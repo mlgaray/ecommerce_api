@@ -1,4 +1,4 @@
-package contracts
+package requests
 
 import (
 	"bytes"
@@ -11,6 +11,10 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
+
+// =============================================================================
+// Shared Types
+// =============================================================================
 
 // ShopRequest represents shop data in HTTP requests.
 type ShopRequest struct {
@@ -252,6 +256,10 @@ func (s *ShopRequest) ToModel() *models.Shop {
 
 	return shop
 }
+
+// =============================================================================
+// Update
+// =============================================================================
 
 // ShopUpdateRequest represents the multipart form request for updating a shop.
 // Form fields:

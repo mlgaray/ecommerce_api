@@ -13,7 +13,8 @@ import (
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
 
@@ -21,28 +22,28 @@ import (
 // Test Helpers
 // =============================================================================
 
-func newValidOrderRequest() *contracts.CreateOrderRequest {
-	return &contracts.CreateOrderRequest{
-		Order: contracts.OrderRequest{
-			Customer: contracts.OrderCustomerRequest{
+func newValidOrderRequest() *requests.CreateOrderRequest {
+	return &requests.CreateOrderRequest{
+		Order: requests.OrderRequest{
+			Customer: requests.OrderCustomerRequest{
 				Name:  "John Doe",
 				Phone: "123456789",
 				Email: "john@example.com",
 			},
-			PaymentMethod: contracts.OrderPaymentMethodRequest{
+			PaymentMethod: requests.OrderPaymentMethodRequest{
 				ID:   1,
 				Name: "Efectivo",
 				Code: "cash",
 			},
-			DeliveryMethod: contracts.OrderDeliveryMethodRequest{
+			DeliveryMethod: requests.OrderDeliveryMethodRequest{
 				ID:           1,
 				Name:         "Retiro en local",
 				Code:         "pickup",
 				ShippingCost: 10.00,
 			},
-			Items: []contracts.OrderItemRequest{
+			Items: []requests.OrderItemRequest{
 				{
-					Product: contracts.OrderProductRequest{
+					Product: requests.OrderProductRequest{
 						ID:    1,
 						Name:  "Test Product",
 						Price: 50.00,
@@ -117,12 +118,14 @@ func TestOrderHandler_Create(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rr.Code)
 		assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 
-		var response models.Order
+		var response responses.CreateOrderResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, createdOrder.ID, response.ID)
-		assert.Equal(t, createdOrder.OrderNumber, response.OrderNumber)
-		assert.Equal(t, createdOrder.Total, response.Total)
+		if assert.NotNil(t, response.Order) {
+			assert.Equal(t, createdOrder.ID, response.Order.ID)
+			assert.Equal(t, createdOrder.OrderNumber, response.Order.OrderNumber)
+			assert.Equal(t, createdOrder.Total, response.Order.Total)
+		}
 	})
 }
 
@@ -248,7 +251,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 	t.Run("when items is empty then returns 400", func(t *testing.T) {
 		// Arrange
 		request := newValidOrderRequest()
-		request.Order.Items = []contracts.OrderItemRequest{}
+		request.Order.Items = []requests.OrderItemRequest{}
 
 		handler := NewOrderHandler(nil, nil)
 
@@ -382,16 +385,16 @@ func TestOrderHandler_Create_WithSelectedOptions(t *testing.T) {
 	t.Run("when request has selected options then passes to use case", func(t *testing.T) {
 		// Arrange
 		request := newValidOrderRequest()
-		request.Order.Items = []contracts.OrderItemRequest{
+		request.Order.Items = []requests.OrderItemRequest{
 			{
-				Product: contracts.OrderProductRequest{
+				Product: requests.OrderProductRequest{
 					ID:    1,
 					Name:  "Pizza",
 					Price: 50.00,
 				},
 				Quantity:  1,
 				UnitPrice: 80.00,
-				SelectedOptions: []contracts.OrderSelectedOptionRequest{
+				SelectedOptions: []requests.OrderSelectedOptionRequest{
 					{VariantID: 1, VariantName: "Tamaño", OptionID: 10, OptionName: "Grande", OptionPrice: 20.00},
 					{VariantID: 2, VariantName: "Masa", OptionID: 20, OptionName: "Crocante", OptionPrice: 10.00},
 				},
@@ -430,7 +433,7 @@ func TestOrderHandler_Create_WithCustomerAddress(t *testing.T) {
 	t.Run("when request has customer address then passes to use case", func(t *testing.T) {
 		// Arrange
 		request := newValidOrderRequest()
-		request.Order.Customer.Address = &contracts.OrderAddressRequest{
+		request.Order.Customer.Address = &requests.OrderAddressRequest{
 			Name:    "123 Main St",
 			PlaceID: "place123",
 			Lat:     -34.603722,
@@ -467,7 +470,7 @@ func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
 	t.Run("when request has delivery zone then passes to use case", func(t *testing.T) {
 		// Arrange
 		request := newValidOrderRequest()
-		request.Order.DeliveryMethod.DeliveryZone = &contracts.OrderDeliveryZoneRequest{
+		request.Order.DeliveryMethod.DeliveryZone = &requests.OrderDeliveryZoneRequest{
 			ID:    5,
 			Name:  "Zona Norte",
 			Price: 25.00,

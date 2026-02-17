@@ -14,6 +14,7 @@ import (
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
 
@@ -101,11 +102,13 @@ func TestCategoryHandler_GetByID(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 
-		var response models.Category
+		var response responses.GetCategoryResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, category.ID, response.ID)
-		assert.Equal(t, category.Name, response.Name)
+		if assert.NotNil(t, response.Category) {
+			assert.Equal(t, category.ID, response.Category.ID)
+			assert.Equal(t, category.Name, response.Category.Name)
+		}
 	})
 
 	t.Run("when category not found then returns 404", func(t *testing.T) {

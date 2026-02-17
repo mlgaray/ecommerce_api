@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
@@ -242,7 +242,7 @@ func TestHub_NotifyNewOrder(t *testing.T) {
 		assert.Equal(t, order.OrderNumber, notification.Order.OrderNumber)
 
 		// Verify the response uses the same format as OrderResponseFromModel
-		expected := contracts.OrderResponseFromModel(order)
+		expected := responses.OrderResponseFromModel(order)
 		assert.Equal(t, expected.Total, notification.Order.Total)
 	})
 

@@ -9,7 +9,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -50,7 +51,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Parse JSON body
-	var request contracts.CreateOrderRequest
+	var request requests.CreateOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderHandlerField,
@@ -100,7 +101,9 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		"total":        createdOrder.Total,
 	}).Info("Order created successfully")
 
-	response := contracts.OrderResponseFromModel(createdOrder)
+	response := responses.CreateOrderResponse{
+		Order: responses.OrderResponseFromModel(createdOrder),
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -141,7 +144,7 @@ func (h *OrderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Parse query parameters into OrderFiltersRequest
 	queryParams := r.URL.Query()
-	filtersRequest, err := contracts.NewOrderFiltersRequest(queryParams)
+	filtersRequest, err := requests.NewOrderFiltersRequest(queryParams)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderHandlerField,
@@ -191,7 +194,7 @@ func (h *OrderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 6. Build HTTP response (handler constructs response DTO)
-	response := contracts.NewPaginatedOrdersResponse(orders, nextCursor, hasMore, totalCount)
+	response := responses.NewListOrdersResponse(orders, nextCursor, hasMore, totalCount)
 
 	// Log successful retrieval
 	logs.WithFields(map[string]interface{}{
