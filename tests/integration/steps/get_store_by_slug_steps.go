@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -159,9 +159,9 @@ func (g *GetStoreBySlugSteps) parseStoreResponse(ctx *TestContext, resp *http.Re
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var store models.Store
-		if err := json.NewDecoder(resp.Body).Decode(&store); err == nil {
-			ctx.responseBody = store
+		var response responses.GetStoreResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			ctx.responseBody = response.Store
 		}
 	}
 }
@@ -170,11 +170,11 @@ func (g *GetStoreBySlugSteps) parseStoreResponse(ctx *TestContext, resp *http.Re
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreDetails() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
-	if store.ID == 0 {
+	if store == nil || store.ID == 0 {
 		return fmt.Errorf("expected store with ID, got ID 0")
 	}
 	if store.Name == "" {
@@ -188,9 +188,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreDetails() error {
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreImages() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if len(store.Images) == 0 {
 		return fmt.Errorf("expected store with images, got nil or empty images")
@@ -200,9 +200,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreImages() error {
 
 func (g *GetStoreBySlugSteps) theResponseShouldNotContainStoreImages() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if len(store.Images) > 0 {
 		return fmt.Errorf("expected store without images, got %d images", len(store.Images))
@@ -212,9 +212,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldNotContainStoreImages() error {
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreAddress() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if store.Address == nil {
 		return fmt.Errorf("expected store with address, got nil address")
@@ -224,9 +224,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreAddress() error {
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStorePaymentMethods() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if len(store.PaymentMethods) == 0 {
 		return fmt.Errorf("expected store with payment methods, got nil or empty")
@@ -236,9 +236,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStorePaymentMethods() e
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreDeliveryMethods() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if len(store.DeliveryMethods) == 0 {
 		return fmt.Errorf("expected store with delivery methods, got nil or empty")
@@ -248,9 +248,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreDeliveryMethods() 
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreTimezone() error {
 	ctx := GetTestContext()
-	store, ok := ctx.responseBody.(models.Store)
+	store, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	if store.Timezone == nil {
 		return fmt.Errorf("expected store with timezone, got nil timezone")
@@ -263,9 +263,9 @@ func (g *GetStoreBySlugSteps) theResponseShouldContainTheStoreTimezone() error {
 
 func (g *GetStoreBySlugSteps) theResponseShouldContainTheIsOpenField() error {
 	ctx := GetTestContext()
-	_, ok := ctx.responseBody.(models.Store)
+	_, ok := ctx.responseBody.(*responses.StoreResponse)
 	if !ok {
-		return fmt.Errorf("expected Store, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected StoreResponse, got: %T", ctx.responseBody)
 	}
 	// is_open is a bool field, always present in JSON response
 	// We just verify the response was parsed correctly as a Store

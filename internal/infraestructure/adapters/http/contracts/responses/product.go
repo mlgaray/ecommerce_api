@@ -1,4 +1,4 @@
-package contracts
+package responses
 
 import (
 	"time"
@@ -153,22 +153,37 @@ func ProductResponsesFromModels(products []*models.Product) []*ProductResponse {
 	return responses
 }
 
-// PaginatedProductsResponse represents the HTTP response for paginated products.
-type PaginatedProductsResponse struct {
+// CreateProductResponse represents the response for product creation.
+type CreateProductResponse struct {
+	Product *ProductResponse `json:"product"`
+}
+
+// GetProductResponse represents the response for product retrieval.
+type GetProductResponse struct {
+	Product *ProductResponse `json:"product"`
+}
+
+// UpdateProductResponse represents the response for a product update.
+type UpdateProductResponse struct {
+	Product *ProductResponse `json:"product"`
+}
+
+// ListProductsResponse represents the HTTP response for list products.
+type ListProductsResponse struct {
 	Products   []*ProductResponse `json:"products"`
 	NextCursor string             `json:"next_cursor,omitempty"`
 	HasMore    bool               `json:"has_more"`
 	TotalCount *int               `json:"total_count,omitempty"`
 }
 
-// NewPaginatedProductsResponse creates a PaginatedProductsResponse from domain models.
-func NewPaginatedProductsResponse(
+// NewListProductsResponse creates a ListProductsResponse from domain models.
+func NewListProductsResponse(
 	products []*models.Product,
 	nextCursor string,
 	hasMore bool,
 	totalCount *int,
-) *PaginatedProductsResponse {
-	return &PaginatedProductsResponse{
+) *ListProductsResponse {
+	return &ListProductsResponse{
 		Products:   ProductResponsesFromModels(products),
 		NextCursor: nextCursor,
 		HasMore:    hasMore,

@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -310,9 +311,9 @@ func (c *CategorySteps) parseResponse(ctx *TestContext, resp *http.Response) err
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var category models.Category
-		if err := json.NewDecoder(resp.Body).Decode(&category); err == nil {
-			ctx.responseBody = &category
+		var response responses.CreateCategoryResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			ctx.responseBody = response.Category
 		}
 	}
 
@@ -321,7 +322,7 @@ func (c *CategorySteps) parseResponse(ctx *TestContext, resp *http.Response) err
 
 func (c *CategorySteps) theCategoryShouldBeCreatedSuccessfully() error {
 	ctx := GetTestContext()
-	createdCategory, ok := ctx.responseBody.(*models.Category)
+	createdCategory, ok := ctx.responseBody.(*responses.CategoryResponse)
 	if !ok || createdCategory == nil {
 		return fmt.Errorf("expected category to be created, got: %T", ctx.responseBody)
 	}

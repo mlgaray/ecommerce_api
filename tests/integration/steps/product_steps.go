@@ -15,6 +15,7 @@ import (
 	"github.com/cucumber/godog"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -385,9 +386,9 @@ func (p *ProductSteps) parseResponse(ctx *TestContext, resp *http.Response) erro
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var product models.Product
-		if err := json.NewDecoder(resp.Body).Decode(&product); err == nil {
-			ctx.responseBody = &product
+		var response responses.CreateProductResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			ctx.responseBody = response.Product
 		}
 	}
 
@@ -508,7 +509,7 @@ func (p *ProductSteps) iHaveProductDataWithPromotionalPriceNotLowerThanPrice() e
 
 func (p *ProductSteps) theProductShouldBeCreatedSuccessfully() error {
 	ctx := GetTestContext()
-	createdProduct, ok := ctx.responseBody.(*models.Product)
+	createdProduct, ok := ctx.responseBody.(*responses.ProductResponse)
 	if !ok || createdProduct == nil {
 		return fmt.Errorf("expected product to be created, got: %T", ctx.responseBody)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/cucumber/godog"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -616,12 +617,27 @@ func (u *UpdateProductSteps) parseResponse(ctx *TestContext, resp *http.Response
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var successResponse map[string]string
+		var successResponse responses.UpdateProductResponse
 		if err := json.NewDecoder(resp.Body).Decode(&successResponse); err == nil {
-			ctx.successMessage = successResponse["message"]
+			ctx.responseBody = successResponse.Product
 		}
 	}
 
+	return nil
+}
+
+func (u *UpdateProductSteps) theUserShouldReceiveTheUpdatedProduct() error {
+	ctx := GetTestContext()
+	product, ok := ctx.responseBody.(*responses.ProductResponse)
+	if !ok {
+		return fmt.Errorf("expected ProductResponse, got: %T", ctx.responseBody)
+	}
+	if product == nil || product.ID == 0 {
+		return fmt.Errorf("expected product with ID, got: %v", product)
+	}
+	if product.Name == "" {
+		return fmt.Errorf("expected product with name, got empty name")
+	}
 	return nil
 }
 
@@ -653,4 +669,5 @@ func (u *UpdateProductSteps) RegisterSteps(sc *godog.ScenarioContext) {
 	// Action steps
 	sc.Step(`^I send an update product request$`, u.iSendAnUpdateProductRequest)
 	sc.Step(`^I send an update product request with invalid id$`, u.iSendAnUpdateProductRequestWithInvalidID)
+	sc.Step(`^the user should receive the updated product$`, u.theUserShouldReceiveTheUpdatedProduct)
 }

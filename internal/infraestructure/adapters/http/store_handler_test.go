@@ -13,6 +13,7 @@ import (
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
@@ -84,12 +85,14 @@ func TestStoreHandler_GetBySlug(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 
-		var response models.Store
+		var response responses.GetStoreResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, store.ID, response.ID)
-		assert.Equal(t, store.Name, response.Name)
-		assert.Equal(t, store.Slug, response.Slug)
+		if assert.NotNil(t, response.Store) {
+			assert.Equal(t, store.ID, response.Store.ID)
+			assert.Equal(t, store.Name, response.Store.Name)
+			assert.Equal(t, store.Slug, response.Store.Slug)
+		}
 	})
 
 	t.Run("when store not found then returns 404", func(t *testing.T) {

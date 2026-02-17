@@ -9,7 +9,8 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -72,9 +73,13 @@ func (h *ShopHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := responses.GetShopResponse{
+		Shop: responses.ShopResponseFromModel(shop),
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(shop)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (h *ShopHandler) parseShopID(r *http.Request) (int, error) {
@@ -135,7 +140,7 @@ func (h *ShopHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build shop update request from multipart form
-	request, err := contracts.NewShopUpdateRequest(r)
+	request, err := requests.NewShopUpdateRequest(r)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ShopHandlerField,

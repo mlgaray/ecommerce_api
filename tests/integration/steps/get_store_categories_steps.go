@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -206,7 +206,7 @@ func (g *GetStoreCategoriesSteps) parseStoreCategoriesResponse(ctx *TestContext,
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var response contracts.PaginatedCategoriesResponse
+		var response responses.ListCategoriesResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
 			ctx.responseBody = response
 		}
@@ -217,9 +217,9 @@ func (g *GetStoreCategoriesSteps) parseStoreCategoriesResponse(ctx *TestContext,
 
 func (g *GetStoreCategoriesSteps) theResponseShouldContainCategories() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	response, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(response.Categories) == 0 {
 		return fmt.Errorf("expected categories in response, got empty")
@@ -229,9 +229,9 @@ func (g *GetStoreCategoriesSteps) theResponseShouldContainCategories() error {
 
 func (g *GetStoreCategoriesSteps) theResponseShouldContainEmptyCategories() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	response, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	if len(response.Categories) > 0 {
 		return fmt.Errorf("expected empty categories, got %d", len(response.Categories))
@@ -241,9 +241,9 @@ func (g *GetStoreCategoriesSteps) theResponseShouldContainEmptyCategories() erro
 
 func (g *GetStoreCategoriesSteps) theResponseShouldIncludePaginationInfo() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedCategoriesResponse)
+	response, ok := ctx.responseBody.(responses.ListCategoriesResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedCategoriesResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListCategoriesResponse, got: %T", ctx.responseBody)
 	}
 	// Store endpoints use cursor-based pagination without TotalCount
 	// Just verify the response structure is correct (HasMore field exists)

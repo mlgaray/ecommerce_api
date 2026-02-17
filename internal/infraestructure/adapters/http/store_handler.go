@@ -9,7 +9,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -71,9 +72,13 @@ func (h *StoreHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := responses.GetStoreResponse{
+		Store: responses.StoreResponseFromModel(store),
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(store)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (h *StoreHandler) parseSlug(r *http.Request) (string, error) {
@@ -101,7 +106,7 @@ func (h *StoreHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters into CategoryFiltersRequest
-	filtersRequest, err := contracts.NewCategoryFiltersRequest(r.URL.Query())
+	filtersRequest, err := requests.NewCategoryFiltersRequest(r.URL.Query())
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
@@ -144,7 +149,7 @@ func (h *StoreHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't use pagination UI)
-	response := contracts.NewPaginatedCategoriesResponse(categories, nextCursor, hasMore, nil)
+	response := responses.NewListCategoriesResponse(categories, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
@@ -180,7 +185,7 @@ func (h *StoreHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters into ProductFiltersRequest
-	filtersRequest, err := contracts.NewProductFiltersRequest(r.URL.Query())
+	filtersRequest, err := requests.NewProductFiltersRequest(r.URL.Query())
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
@@ -222,7 +227,7 @@ func (h *StoreHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't need it)
-	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, nil)
+	response := responses.NewListProductsResponse(products, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
@@ -257,7 +262,7 @@ func (h *StoreHandler) GetFeaturedProducts(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Parse query parameters into ProductFiltersRequest
-	filtersRequest, err := contracts.NewProductFiltersRequest(r.URL.Query())
+	filtersRequest, err := requests.NewProductFiltersRequest(r.URL.Query())
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
@@ -299,7 +304,7 @@ func (h *StoreHandler) GetFeaturedProducts(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Build HTTP response (no TotalCount - store frontend doesn't need it)
-	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, nil)
+	response := responses.NewListProductsResponse(products, nextCursor, hasMore, nil)
 
 	logs.WithFields(map[string]interface{}{
 		"file":         StoreHandlerField,
@@ -371,7 +376,7 @@ func (h *StoreHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(product)); err != nil {
+	if err := json.NewEncoder(w).Encode(responses.ProductResponseFromModel(product)); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     StoreHandlerField,
 			"function": GetStoreProductByIDFunctionField,

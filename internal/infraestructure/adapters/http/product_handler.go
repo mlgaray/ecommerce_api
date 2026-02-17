@@ -10,7 +10,8 @@ import (
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
@@ -73,7 +74,7 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Create ProductCreateRequest
 	stepStart = time.Now()
-	request, err := contracts.NewProductCreateRequest(r, shopID)
+	request, err := requests.NewProductCreateRequest(r, shopID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -152,7 +153,11 @@ func (p *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(createdProduct)); err != nil {
+	response := responses.CreateProductResponse{
+		Product: responses.ProductResponseFromModel(createdProduct),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": CreateProductFunctionField,
@@ -210,7 +215,7 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 
 	// Parse query parameters into ProductFiltersRequest
 	queryParams := r.URL.Query()
-	filtersRequest, err := contracts.NewProductFiltersRequest(queryParams)
+	filtersRequest, err := requests.NewProductFiltersRequest(queryParams)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -260,7 +265,7 @@ func (p *ProductHandler) GetAllByShopIDWithFilters(w http.ResponseWriter, r *htt
 	}
 
 	// Build HTTP response (handler constructs response DTO)
-	response := contracts.NewPaginatedProductsResponse(products, nextCursor, hasMore, totalCount)
+	response := responses.NewListProductsResponse(products, nextCursor, hasMore, totalCount)
 
 	// Log successful search
 	logs.WithFields(map[string]interface{}{
@@ -310,7 +315,11 @@ func (p *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	// Return product response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(contracts.ProductResponseFromModel(product)); err != nil {
+	response := responses.GetProductResponse{
+		Product: responses.ProductResponseFromModel(product),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": GetByIDFunctionField,
@@ -376,7 +385,7 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build product update request (different from create)
-	request, err := contracts.NewProductUpdateRequest(r)
+	request, err := requests.NewProductUpdateRequest(r)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
@@ -432,14 +441,26 @@ func (p *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return success message (no product returned - frontend navigates to list)
-	type UpdateSuccessResponse struct {
-		Message string `json:"message"`
+	// Fetch updated product to return in response
+	updatedProduct, err := p.getByID.Execute(ctx, productID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":       ProductHandlerField,
+			"function":   UpdateProductFunctionField,
+			"product_id": productID,
+			"error":      err.Error(),
+		}).Error("Error retrieving updated product")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	response := responses.UpdateProductResponse{
+		Product: responses.ProductResponseFromModel(updatedProduct),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(UpdateSuccessResponse{Message: "product_updated_successfully"}); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     ProductHandlerField,
 			"function": UpdateProductFunctionField,

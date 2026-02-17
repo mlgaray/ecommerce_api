@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -183,7 +183,7 @@ func (g *GetStoreFeaturedProductsSteps) parseStoreFeaturedProductsResponse(ctx *
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var response contracts.PaginatedProductsResponse
+		var response responses.ListProductsResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
 			ctx.responseBody = response
 		}
@@ -194,9 +194,9 @@ func (g *GetStoreFeaturedProductsSteps) parseStoreFeaturedProductsResponse(ctx *
 
 func (g *GetStoreFeaturedProductsSteps) theResponseShouldContainFeaturedProducts() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(response.Products) == 0 {
 		return fmt.Errorf("expected featured products in response, got empty")
@@ -206,9 +206,9 @@ func (g *GetStoreFeaturedProductsSteps) theResponseShouldContainFeaturedProducts
 
 func (g *GetStoreFeaturedProductsSteps) theResponseShouldContainEmptyProducts() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(response.Products) > 0 {
 		return fmt.Errorf("expected empty products, got %d", len(response.Products))
@@ -218,9 +218,9 @@ func (g *GetStoreFeaturedProductsSteps) theResponseShouldContainEmptyProducts() 
 
 func (g *GetStoreFeaturedProductsSteps) theResponseShouldIncludeProductsPaginationInfo() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	// Store endpoints use cursor-based pagination without TotalCount
 	// Just verify the response structure is correct (HasMore field exists)
@@ -230,9 +230,9 @@ func (g *GetStoreFeaturedProductsSteps) theResponseShouldIncludeProductsPaginati
 
 func (g *GetStoreFeaturedProductsSteps) theResponseShouldOnlyContainHighlightedActiveProducts() error {
 	ctx := GetTestContext()
-	response, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	response, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	for _, product := range response.Products {
 		if !product.IsHighlighted {

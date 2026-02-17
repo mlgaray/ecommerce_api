@@ -11,13 +11,13 @@ Feature: Category Update
     Given I have a category with id 1 and valid update data with existing image
     When I send an update category request
     Then the response status should be 200
-    And the user should receive a success message "category_updated_successfully"
+    And the user should receive the updated category
 
   Scenario: Successfully update a category with new image
     Given I have a category with id 1 and valid update data with new image
     When I send an update category request
     Then the response status should be 200
-    And the user should receive a success message "category_updated_successfully"
+    And the user should receive the updated category
 
   # HTTP Validations (Infrastructure layer)
   Scenario: Update category with empty name

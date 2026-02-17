@@ -1,4 +1,4 @@
-package contracts
+package requests
 
 import (
 	"bytes"
@@ -662,5 +662,281 @@ func TestShopUpdateRequest_EdgeCases(t *testing.T) {
 
 		// Assert
 		assert.NoError(t, err)
+	})
+}
+
+// =============================================================================
+// ShopRequest.ToModel Tests
+// =============================================================================
+
+func TestShopRequest_ToModel(t *testing.T) {
+	t.Run("when basic fields then maps all", func(t *testing.T) {
+		// Arrange
+		primaryColor := "#FF5733"
+		request := &ShopRequest{
+			ID:           1,
+			Name:         "Test Shop",
+			Slug:         "test-shop",
+			Email:        "shop@example.com",
+			Phone:        "+54 11 1234-5678",
+			Instagram:    "@testshop",
+			PrimaryColor: &primaryColor,
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Equal(t, 1, shop.ID)
+		assert.Equal(t, "Test Shop", shop.Name)
+		assert.Equal(t, "test-shop", shop.Slug)
+		assert.Equal(t, "shop@example.com", shop.Email)
+		assert.Equal(t, "+54 11 1234-5678", shop.Phone)
+		assert.Equal(t, "@testshop", shop.Instagram)
+		assert.NotNil(t, shop.PrimaryColor)
+		assert.Equal(t, "#FF5733", *shop.PrimaryColor)
+	})
+
+	t.Run("when images then maps images", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			Images: []*ShopImageRequest{
+				{ID: 1, URL: "https://example.com/logo.jpg", Type: "logo"},
+				{ID: 2, URL: "https://example.com/cover.jpg", Type: "cover"},
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Len(t, shop.Images, 2)
+		assert.Equal(t, 1, shop.Images[0].ID)
+		assert.Equal(t, "https://example.com/logo.jpg", shop.Images[0].URL)
+		assert.Equal(t, "logo", shop.Images[0].Type)
+	})
+
+	t.Run("when address then maps address", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			Address: &ShopAddressRequest{
+				ID:      5,
+				Name:    "Av. Corrientes",
+				PlaceID: "ChIJxyz",
+				Lat:     -34.6037,
+				Lng:     -58.3816,
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.NotNil(t, shop.Address)
+		assert.Equal(t, 5, shop.Address.ID)
+		assert.Equal(t, "Av. Corrientes", shop.Address.Name)
+		assert.Equal(t, "ChIJxyz", shop.Address.PlaceID)
+		assert.Equal(t, -34.6037, shop.Address.Lat)
+	})
+
+	t.Run("when payment methods with configs then maps all", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			PaymentMethods: []*ShopPaymentMethodRequest{
+				{
+					ID:       1,
+					Name:     "Transfer",
+					Code:     "transfer",
+					IsActive: true,
+					TransferConfig: &ShopTransferConfigRequest{
+						ID:        1,
+						CBU:       "0123456789012345678901",
+						CUIL:      "20-12345678-9",
+						Alias:     "mi.alias",
+						OwnerName: "Owner",
+					},
+				},
+				{
+					ID:       2,
+					Name:     "MercadoPago",
+					Code:     "mercadopago",
+					IsActive: true,
+					MercadoPagoConfig: &ShopMercadoPagoConfigRequest{
+						ID:          1,
+						AccessToken: "TOKEN",
+						PublicKey:   "KEY",
+						UserID:      "UID",
+					},
+				},
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Len(t, shop.PaymentMethods, 2)
+		assert.NotNil(t, shop.PaymentMethods[0].TransferConfig)
+		assert.Equal(t, "0123456789012345678901", shop.PaymentMethods[0].TransferConfig.CBU)
+		assert.Nil(t, shop.PaymentMethods[0].MercadoPagoConfig)
+		assert.NotNil(t, shop.PaymentMethods[1].MercadoPagoConfig)
+		assert.Equal(t, "TOKEN", shop.PaymentMethods[1].MercadoPagoConfig.AccessToken)
+	})
+
+	t.Run("when delivery methods with zones and pickup then maps all", func(t *testing.T) {
+		// Arrange
+		fixedPrice := 500.0
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			DeliveryMethods: []*ShopDeliveryMethodRequest{
+				{
+					ID:       1,
+					Name:     "Delivery",
+					Code:     "delivery",
+					IsActive: true,
+					DeliveryConfig: &ShopDeliveryConfigRequest{
+						ID:         1,
+						FixedPrice: &fixedPrice,
+					},
+					DeliveryZones: []*ShopDeliveryZoneRequest{
+						{ID: 1, Name: "Norte", Price: 300},
+						{ID: 2, Name: "Sur", Price: 400},
+					},
+				},
+				{
+					ID:       2,
+					Name:     "Pickup",
+					Code:     "pickup",
+					IsActive: true,
+					PickupConfig: &ShopPickupConfigRequest{
+						ID:           1,
+						Address:      "Calle 123",
+						City:         "CABA",
+						Province:     "Buenos Aires",
+						PostalCode:   "C1000",
+						Instructions: "Ring bell",
+					},
+				},
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Len(t, shop.DeliveryMethods, 2)
+		assert.NotNil(t, shop.DeliveryMethods[0].DeliveryConfig)
+		assert.Equal(t, 500.0, *shop.DeliveryMethods[0].DeliveryConfig.FixedPrice)
+		assert.Len(t, shop.DeliveryMethods[0].DeliveryZones, 2)
+		assert.Equal(t, "Norte", shop.DeliveryMethods[0].DeliveryZones[0].Name)
+		assert.Nil(t, shop.DeliveryMethods[0].PickupConfig)
+		assert.NotNil(t, shop.DeliveryMethods[1].PickupConfig)
+		assert.Equal(t, "Calle 123", shop.DeliveryMethods[1].PickupConfig.Address)
+	})
+
+	t.Run("when operating schedules then maps all", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			OperatingSchedules: []*ShopOperatingScheduleRequest{
+				{ID: 1, DayOfWeek: 1, OpenTime: "09:00", CloseTime: "18:00"},
+				{ID: 2, DayOfWeek: 5, OpenTime: "09:00", CloseTime: "20:00"},
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Len(t, shop.OperatingSchedules, 2)
+		assert.Equal(t, 1, int(shop.OperatingSchedules[0].DayOfWeek))
+		assert.Equal(t, "09:00", shop.OperatingSchedules[0].OpenTime)
+	})
+
+	t.Run("when timezone then maps timezone", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{
+			Name: "Test",
+			Slug: "test",
+			Timezone: &ShopTimezoneRequest{
+				ID:   1,
+				Name: "Argentina",
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.NotNil(t, shop.Timezone)
+		assert.Equal(t, 1, shop.Timezone.ID)
+		assert.Equal(t, "Argentina", shop.Timezone.Name)
+	})
+
+	t.Run("when no optional fields then all are nil", func(t *testing.T) {
+		// Arrange
+		request := &ShopRequest{Name: "Minimal", Slug: "minimal"}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Nil(t, shop.PrimaryColor)
+		assert.Nil(t, shop.Images)
+		assert.Nil(t, shop.Address)
+		assert.Nil(t, shop.PaymentMethods)
+		assert.Nil(t, shop.DeliveryMethods)
+		assert.Nil(t, shop.OperatingSchedules)
+		assert.Nil(t, shop.Timezone)
+	})
+}
+
+// =============================================================================
+// ShopUpdateRequest.ToModel Tests
+// =============================================================================
+
+func TestShopUpdateRequest_ToModel(t *testing.T) {
+	t.Run("when update request then delegates to shop ToModel", func(t *testing.T) {
+		// Arrange
+		request := &ShopUpdateRequest{
+			Shop: ShopRequest{
+				ID:   1,
+				Name: "Updated Shop",
+				Slug: "updated-shop",
+			},
+		}
+
+		// Act
+		shop := request.ToModel()
+
+		// Assert
+		assert.Equal(t, 1, shop.ID)
+		assert.Equal(t, "Updated Shop", shop.Name)
+		assert.Equal(t, "updated-shop", shop.Slug)
+	})
+
+	t.Run("when logo and cover buffers with nil files then returns nil", func(t *testing.T) {
+		// Arrange
+		request := &ShopUpdateRequest{
+			Shop: ShopRequest{Name: "Test", Slug: "test"},
+		}
+
+		// Act
+		logo, logoErr := request.ToLogoBuffer()
+		cover, coverErr := request.ToCoverBuffer()
+
+		// Assert
+		assert.NoError(t, logoErr)
+		assert.Nil(t, logo)
+		assert.NoError(t, coverErr)
+		assert.Nil(t, cover)
 	})
 }

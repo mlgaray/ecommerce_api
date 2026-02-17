@@ -10,7 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -231,7 +231,7 @@ func (g *GetProductsByShopIDSteps) parseResponse(ctx *TestContext, resp *http.Re
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var paginatedResponse contracts.PaginatedProductsResponse
+		var paginatedResponse responses.ListProductsResponse
 		if err := json.NewDecoder(resp.Body).Decode(&paginatedResponse); err == nil {
 			ctx.responseBody = paginatedResponse
 		}
@@ -383,9 +383,9 @@ func (g *GetProductsByShopIDSteps) setupGetProductsSQLExpectations() {
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainAListOfProducts() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.Products == nil {
 		return fmt.Errorf("expected products list, got nil")
@@ -395,9 +395,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainAListOfProducts() err
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainPaginationMetadata() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	// Verify that the response has the pagination fields
 	_ = paginatedResponse.NextCursor
@@ -407,9 +407,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainPaginationMetadata() 
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainTotalCountOnFirstPage() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.TotalCount == nil {
 		return fmt.Errorf("expected total_count on first page, got nil")
@@ -419,9 +419,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainTotalCountOnFirstPage
 
 func (g *GetProductsByShopIDSteps) theResponseShouldNotContainTotalCount() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.TotalCount != nil {
 		return fmt.Errorf("expected no total_count on subsequent pages, got: %v", *paginatedResponse.TotalCount)
@@ -431,9 +431,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldNotContainTotalCount() error
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainAtMostNProducts(maxCount int) error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) > maxCount {
 		return fmt.Errorf("expected at most %d products, got %d", maxCount, len(paginatedResponse.Products))
@@ -443,9 +443,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainAtMostNProducts(maxCo
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsFromNextPage() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected products from next page, got empty list")
@@ -459,9 +459,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsFromNextPage(
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainAnEmptyListOfProducts() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) != 0 {
 		return fmt.Errorf("expected empty products list, got %d products", len(paginatedResponse.Products))
@@ -471,9 +471,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainAnEmptyListOfProducts
 
 func (g *GetProductsByShopIDSteps) theResponseShouldHaveHasMoreAsFalse() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if paginatedResponse.HasMore {
 		return fmt.Errorf("expected hasMore to be false, got true")
@@ -483,9 +483,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldHaveHasMoreAsFalse() error {
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsMatchingSearchTerm() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected products matching search term, got empty list")
@@ -497,9 +497,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsMatchingSearc
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsFromCategory(categoryID int) error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected products from category %d, got empty list", categoryID)
@@ -515,9 +515,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsFromCategory(
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsWithinPriceRange() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected products within price range, got empty list")
@@ -533,9 +533,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainProductsWithinPriceRa
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainOnlyActiveProducts() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected active products, got empty list")
@@ -551,9 +551,9 @@ func (g *GetProductsByShopIDSteps) theResponseShouldContainOnlyActiveProducts() 
 
 func (g *GetProductsByShopIDSteps) theResponseProductsShouldBeSortedByPriceAscending() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) < 2 {
 		return nil // Can't verify sorting with less than 2 products
@@ -569,9 +569,9 @@ func (g *GetProductsByShopIDSteps) theResponseProductsShouldBeSortedByPriceAscen
 
 func (g *GetProductsByShopIDSteps) theResponseShouldContainFilteredProducts() error {
 	ctx := GetTestContext()
-	paginatedResponse, ok := ctx.responseBody.(contracts.PaginatedProductsResponse)
+	paginatedResponse, ok := ctx.responseBody.(responses.ListProductsResponse)
 	if !ok {
-		return fmt.Errorf("expected PaginatedProductsResponse, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected ListProductsResponse, got: %T", ctx.responseBody)
 	}
 	if len(paginatedResponse.Products) == 0 {
 		return fmt.Errorf("expected filtered products, got empty list")

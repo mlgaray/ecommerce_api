@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
 
-	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -227,9 +227,9 @@ func (g *GetCategoryByIDSteps) parseResponse(ctx *TestContext, resp *http.Respon
 			ctx.errorMessage = errorResponse["error"]
 		}
 	} else {
-		var category models.Category
-		if err := json.NewDecoder(resp.Body).Decode(&category); err == nil {
-			ctx.responseBody = category
+		var response responses.GetCategoryResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			ctx.responseBody = response.Category
 		}
 	}
 }
@@ -238,11 +238,11 @@ func (g *GetCategoryByIDSteps) parseResponse(ctx *TestContext, resp *http.Respon
 
 func (g *GetCategoryByIDSteps) theResponseShouldContainTheCategoryDetails() error {
 	ctx := GetTestContext()
-	category, ok := ctx.responseBody.(models.Category)
+	category, ok := ctx.responseBody.(*responses.CategoryResponse)
 	if !ok {
-		return fmt.Errorf("expected Category, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected CategoryResponse, got: %T", ctx.responseBody)
 	}
-	if category.ID == 0 {
+	if category == nil || category.ID == 0 {
 		return fmt.Errorf("expected category with ID, got ID 0")
 	}
 	if category.Name == "" {
@@ -253,9 +253,9 @@ func (g *GetCategoryByIDSteps) theResponseShouldContainTheCategoryDetails() erro
 
 func (g *GetCategoryByIDSteps) theResponseShouldContainTheCategoryImage() error {
 	ctx := GetTestContext()
-	category, ok := ctx.responseBody.(models.Category)
+	category, ok := ctx.responseBody.(*responses.CategoryResponse)
 	if !ok {
-		return fmt.Errorf("expected Category, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected CategoryResponse, got: %T", ctx.responseBody)
 	}
 	if category.Image == nil {
 		return fmt.Errorf("expected category with image, got nil image")
@@ -268,9 +268,9 @@ func (g *GetCategoryByIDSteps) theResponseShouldContainTheCategoryImage() error 
 
 func (g *GetCategoryByIDSteps) theResponseShouldNotContainACategoryImage() error {
 	ctx := GetTestContext()
-	category, ok := ctx.responseBody.(models.Category)
+	category, ok := ctx.responseBody.(*responses.CategoryResponse)
 	if !ok {
-		return fmt.Errorf("expected Category, got: %T", ctx.responseBody)
+		return fmt.Errorf("expected CategoryResponse, got: %T", ctx.responseBody)
 	}
 	if category.Image != nil {
 		return fmt.Errorf("expected category without image, got image with URL: %s", category.Image.URL)

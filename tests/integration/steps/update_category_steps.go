@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 )
 
 const (
@@ -468,15 +469,35 @@ func (u *UpdateCategorySteps) parseResponse(ctx *TestContext, resp *http.Respons
 	}
 	defer resp.Body.Close()
 
-	var response map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
-		if msg, ok := response["message"]; ok {
-			ctx.successMessage = msg
+	if resp.StatusCode >= 400 {
+		var response map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+			if errMsg, ok := response["error"]; ok {
+				ctx.errorMessage = errMsg
+			}
 		}
-		if errMsg, ok := response["error"]; ok {
-			ctx.errorMessage = errMsg
-		}
+		return
 	}
+
+	var response responses.UpdateCategoryResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err == nil {
+		ctx.responseBody = response.Category
+	}
+}
+
+func (u *UpdateCategorySteps) theUserShouldReceiveTheUpdatedCategory() error {
+	ctx := GetTestContext()
+	category, ok := ctx.responseBody.(*responses.CategoryResponse)
+	if !ok {
+		return fmt.Errorf("expected CategoryResponse, got: %T", ctx.responseBody)
+	}
+	if category == nil || category.ID == 0 {
+		return fmt.Errorf("expected category with ID, got: %v", category)
+	}
+	if category.Name == "" {
+		return fmt.Errorf("expected category with name, got empty name")
+	}
+	return nil
 }
 
 // ===== Register Steps =====
@@ -502,4 +523,5 @@ func (u *UpdateCategorySteps) RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^I send an update category request$`, u.iSendAnUpdateCategoryRequest)
 	sc.Step(`^I send an update category request with invalid id$`, u.iSendAnUpdateCategoryRequestWithInvalidID)
 	sc.Step(`^I send an unauthenticated update category request for category (\d+)$`, u.iSendAnUnauthenticatedUpdateCategoryRequestForCategory)
+	sc.Step(`^the user should receive the updated category$`, u.theUserShouldReceiveTheUpdatedCategory)
 }
