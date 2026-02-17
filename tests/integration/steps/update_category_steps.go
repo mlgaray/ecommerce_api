@@ -438,7 +438,7 @@ func (u *UpdateCategorySteps) setupUpdateCategorySQLExpectations() {
 
 	categoryID := 1
 	if id, ok := ctx.pathParams["category_id"]; ok {
-		fmt.Sscanf(id, "%d", &categoryID)
+		_, _ = fmt.Sscanf(id, "%d", &categoryID)
 	}
 
 	switch ctx.scenario {

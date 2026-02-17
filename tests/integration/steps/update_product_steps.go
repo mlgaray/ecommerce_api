@@ -40,7 +40,7 @@ func (u *UpdateProductSteps) setupSQLExpectations() {
 		// Mock getByID query that handler calls after update to return updated product
 		productID := 1
 		if id, ok := ctx.pathParams["product_id"]; ok {
-			fmt.Sscanf(id, "%d", &productID)
+			_, _ = fmt.Sscanf(id, "%d", &productID)
 		}
 
 		getByIDColumns := []string{
