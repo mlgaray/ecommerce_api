@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
@@ -35,6 +36,26 @@ func (u *UpdateProductSteps) setupSQLExpectations() {
 			AddRow("{}") // Empty array - no images deleted
 		ctx.mockSQLMock.ExpectQuery("SELECT update_product").
 			WillReturnRows(rows)
+
+		// Mock getByID query that handler calls after update to return updated product
+		productID := 1
+		if id, ok := ctx.pathParams["product_id"]; ok {
+			fmt.Sscanf(id, "%d", &productID)
+		}
+
+		getByIDColumns := []string{
+			"id", "name", "description", "price", "is_stockeable", "stock", "minimum_stock",
+			"is_active", "is_highlighted", "is_promotional", "promotional_price",
+			"created_at", "category_id", "category_name", "category_description",
+			"images", "variants",
+		}
+		imagesJSON := `[{"id": 1, "url": "https://existing.com/image1.jpg"}]`
+		getByIDRows := sqlmock.NewRows(getByIDColumns).
+			AddRow(productID, "Updated Product", "Updated Description", 149.99, false, 20, 5,
+				true, false, false, 0.0, time.Now(), 1, "Category 1", "", imagesJSON, "[]")
+		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM products").
+			WithArgs(productID).
+			WillReturnRows(getByIDRows)
 	}
 }
 

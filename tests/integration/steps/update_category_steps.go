@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
@@ -435,6 +436,11 @@ func (u *UpdateCategorySteps) executeRequest(ctx *TestContext, categoryID string
 func (u *UpdateCategorySteps) setupUpdateCategorySQLExpectations() {
 	ctx := GetTestContext()
 
+	categoryID := 1
+	if id, ok := ctx.pathParams["category_id"]; ok {
+		fmt.Sscanf(id, "%d", &categoryID)
+	}
+
 	switch ctx.scenario {
 	case scenarioUpdateCategoryValid:
 		// Mock successful category update via stored procedure
@@ -442,6 +448,14 @@ func (u *UpdateCategorySteps) setupUpdateCategorySQLExpectations() {
 			AddRow("") // Empty string - no old image deleted
 		ctx.mockSQLMock.ExpectQuery("SELECT update_category").
 			WillReturnRows(rows)
+
+		// Mock getByID query that handler calls after update to return updated category
+		imageJSON := `{"id": 5, "url": "https://cloudinary.com/updated_image.jpg", "storage_ref": "shop_1/categories/abc123"}`
+		getByIDRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "image"}).
+			AddRow(categoryID, "Updated Category", "Updated Description", time.Now(), imageJSON)
+		ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM categories").
+			WithArgs(categoryID).
+			WillReturnRows(getByIDRows)
 
 	case scenarioUpdateCategoryNotFound:
 		// Mock category not found error
