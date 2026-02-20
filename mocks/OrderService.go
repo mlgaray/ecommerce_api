@@ -38,6 +38,57 @@ func (_m *OrderService) EXPECT() *OrderService_Expecter {
 	return &OrderService_Expecter{mock: &_m.Mock}
 }
 
+// CalculateAndValidateTotals provides a mock function for the type OrderService
+func (_mock *OrderService) CalculateAndValidateTotals(order *models.Order) error {
+	ret := _mock.Called(order)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CalculateAndValidateTotals")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*models.Order) error); ok {
+		r0 = returnFunc(order)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrderService_CalculateAndValidateTotals_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CalculateAndValidateTotals'
+type OrderService_CalculateAndValidateTotals_Call struct {
+	*mock.Call
+}
+
+// CalculateAndValidateTotals is a helper method to define mock.On call
+//   - order *models.Order
+func (_e *OrderService_Expecter) CalculateAndValidateTotals(order interface{}) *OrderService_CalculateAndValidateTotals_Call {
+	return &OrderService_CalculateAndValidateTotals_Call{Call: _e.mock.On("CalculateAndValidateTotals", order)}
+}
+
+func (_c *OrderService_CalculateAndValidateTotals_Call) Run(run func(order *models.Order)) *OrderService_CalculateAndValidateTotals_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *models.Order
+		if args[0] != nil {
+			arg0 = args[0].(*models.Order)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderService_CalculateAndValidateTotals_Call) Return(err error) *OrderService_CalculateAndValidateTotals_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrderService_CalculateAndValidateTotals_Call) RunAndReturn(run func(order *models.Order) error) *OrderService_CalculateAndValidateTotals_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountByShopIDWithFilters provides a mock function for the type OrderService
 func (_mock *OrderService) CountByShopIDWithFilters(ctx context.Context, shopID int, filters models.OrderFilters) (int, error) {
 	ret := _mock.Called(ctx, shopID, filters)
@@ -254,6 +305,212 @@ func (_c *OrderService_GetAllByShopIDWithFilters_Call) Return(orders []*models.O
 }
 
 func (_c *OrderService_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(ctx context.Context, shopID int, filters models.OrderFilters) ([]*models.Order, error)) *OrderService_GetAllByShopIDWithFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByID provides a mock function for the type OrderService
+func (_mock *OrderService) GetByID(ctx context.Context, shopID int, orderID int) (*models.Order, error) {
+	ret := _mock.Called(ctx, shopID, orderID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByID")
+	}
+
+	var r0 *models.Order
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*models.Order, error)); ok {
+		return returnFunc(ctx, shopID, orderID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *models.Order); ok {
+		r0 = returnFunc(ctx, shopID, orderID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Order)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = returnFunc(ctx, shopID, orderID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// OrderService_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type OrderService_GetByID_Call struct {
+	*mock.Call
+}
+
+// GetByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - orderID int
+func (_e *OrderService_Expecter) GetByID(ctx interface{}, shopID interface{}, orderID interface{}) *OrderService_GetByID_Call {
+	return &OrderService_GetByID_Call{Call: _e.mock.On("GetByID", ctx, shopID, orderID)}
+}
+
+func (_c *OrderService_GetByID_Call) Run(run func(ctx context.Context, shopID int, orderID int)) *OrderService_GetByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderService_GetByID_Call) Return(order *models.Order, err error) *OrderService_GetByID_Call {
+	_c.Call.Return(order, err)
+	return _c
+}
+
+func (_c *OrderService_GetByID_Call) RunAndReturn(run func(ctx context.Context, shopID int, orderID int) (*models.Order, error)) *OrderService_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type OrderService
+func (_mock *OrderService) Update(ctx context.Context, shopID int, order *models.Order) error {
+	ret := _mock.Called(ctx, shopID, order)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Order) error); ok {
+		r0 = returnFunc(ctx, shopID, order)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrderService_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type OrderService_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - order *models.Order
+func (_e *OrderService_Expecter) Update(ctx interface{}, shopID interface{}, order interface{}) *OrderService_Update_Call {
+	return &OrderService_Update_Call{Call: _e.mock.On("Update", ctx, shopID, order)}
+}
+
+func (_c *OrderService_Update_Call) Run(run func(ctx context.Context, shopID int, order *models.Order)) *OrderService_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Order
+		if args[2] != nil {
+			arg2 = args[2].(*models.Order)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderService_Update_Call) Return(err error) *OrderService_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrderService_Update_Call) RunAndReturn(run func(ctx context.Context, shopID int, order *models.Order) error) *OrderService_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateStatus provides a mock function for the type OrderService
+func (_mock *OrderService) UpdateStatus(ctx context.Context, shopID int, order *models.Order, newStatus models.OrderStatus) error {
+	ret := _mock.Called(ctx, shopID, order, newStatus)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateStatus")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Order, models.OrderStatus) error); ok {
+		r0 = returnFunc(ctx, shopID, order, newStatus)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrderService_UpdateStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateStatus'
+type OrderService_UpdateStatus_Call struct {
+	*mock.Call
+}
+
+// UpdateStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - order *models.Order
+//   - newStatus models.OrderStatus
+func (_e *OrderService_Expecter) UpdateStatus(ctx interface{}, shopID interface{}, order interface{}, newStatus interface{}) *OrderService_UpdateStatus_Call {
+	return &OrderService_UpdateStatus_Call{Call: _e.mock.On("UpdateStatus", ctx, shopID, order, newStatus)}
+}
+
+func (_c *OrderService_UpdateStatus_Call) Run(run func(ctx context.Context, shopID int, order *models.Order, newStatus models.OrderStatus)) *OrderService_UpdateStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Order
+		if args[2] != nil {
+			arg2 = args[2].(*models.Order)
+		}
+		var arg3 models.OrderStatus
+		if args[3] != nil {
+			arg3 = args[3].(models.OrderStatus)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderService_UpdateStatus_Call) Return(err error) *OrderService_UpdateStatus_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrderService_UpdateStatus_Call) RunAndReturn(run func(ctx context.Context, shopID int, order *models.Order, newStatus models.OrderStatus) error) *OrderService_UpdateStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }

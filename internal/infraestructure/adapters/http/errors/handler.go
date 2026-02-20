@@ -18,13 +18,14 @@ var errorStatusMap = map[reflect.Type]int{
 	reflect.TypeOf(&ForbiddenError{}):    http.StatusForbidden,    // 403
 
 	// Domain errors
-	reflect.TypeOf(&domainErrors.ValidationError{}):           http.StatusBadRequest,          // 400
-	reflect.TypeOf(&domainErrors.AuthenticationError{}):       http.StatusUnauthorized,        // 401
-	reflect.TypeOf(&domainErrors.AuthorizationError{}):        http.StatusForbidden,           // 403
-	reflect.TypeOf(&domainErrors.RecordNotFoundError{}):       http.StatusNotFound,            // 404
-	reflect.TypeOf(&domainErrors.DuplicateRecordError{}):      http.StatusConflict,            // 409
-	reflect.TypeOf(&domainErrors.ReferentialIntegrityError{}): http.StatusConflict,            // 409
-	reflect.TypeOf(&domainErrors.BusinessRuleError{}):         http.StatusUnprocessableEntity, // 422
+	reflect.TypeOf(&domainErrors.ValidationError{}):             http.StatusBadRequest,          // 400
+	reflect.TypeOf(&domainErrors.AuthenticationError{}):         http.StatusUnauthorized,        // 401
+	reflect.TypeOf(&domainErrors.AuthorizationError{}):          http.StatusForbidden,           // 403
+	reflect.TypeOf(&domainErrors.RecordNotFoundError{}):         http.StatusNotFound,            // 404
+	reflect.TypeOf(&domainErrors.DuplicateRecordError{}):        http.StatusConflict,            // 409
+	reflect.TypeOf(&domainErrors.ReferentialIntegrityError{}):   http.StatusConflict,            // 409
+	reflect.TypeOf(&domainErrors.ConcurrentModificationError{}): http.StatusConflict,            // 409
+	reflect.TypeOf(&domainErrors.BusinessRuleError{}):           http.StatusUnprocessableEntity, // 422
 }
 
 // HandleError handles different error types and returns appropriate HTTP responses.

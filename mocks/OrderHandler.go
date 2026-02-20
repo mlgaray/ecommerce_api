@@ -128,3 +128,141 @@ func (_c *OrderHandler_GetAll_Call) RunAndReturn(run func(responseWriter http.Re
 	_c.Run(run)
 	return _c
 }
+
+// GetByID provides a mock function for the type OrderHandler
+func (_mock *OrderHandler) GetByID(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// OrderHandler_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type OrderHandler_GetByID_Call struct {
+	*mock.Call
+}
+
+// GetByID is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *OrderHandler_Expecter) GetByID(responseWriter interface{}, request interface{}) *OrderHandler_GetByID_Call {
+	return &OrderHandler_GetByID_Call{Call: _e.mock.On("GetByID", responseWriter, request)}
+}
+
+func (_c *OrderHandler_GetByID_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_GetByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderHandler_GetByID_Call) Return() *OrderHandler_GetByID_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *OrderHandler_GetByID_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_GetByID_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Update provides a mock function for the type OrderHandler
+func (_mock *OrderHandler) Update(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// OrderHandler_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type OrderHandler_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *OrderHandler_Expecter) Update(responseWriter interface{}, request interface{}) *OrderHandler_Update_Call {
+	return &OrderHandler_Update_Call{Call: _e.mock.On("Update", responseWriter, request)}
+}
+
+func (_c *OrderHandler_Update_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderHandler_Update_Call) Return() *OrderHandler_Update_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *OrderHandler_Update_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_Update_Call {
+	_c.Run(run)
+	return _c
+}
+
+// UpdateStatus provides a mock function for the type OrderHandler
+func (_mock *OrderHandler) UpdateStatus(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// OrderHandler_UpdateStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateStatus'
+type OrderHandler_UpdateStatus_Call struct {
+	*mock.Call
+}
+
+// UpdateStatus is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *OrderHandler_Expecter) UpdateStatus(responseWriter interface{}, request interface{}) *OrderHandler_UpdateStatus_Call {
+	return &OrderHandler_UpdateStatus_Call{Call: _e.mock.On("UpdateStatus", responseWriter, request)}
+}
+
+func (_c *OrderHandler_UpdateStatus_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_UpdateStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderHandler_UpdateStatus_Call) Return() *OrderHandler_UpdateStatus_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *OrderHandler_UpdateStatus_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *OrderHandler_UpdateStatus_Call {
+	_c.Run(run)
+	return _c
+}

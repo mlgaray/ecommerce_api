@@ -266,6 +266,43 @@ func TestReferentialIntegrityError_Error(t *testing.T) {
 }
 
 // =============================================================================
+// ConcurrentModificationError Tests
+// =============================================================================
+
+func TestConcurrentModificationError_Error(t *testing.T) {
+	t.Run("when message is set then returns message", func(t *testing.T) {
+		// Arrange
+		err := &ConcurrentModificationError{Message: "concurrent_modification"}
+
+		// Act
+		result := err.Error()
+
+		// Assert
+		assert.Equal(t, "concurrent_modification", result)
+	})
+
+	t.Run("when message is empty then returns empty string", func(t *testing.T) {
+		// Arrange
+		err := &ConcurrentModificationError{Message: ""}
+
+		// Act
+		result := err.Error()
+
+		// Assert
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("implements error interface", func(t *testing.T) {
+		// Arrange
+		var err error = &ConcurrentModificationError{Message: "conflict"}
+
+		// Assert
+		assert.NotNil(t, err)
+		assert.Equal(t, "conflict", err.Error())
+	})
+}
+
+// =============================================================================
 // Type Assertion Tests
 // =============================================================================
 
@@ -388,6 +425,23 @@ func TestErrorTypeAssertions(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, "test", refErr.Message)
 	})
+
+	t.Run("ConcurrentModificationError can be type asserted", func(t *testing.T) {
+		// Arrange
+		var err error = &ConcurrentModificationError{Message: "test"}
+
+		// Act
+		var concErr *ConcurrentModificationError
+		ok := false
+		if e, isType := err.(*ConcurrentModificationError); isType {
+			concErr = e
+			ok = true
+		}
+
+		// Assert
+		assert.True(t, ok)
+		assert.Equal(t, "test", concErr.Message)
+	})
 }
 
 // =============================================================================
@@ -441,5 +495,13 @@ func TestErrorWithConstants(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, "category_has_products", err.Error())
+	})
+
+	t.Run("ConcurrentModificationError with OrderConcurrentModification constant", func(t *testing.T) {
+		// Arrange
+		err := &ConcurrentModificationError{Message: OrderConcurrentModification}
+
+		// Assert
+		assert.Equal(t, "concurrent_modification", err.Error())
 	})
 }

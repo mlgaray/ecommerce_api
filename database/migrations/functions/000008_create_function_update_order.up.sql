@@ -1,76 +1,81 @@
 -- ============================================================================
--- FUNCTION: create_order
--- Creates an order with all its items and selected options in a single call.
--- Generates order_number using generate_order_number() function.
+-- FUNCTION: update_order
+-- Updates an order with all its items and selected options in a single call.
+-- Validates order exists AND belongs to the store.
+-- Recalculates subtotal and total from items.
+-- Deletes all existing items (CASCADE handles selections) and inserts new ones.
 -- Uses set-based INSERT...SELECT instead of FOR loops for better performance.
--- Returns JSONB with the created order including all relations.
+-- Returns JSONB with updated_at, subtotal, total.
 -- ============================================================================
-CREATE OR REPLACE FUNCTION create_order(
+CREATE OR REPLACE FUNCTION update_order(
+    p_order_id bigint,
     p_store_id bigint,
-    p_store_name text,
-    p_store_slug text,
     p_customer_name text,
     p_customer_phone text,
     p_customer_email text,
-    p_customer_address_name text,
-    p_customer_address_place_id text,
-    p_customer_address_lat double precision,
-    p_customer_address_lng double precision,
+    p_address_name text,
+    p_address_place_id text,
+    p_address_lat double precision,
+    p_address_lng double precision,
     p_payment_method_id bigint,
     p_payment_method_code text,
     p_payment_method_name text,
     p_delivery_method_id bigint,
     p_delivery_method_code text,
     p_delivery_method_name text,
+    p_delivery_zone_id bigint,
+    p_delivery_zone_name text,
+    p_delivery_zone_price double precision,
     p_shipping_cost double precision,
     p_items jsonb  -- [{product_id, product_name, product_image_url, base_price, is_promotional, promotional_price, quantity, unit_price, total_price, notes, selected_options: [{variant_id, option_id, variant_name, option_name, option_price, quantity}]}]
 ) RETURNS jsonb AS $$
 DECLARE
-    v_order_id bigint;
-    v_order_number text;
     v_subtotal double precision := 0;
     v_total double precision := 0;
-    v_created_at timestamp with time zone;
+    v_updated_at timestamp with time zone;
     v_result jsonb;
 BEGIN
-    -- 1. Validate store exists
-    PERFORM 1 FROM shops WHERE id = p_store_id;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Store not found: %', p_store_id
-        USING ERRCODE = 'P0002';  -- No data found
-    END IF;
-
-    -- 2. Generate order number
-    v_order_number := generate_order_number(p_store_id);
-
-    -- 3. Calculate subtotal from items using jsonb_to_recordset (typed, no casts)
+    -- 1. Calculate subtotal from items using jsonb_to_recordset (typed, no casts)
     SELECT COALESCE(SUM(i.total_price), 0) INTO v_subtotal
     FROM jsonb_to_recordset(p_items) AS i(total_price double precision);
 
     v_total := v_subtotal + COALESCE(p_shipping_cost, 0);
 
-    -- 4. Insert order
-    INSERT INTO orders (
-        order_number,
-        store_id, store_name, store_slug,
-        status,
-        customer_name, customer_phone, customer_email,
-        customer_address_name, customer_address_place_id, customer_address_lat, customer_address_lng,
-        payment_method_id, payment_method_code, payment_method_name,
-        delivery_method_id, delivery_method_code, delivery_method_name,
-        subtotal, shipping_cost, total
-    ) VALUES (
-        v_order_number,
-        p_store_id, p_store_name, p_store_slug,
-        'pending',
-        p_customer_name, p_customer_phone, p_customer_email,
-        p_customer_address_name, p_customer_address_place_id, p_customer_address_lat, p_customer_address_lng,
-        p_payment_method_id, p_payment_method_code, p_payment_method_name,
-        p_delivery_method_id, p_delivery_method_code, p_delivery_method_name,
-        v_subtotal, COALESCE(p_shipping_cost, 0), v_total
-    ) RETURNING id, created_at INTO v_order_id, v_created_at;
+    -- 2. Update order fields (customer, payment, delivery, delivery_zone, totals)
+    UPDATE orders SET
+        customer_name = p_customer_name,
+        customer_phone = p_customer_phone,
+        customer_email = p_customer_email,
+        customer_address_name = p_address_name,
+        customer_address_place_id = p_address_place_id,
+        customer_address_lat = p_address_lat,
+        customer_address_lng = p_address_lng,
+        payment_method_id = p_payment_method_id,
+        payment_method_code = p_payment_method_code,
+        payment_method_name = p_payment_method_name,
+        delivery_method_id = p_delivery_method_id,
+        delivery_method_code = p_delivery_method_code,
+        delivery_method_name = p_delivery_method_name,
+        delivery_zone_id = p_delivery_zone_id,
+        delivery_zone_name = p_delivery_zone_name,
+        delivery_zone_price = p_delivery_zone_price,
+        subtotal = v_subtotal,
+        shipping_cost = COALESCE(p_shipping_cost, 0),
+        total = v_total,
+        updated_at = now()
+    WHERE id = p_order_id AND store_id = p_store_id
+    RETURNING updated_at INTO v_updated_at;
 
-    -- 5. Insert items and their selected options using set-based CTE chain
+    -- 3. Verify the order exists and belongs to the store
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Order not found: order_id=%, store_id=%', p_order_id, p_store_id
+        USING ERRCODE = 'P0002';  -- No data found
+    END IF;
+
+    -- 4. Delete all existing order_items (CASCADE handles order_item_selections)
+    DELETE FROM order_items WHERE order_id = p_order_id;
+
+    -- 5. Insert new items and their selected options using set-based CTE chain
     IF COALESCE(jsonb_array_length(p_items), 0) > 0 THEN
         WITH expanded_items AS (
             -- Use jsonb_array_elements WITH ORDINALITY for guaranteed array position
@@ -105,7 +110,7 @@ BEGIN
                 notes
             )
             SELECT
-                v_order_id,
+                p_order_id,
                 NULLIF(ei.product_id, '')::bigint,
                 ei.product_name,
                 ei.product_image_url,
@@ -158,15 +163,11 @@ BEGIN
           AND jsonb_array_length(ei.selected_options) > 0;
     END IF;
 
-    -- 6. Build result JSON with order data
+    -- 6. Build result JSON
     v_result := jsonb_build_object(
-        'id', v_order_id,
-        'order_number', v_order_number,
-        'status', 'pending',
+        'updated_at', v_updated_at,
         'subtotal', v_subtotal,
-        'shipping_cost', COALESCE(p_shipping_cost, 0),
-        'total', v_total,
-        'created_at', v_created_at
+        'total', v_total
     );
 
     RETURN v_result;
@@ -181,15 +182,24 @@ $$ LANGUAGE plpgsql
 SET search_path = public;
 
 -- Function documentation
-COMMENT ON FUNCTION create_order IS
-'Creates an order with items and selected options in a single call.
+COMMENT ON FUNCTION update_order IS
+'Updates an order with items and selected options in a single call.
+Parameters:
+- p_order_id: ID of the order to update
+- p_store_id: Store ID for ownership validation (order must belong to this store)
+- Customer fields: name, phone, email, address (name, place_id, lat, lng)
+- Payment method fields: id, code, name
+- Delivery method fields: id, code, name
+- Delivery zone fields: id, name, price
+- p_shipping_cost: Shipping cost
+- p_items: JSONB array of items with selected_options
 Validations:
-- Store existence (P0002 if not found)
-- Uses generate_order_number() for sequential order numbers
+- Order existence and store ownership (P0002 if not found)
 Performance:
-- 1 INSERT (order)
+- 1 UPDATE (order)
+- 1 DELETE (existing items, CASCADE handles selections)
 - 1 batch INSERT (all items via INSERT...SELECT with jsonb_to_recordset)
 - 1 batch INSERT (all selections via INSERT...SELECT with JOIN + LATERAL)
 - Uses jsonb_array_elements WITH ORDINALITY for guaranteed array position
 - Uses row_number() OVER (ORDER BY id) to recover insertion order from RETURNING
-Reduces multiple Go round trips to 1 stored procedure call.';
+Returns JSONB with updated_at, subtotal, total.';

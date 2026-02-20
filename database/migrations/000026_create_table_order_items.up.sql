@@ -21,6 +21,9 @@ CREATE TABLE public.order_items (
     unit_price double precision NOT NULL,
     total_price double precision NOT NULL,
 
+    -- Observaciones del cliente para este item (ej: "sin mayonesa")
+    notes text NULL,
+
     -- Timestamp de cuando se agregó el item
     added_at timestamp with time zone NOT NULL DEFAULT now(),
 
@@ -59,6 +62,7 @@ CREATE INDEX idx_order_items_promotional ON public.order_items (added_at DESC)
 COMMENT ON TABLE order_items IS 'Items de la orden. Snapshot completo del producto para preservar datos históricos independiente de cambios en el catálogo.';
 COMMENT ON COLUMN order_items.unit_price IS 'Precio efectivo por unidad: precio base o promocional + suma de opciones seleccionadas.';
 COMMENT ON COLUMN order_items.product_id IS 'FK al producto. SET NULL si el producto es eliminado. El snapshot preserva los datos.';
+COMMENT ON COLUMN order_items.notes IS 'Observaciones del cliente para este item (ej: "sin mayonesa"). Texto libre opcional.';
 
 -- Enable Row Level Security
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;

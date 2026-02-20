@@ -80,6 +80,7 @@ type OrderItemRequest struct {
 	Product         OrderProductRequest          `json:"product"`
 	Quantity        int                          `json:"quantity"`
 	UnitPrice       float64                      `json:"unit_price"`
+	Notes           string                       `json:"notes,omitempty"`
 	SelectedOptions []OrderSelectedOptionRequest `json:"selected_options,omitempty"`
 }
 
@@ -102,6 +103,7 @@ type OrderSelectedOptionRequest struct {
 	OptionID    int     `json:"option_id"`
 	OptionName  string  `json:"option_name"`
 	OptionPrice float64 `json:"option_price"`
+	Quantity    int     `json:"quantity"`
 }
 
 // Validate validates HTTP input for creating an order.
@@ -297,6 +299,7 @@ func (r *OrderRequest) ToModel() *models.Order {
 			Product:   product,
 			Quantity:  item.Quantity,
 			UnitPrice: item.UnitPrice,
+			Notes:     item.Notes,
 		}
 
 		// Group selected options by variant with snapshot data
@@ -311,10 +314,15 @@ func (r *OrderRequest) ToModel() *models.Order {
 				}
 				variantMap[opt.VariantID] = variant
 			}
+			quantity := opt.Quantity
+			if quantity <= 0 {
+				quantity = 1
+			}
 			variant.Options = append(variant.Options, &models.Option{
-				ID:    opt.OptionID,
-				Name:  opt.OptionName,
-				Price: opt.OptionPrice,
+				ID:       opt.OptionID,
+				Name:     opt.OptionName,
+				Price:    opt.OptionPrice,
+				Quantity: quantity,
 			})
 		}
 
@@ -327,6 +335,269 @@ func (r *OrderRequest) ToModel() *models.Order {
 	}
 
 	return order
+}
+
+// =============================================================================
+// Update Status
+// =============================================================================
+
+// UpdateOrderStatusRequest represents the HTTP request for updating order status.
+type UpdateOrderStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// Validate validates HTTP input for updating order status.
+func (r *UpdateOrderStatusRequest) Validate() error {
+	trimmed := strings.TrimSpace(r.Status)
+	if trimmed == "" {
+		return &httpErrors.BadRequestError{Message: "status_is_required"}
+	}
+	if !models.IsValidOrderStatus(trimmed) {
+		return &httpErrors.BadRequestError{Message: "invalid_order_status"}
+	}
+	return nil
+}
+
+// ToStatus converts the request status string to a domain OrderStatus.
+func (r *UpdateOrderStatusRequest) ToStatus() models.OrderStatus {
+	return models.OrderStatus(strings.TrimSpace(r.Status))
+}
+
+// =============================================================================
+// Update Order
+// =============================================================================
+
+// UpdateOrderRequest represents the HTTP request for updating an order.
+// PaymentMethod and DeliveryMethod are pointers (nullable — can be removed).
+// Customer and Items follow the same rules as CreateOrderRequest.
+type UpdateOrderRequest struct {
+	Order UpdateOrderDataRequest `json:"order"`
+}
+
+// UpdateOrderDataRequest represents the order data in the update request.
+// PaymentMethod and DeliveryMethod are pointers to allow null (removal).
+type UpdateOrderDataRequest struct {
+	Customer       OrderCustomerRequest        `json:"customer"`
+	PaymentMethod  *OrderPaymentMethodRequest  `json:"payment_method"`
+	DeliveryMethod *OrderDeliveryMethodRequest `json:"delivery_method"`
+	Items          []OrderItemRequest          `json:"items"`
+	Subtotal       float64                     `json:"subtotal"`
+	Total          float64                     `json:"total"`
+}
+
+// Validate validates HTTP input for updating an order.
+func (r *UpdateOrderRequest) Validate() error {
+	return r.Order.Validate()
+}
+
+// Validate validates the update order data.
+//
+//nolint:gocyclo // Complexity is intentional for readability - linear field validations per item and selected option
+func (r *UpdateOrderDataRequest) Validate() error {
+	// Validate customer (required)
+	if strings.TrimSpace(r.Customer.Name) == "" {
+		return &httpErrors.BadRequestError{Message: "customer_name_is_required"}
+	}
+
+	// Validate payment method (optional — pointer)
+	if r.PaymentMethod != nil {
+		if r.PaymentMethod.ID <= 0 {
+			return &httpErrors.BadRequestError{Message: "payment_method_id_is_required"}
+		}
+		if strings.TrimSpace(r.PaymentMethod.Name) == "" {
+			return &httpErrors.BadRequestError{Message: "payment_method_name_is_required"}
+		}
+		if strings.TrimSpace(r.PaymentMethod.Code) == "" {
+			return &httpErrors.BadRequestError{Message: "payment_method_code_is_required"}
+		}
+	}
+
+	// Validate delivery method (optional — pointer)
+	if r.DeliveryMethod != nil {
+		if r.DeliveryMethod.ID <= 0 {
+			return &httpErrors.BadRequestError{Message: "delivery_method_id_is_required"}
+		}
+		if strings.TrimSpace(r.DeliveryMethod.Name) == "" {
+			return &httpErrors.BadRequestError{Message: "delivery_method_name_is_required"}
+		}
+		if strings.TrimSpace(r.DeliveryMethod.Code) == "" {
+			return &httpErrors.BadRequestError{Message: "delivery_method_code_is_required"}
+		}
+		if r.DeliveryMethod.ShippingCost < 0 {
+			return &httpErrors.BadRequestError{Message: "shipping_cost_cannot_be_negative"}
+		}
+		if r.DeliveryMethod.DeliveryZone != nil {
+			if r.DeliveryMethod.DeliveryZone.ID <= 0 {
+				return &httpErrors.BadRequestError{Message: "delivery_zone_id_is_required"}
+			}
+			if strings.TrimSpace(r.DeliveryMethod.DeliveryZone.Name) == "" {
+				return &httpErrors.BadRequestError{Message: "delivery_zone_name_is_required"}
+			}
+		}
+	}
+
+	// Validate items (at least one required)
+	if len(r.Items) == 0 {
+		return &httpErrors.BadRequestError{Message: "order_must_have_at_least_one_item"}
+	}
+
+	for _, item := range r.Items {
+		if item.Product.ID <= 0 {
+			return &httpErrors.BadRequestError{Message: "product_id_is_required"}
+		}
+		if strings.TrimSpace(item.Product.Name) == "" {
+			return &httpErrors.BadRequestError{Message: "product_name_is_required"}
+		}
+		if item.Product.Price < 0 {
+			return &httpErrors.BadRequestError{Message: "product_price_cannot_be_negative"}
+		}
+		if item.Quantity <= 0 {
+			return &httpErrors.BadRequestError{Message: "quantity_must_be_positive"}
+		}
+		if item.UnitPrice < 0 {
+			return &httpErrors.BadRequestError{Message: "unit_price_cannot_be_negative"}
+		}
+
+		for _, opt := range item.SelectedOptions {
+			if opt.VariantID <= 0 {
+				return &httpErrors.BadRequestError{Message: "variant_id_is_required"}
+			}
+			if strings.TrimSpace(opt.VariantName) == "" {
+				return &httpErrors.BadRequestError{Message: "variant_name_is_required"}
+			}
+			if opt.OptionID <= 0 {
+				return &httpErrors.BadRequestError{Message: "option_id_is_required"}
+			}
+			if strings.TrimSpace(opt.OptionName) == "" {
+				return &httpErrors.BadRequestError{Message: "option_name_is_required"}
+			}
+			if opt.OptionPrice < 0 {
+				return &httpErrors.BadRequestError{Message: "option_price_cannot_be_negative"}
+			}
+		}
+	}
+
+	return nil
+}
+
+// ToModel converts the update request to a domain model.
+func (r *UpdateOrderRequest) ToModel() *models.Order {
+	return r.Order.ToModel()
+}
+
+// ToModel converts the update order data to a domain model.
+// Maps all snapshot fields for historical preservation.
+func (r *UpdateOrderDataRequest) ToModel() *models.Order {
+	order := &models.Order{
+		Customer: &models.Customer{
+			Name:  r.Customer.Name,
+			Phone: r.Customer.Phone,
+			Email: r.Customer.Email,
+		},
+		Subtotal: r.Subtotal,
+		Total:    r.Total,
+		Items:    make([]*models.OrderItem, 0, len(r.Items)),
+	}
+
+	// Set customer address if provided
+	if r.Customer.Address != nil {
+		order.Customer.Address = &models.Address{
+			Name:    r.Customer.Address.Name,
+			PlaceID: r.Customer.Address.PlaceID,
+			Lat:     r.Customer.Address.Lat,
+			Lng:     r.Customer.Address.Lng,
+		}
+	}
+
+	// Set payment method if provided (nullable)
+	if r.PaymentMethod != nil {
+		order.PaymentMethod = &models.PaymentMethod{
+			ID:   r.PaymentMethod.ID,
+			Name: r.PaymentMethod.Name,
+			Code: models.PaymentMethodCode(r.PaymentMethod.Code),
+		}
+	}
+
+	// Set delivery method if provided (nullable)
+	if r.DeliveryMethod != nil {
+		order.DeliveryMethod = &models.DeliveryMethod{
+			ID:   r.DeliveryMethod.ID,
+			Name: r.DeliveryMethod.Name,
+			Code: models.DeliveryMethodCode(r.DeliveryMethod.Code),
+		}
+		order.ShippingCost = r.DeliveryMethod.ShippingCost
+
+		// Set delivery zone if provided
+		if r.DeliveryMethod.DeliveryZone != nil {
+			order.DeliveryMethod.DeliveryZones = []*models.DeliveryZone{
+				{
+					ID:    r.DeliveryMethod.DeliveryZone.ID,
+					Name:  r.DeliveryMethod.DeliveryZone.Name,
+					Price: r.DeliveryMethod.DeliveryZone.Price,
+				},
+			}
+		}
+	}
+
+	// Convert items with snapshot data
+	for i := range r.Items {
+		order.Items = append(order.Items, r.Items[i].toOrderItem())
+	}
+
+	return order
+}
+
+// toOrderItem converts an order item request to a domain OrderItem.
+func (item *OrderItemRequest) toOrderItem() *models.OrderItem {
+	product := &models.Product{
+		ID:               item.Product.ID,
+		Name:             item.Product.Name,
+		Price:            item.Product.Price,
+		IsPromotional:    item.Product.IsPromotional,
+		PromotionalPrice: item.Product.PromotionalPrice,
+		Variants:         make([]*models.Variant, 0),
+	}
+
+	if item.Product.ImageURL != "" {
+		product.Images = []*models.Image{{URL: item.Product.ImageURL}}
+	}
+
+	orderItem := &models.OrderItem{
+		Product:   product,
+		Quantity:  item.Quantity,
+		UnitPrice: item.UnitPrice,
+		Notes:     item.Notes,
+	}
+
+	// Group selected options by variant with snapshot data
+	variantMap := make(map[int]*models.Variant)
+	for _, opt := range item.SelectedOptions {
+		variant, exists := variantMap[opt.VariantID]
+		if !exists {
+			variant = &models.Variant{
+				ID:      opt.VariantID,
+				Name:    opt.VariantName,
+				Options: make([]*models.Option, 0),
+			}
+			variantMap[opt.VariantID] = variant
+		}
+		quantity := opt.Quantity
+		if quantity <= 0 {
+			quantity = 1
+		}
+		variant.Options = append(variant.Options, &models.Option{
+			ID:       opt.OptionID,
+			Name:     opt.OptionName,
+			Price:    opt.OptionPrice,
+			Quantity: quantity,
+		})
+	}
+
+	for _, variant := range variantMap {
+		orderItem.Product.Variants = append(orderItem.Product.Variants, variant)
+	}
+
+	return orderItem
 }
 
 // =============================================================================

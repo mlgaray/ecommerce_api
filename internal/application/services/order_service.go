@@ -38,7 +38,7 @@ func (s *OrderService) Create(ctx context.Context, order *models.Order, store *m
 	order.Status = models.OrderStatusPending
 
 	// 3. Calculate totals and validate against frontend values
-	if err := s.calculateAndValidateTotals(order); err != nil {
+	if err := s.CalculateAndValidateTotals(order); err != nil {
 		return nil, err
 	}
 
@@ -63,10 +63,35 @@ func (s *OrderService) CountByShopIDWithFilters(ctx context.Context, shopID int,
 	return s.orderRepository.CountByShopIDWithFilters(ctx, shopID, filters)
 }
 
-// calculateAndValidateTotals calculates item total prices, subtotal, and total.
+// GetByID retrieves a single order with full details.
+// Delegates to repository - service adds no extra business logic for reads.
+func (s *OrderService) GetByID(ctx context.Context, shopID int, orderID int) (*models.Order, error) {
+	return s.orderRepository.GetByID(ctx, shopID, orderID)
+}
+
+// UpdateStatus validates the status transition and persists the change.
+// Captures current status before mutation for optimistic locking.
+func (s *OrderService) UpdateStatus(ctx context.Context, shopID int, order *models.Order, newStatus models.OrderStatus) error {
+	currentStatus := order.Status
+
+	if err := order.TransitionTo(newStatus); err != nil {
+		return err
+	}
+
+	return s.orderRepository.UpdateStatus(ctx, shopID, order.ID, currentStatus, newStatus)
+}
+
+// Update persists order changes. Expects the order to be already validated
+// by the use case (editability, items, delivery, totals, domain rules).
+// Does NOT change the order status.
+func (s *OrderService) Update(ctx context.Context, shopID int, order *models.Order) error {
+	return s.orderRepository.Update(ctx, shopID, order)
+}
+
+// CalculateAndValidateTotals calculates item total prices, subtotal, and total.
 // Then validates that the frontend-sent values match the backend calculations.
 // Backend is the source of truth for all monetary calculations.
-func (s *OrderService) calculateAndValidateTotals(order *models.Order) error {
+func (s *OrderService) CalculateAndValidateTotals(order *models.Order) error {
 	// Calculate item totals and subtotal
 	var calculatedSubtotal float64
 	for _, item := range order.Items {
