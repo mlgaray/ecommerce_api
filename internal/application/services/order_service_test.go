@@ -340,3 +340,240 @@ func TestOrderService_CountByShopIDWithFilters(t *testing.T) {
 		assert.Equal(t, expectedError, err)
 	})
 }
+
+// =============================================================================
+// OrderService.GetByID Tests
+// =============================================================================
+
+func TestOrderService_GetByID(t *testing.T) {
+	t.Run("when order exists then returns order", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		orderID := 1
+		expectedOrder := &models.Order{ID: 1, OrderNumber: "ORD-001"}
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(expectedOrder, nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.GetByID(ctx, shopID, orderID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedOrder, result)
+	})
+
+	t.Run("when order not found then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		orderID := 999
+		notFoundError := &errors.RecordNotFoundError{Message: errors.OrderNotFound}
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(nil, notFoundError)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.GetByID(ctx, shopID, orderID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+	})
+}
+
+// =============================================================================
+// OrderService.UpdateStatus Tests
+// =============================================================================
+
+func TestOrderService_UpdateStatus(t *testing.T) {
+	t.Run("when valid transition then updates status", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		order := &models.Order{
+			ID:     1,
+			Status: models.OrderStatusPending,
+		}
+		newStatus := models.OrderStatusConfirmed
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			UpdateStatus(ctx, shopID, order.ID, models.OrderStatusPending, newStatus).
+			Return(nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.UpdateStatus(ctx, shopID, order, newStatus)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, models.OrderStatusConfirmed, order.Status)
+	})
+
+	t.Run("when invalid transition then returns validation error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		order := &models.Order{
+			ID:     1,
+			Status: models.OrderStatusCompleted,
+		}
+		newStatus := models.OrderStatusPending // Invalid: completed -> pending
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.UpdateStatus(ctx, shopID, order, newStatus)
+
+		// Assert
+		assert.Error(t, err)
+		var valErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &valErr))
+		assert.Equal(t, errors.InvalidOrderTransition, valErr.Message)
+	})
+
+	t.Run("when concurrent modification then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		order := &models.Order{
+			ID:     1,
+			Status: models.OrderStatusPending,
+		}
+		newStatus := models.OrderStatusConfirmed
+		concurrentError := &errors.ConcurrentModificationError{Message: errors.OrderConcurrentModification}
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			UpdateStatus(ctx, shopID, order.ID, models.OrderStatusPending, newStatus).
+			Return(concurrentError)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.UpdateStatus(ctx, shopID, order, newStatus)
+
+		// Assert
+		assert.Error(t, err)
+		var concErr *errors.ConcurrentModificationError
+		assert.True(t, stdErrors.As(err, &concErr))
+	})
+}
+
+// =============================================================================
+// OrderService.Update Tests
+// =============================================================================
+
+func TestOrderService_Update(t *testing.T) {
+	t.Run("when update succeeds then returns nil", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		order := newTestOrder()
+		order.ID = 1
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			Update(ctx, shopID, order).
+			Return(nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.Update(ctx, shopID, order)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		order := newTestOrder()
+		order.ID = 1
+		dbError := stdErrors.New("database error")
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			Update(ctx, shopID, order).
+			Return(dbError)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.Update(ctx, shopID, order)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, dbError, err)
+	})
+}
+
+// =============================================================================
+// OrderService.CalculateAndValidateTotals Tests (standalone)
+// =============================================================================
+
+func TestOrderService_CalculateAndValidateTotals(t *testing.T) {
+	t.Run("when totals are correct then returns nil", func(t *testing.T) {
+		// Arrange
+		order := newTestOrder()
+		orderRepoMock := mocks.NewOrderRepository(t)
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.CalculateAndValidateTotals(order)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, 200.00, order.Items[0].TotalPrice)
+	})
+
+	t.Run("when subtotal mismatches then returns error", func(t *testing.T) {
+		// Arrange
+		order := newTestOrder()
+		order.Subtotal = 999.99
+		orderRepoMock := mocks.NewOrderRepository(t)
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.CalculateAndValidateTotals(order)
+
+		// Assert
+		assert.Error(t, err)
+		var valErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &valErr))
+		assert.Equal(t, errors.SubtotalMismatch, valErr.Message)
+	})
+
+	t.Run("when total mismatches then returns error", func(t *testing.T) {
+		// Arrange
+		order := newTestOrder()
+		order.Total = 999.99
+		orderRepoMock := mocks.NewOrderRepository(t)
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		err := service.CalculateAndValidateTotals(order)
+
+		// Assert
+		assert.Error(t, err)
+		var valErr *errors.ValidationError
+		assert.True(t, stdErrors.As(err, &valErr))
+		assert.Equal(t, errors.TotalMismatch, valErr.Message)
+	})
+}
