@@ -165,10 +165,6 @@ func TestOrder_Validate_MultipleItems(t *testing.T) {
 // =============================================================================
 
 func TestOrderStatus_Constants(t *testing.T) {
-	t.Run("draft status has correct value", func(t *testing.T) {
-		assert.Equal(t, OrderStatus("draft"), OrderStatusDraft)
-	})
-
 	t.Run("pending status has correct value", func(t *testing.T) {
 		assert.Equal(t, OrderStatus("pending"), OrderStatusPending)
 	})
@@ -183,6 +179,143 @@ func TestOrderStatus_Constants(t *testing.T) {
 
 	t.Run("cancelled status has correct value", func(t *testing.T) {
 		assert.Equal(t, OrderStatus("cancelled"), OrderStatusCancelled)
+	})
+}
+
+// =============================================================================
+// CanTransitionTo Tests
+// =============================================================================
+
+func TestOrder_CanTransitionTo(t *testing.T) {
+	t.Run("pending can transition to confirmed", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		assert.True(t, order.CanTransitionTo(OrderStatusConfirmed))
+	})
+
+	t.Run("pending can transition to cancelled", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		assert.True(t, order.CanTransitionTo(OrderStatusCancelled))
+	})
+
+	t.Run("pending cannot transition to completed", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		assert.False(t, order.CanTransitionTo(OrderStatusCompleted))
+	})
+
+	t.Run("confirmed can transition to completed", func(t *testing.T) {
+		order := &Order{Status: OrderStatusConfirmed}
+		assert.True(t, order.CanTransitionTo(OrderStatusCompleted))
+	})
+
+	t.Run("confirmed can transition to cancelled", func(t *testing.T) {
+		order := &Order{Status: OrderStatusConfirmed}
+		assert.True(t, order.CanTransitionTo(OrderStatusCancelled))
+	})
+
+	t.Run("confirmed cannot transition to pending", func(t *testing.T) {
+		order := &Order{Status: OrderStatusConfirmed}
+		assert.False(t, order.CanTransitionTo(OrderStatusPending))
+	})
+
+	t.Run("completed is terminal - no transitions", func(t *testing.T) {
+		order := &Order{Status: OrderStatusCompleted}
+		assert.False(t, order.CanTransitionTo(OrderStatusPending))
+		assert.False(t, order.CanTransitionTo(OrderStatusConfirmed))
+		assert.False(t, order.CanTransitionTo(OrderStatusCancelled))
+	})
+
+	t.Run("cancelled is terminal - no transitions", func(t *testing.T) {
+		order := &Order{Status: OrderStatusCancelled}
+		assert.False(t, order.CanTransitionTo(OrderStatusPending))
+		assert.False(t, order.CanTransitionTo(OrderStatusConfirmed))
+		assert.False(t, order.CanTransitionTo(OrderStatusCompleted))
+	})
+}
+
+// =============================================================================
+// TransitionTo Tests
+// =============================================================================
+
+func TestOrder_TransitionTo(t *testing.T) {
+	t.Run("valid transition updates status", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		err := order.TransitionTo(OrderStatusConfirmed)
+		assert.NoError(t, err)
+		assert.Equal(t, OrderStatusConfirmed, order.Status)
+	})
+
+	t.Run("invalid transition returns error and preserves status", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		err := order.TransitionTo(OrderStatusCompleted)
+		assert.Error(t, err)
+		assert.Equal(t, OrderStatusPending, order.Status)
+	})
+
+	t.Run("terminal state returns error", func(t *testing.T) {
+		order := &Order{Status: OrderStatusCompleted}
+		err := order.TransitionTo(OrderStatusCancelled)
+		assert.Error(t, err)
+		assert.Equal(t, OrderStatusCompleted, order.Status)
+	})
+}
+
+// =============================================================================
+// IsValidOrderStatus Tests
+// =============================================================================
+
+func TestIsValidOrderStatus(t *testing.T) {
+	t.Run("pending is valid", func(t *testing.T) {
+		assert.True(t, IsValidOrderStatus("pending"))
+	})
+
+	t.Run("confirmed is valid", func(t *testing.T) {
+		assert.True(t, IsValidOrderStatus("confirmed"))
+	})
+
+	t.Run("completed is valid", func(t *testing.T) {
+		assert.True(t, IsValidOrderStatus("completed"))
+	})
+
+	t.Run("cancelled is valid", func(t *testing.T) {
+		assert.True(t, IsValidOrderStatus("cancelled"))
+	})
+
+	t.Run("draft is not valid", func(t *testing.T) {
+		assert.False(t, IsValidOrderStatus("draft"))
+	})
+
+	t.Run("empty is not valid", func(t *testing.T) {
+		assert.False(t, IsValidOrderStatus(""))
+	})
+
+	t.Run("random string is not valid", func(t *testing.T) {
+		assert.False(t, IsValidOrderStatus("unknown"))
+	})
+}
+
+// =============================================================================
+// IsEditable Tests
+// =============================================================================
+
+func TestOrder_IsEditable(t *testing.T) {
+	t.Run("pending order is editable", func(t *testing.T) {
+		order := &Order{Status: OrderStatusPending}
+		assert.True(t, order.IsEditable())
+	})
+
+	t.Run("confirmed order is editable", func(t *testing.T) {
+		order := &Order{Status: OrderStatusConfirmed}
+		assert.True(t, order.IsEditable())
+	})
+
+	t.Run("completed order is not editable", func(t *testing.T) {
+		order := &Order{Status: OrderStatusCompleted}
+		assert.False(t, order.IsEditable())
+	})
+
+	t.Run("cancelled order is not editable", func(t *testing.T) {
+		order := &Order{Status: OrderStatusCancelled}
+		assert.False(t, order.IsEditable())
 	})
 }
 

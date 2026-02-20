@@ -12,20 +12,20 @@ The project documentation is organized into specialized guides:
 
 ### Core Concepts
 
-- **[Architecture](./.claude/ARCHITECTURE.md)** - Hexagonal Architecture, Dependency Flow, Ports and Adapters
-- **[Layer Responsibilities](./.claude/LAYERS.md)** - Use Cases, Services, Repositories, Handlers, Rich Models
-- **[Error Handling](./.claude/ERRORS.md)** - Domain vs HTTP errors, Validation layers, Error flow
+- **[Architecture](./docs/ai/ARCHITECTURE.md)** - Hexagonal Architecture, Dependency Flow, Ports and Adapters
+- **[Layer Responsibilities](./docs/ai/LAYERS.md)** - Use Cases, Services, Repositories, Handlers, Rich Models
+- **[Error Handling](./docs/ai/ERRORS.md)** - Domain vs HTTP errors, Validation layers, Error flow
 
 ### Development Practices
 
-- **[Validations](./.claude/VALIDATIONS.md)** - HTTP vs Business validations, Separation of concerns, Validation flow
-- **[Logging](./.claude/LOGGING.md)** - Structured logging patterns, Field naming, Log levels
-- **[Testing](./.claude/TESTING.md)** - Unit tests, Integration tests (BDD), Mock generation
-- **[Database](./.claude/DATABASE.md)** - Migrations, Transactions, Repository patterns, Query patterns
+- **[Validations](./docs/ai/VALIDATIONS.md)** - HTTP vs Business validations, Separation of concerns, Validation flow
+- **[Logging](./docs/ai/LOGGING.md)** - Structured logging patterns, Field naming, Log levels
+- **[Testing](./docs/ai/TESTING.md)** - Unit tests, Integration tests (BDD), Mock generation
+- **[Database](./docs/ai/DATABASE.md)** - Migrations, Transactions, Repository patterns, Query patterns
 
 ### Setup & Commands
 
-- **[Development Guide](./.claude/DEVELOPMENT.md)** - Setup, Commands, Workflows, Troubleshooting
+- **[Development Guide](./docs/ai/DEVELOPMENT.md)** - Setup, Commands, Workflows, Troubleshooting
 
 ## Quick Start
 
@@ -72,7 +72,7 @@ Infrastructure (HTTP, DB) → Application (Services) → Core (Domain)
 - **Business Validations** (`models/`): Domain rules, invariants (via `Model.Validate()`)
 - Services call `Model.Validate()` before persisting data
 
-See [Validations](./.claude/VALIDATIONS.md) for complete guide.
+See [Validations](./docs/ai/VALIDATIONS.md) for complete guide.
 
 ### Error Handling
 
@@ -80,7 +80,7 @@ See [Validations](./.claude/VALIDATIONS.md) for complete guide.
 - **HTTP Errors** (`infraestructure/adapters/http/errors/`): BadRequestError
 - **Technical Errors**: `fmt.Errorf()` for unexpected errors
 
-See [Error Handling](./.claude/ERRORS.md) for complete guide.
+See [Error Handling](./docs/ai/ERRORS.md) for complete guide.
 
 ## Tech Stack
 
@@ -114,13 +114,13 @@ go run main.go          # Run server
 go build -o bin/app     # Build binary
 ```
 
-See [Development Guide](./.claude/DEVELOPMENT.md) for complete command reference.
+See [Development Guide](./docs/ai/DEVELOPMENT.md) for complete command reference.
 
 ## Project Structure
 
 ```
 .
-├── .claude/                    # Documentation
+├── docs/ai/                    # Documentation for AI assistants
 ├── internal/
 │   ├── core/                   # Domain layer (no dependencies)
 │   │   ├── errors/             # Domain errors
@@ -141,20 +141,25 @@ See [Development Guide](./.claude/DEVELOPMENT.md) for complete command reference
 
 ## Contributing
 
-1. Read the [Architecture](./.claude/ARCHITECTURE.md) guide
-2. Follow [Layer Responsibilities](./.claude/LAYERS.md)
-3. Implement proper [Validations](./.claude/VALIDATIONS.md) (HTTP vs Business)
-4. Implement proper [Error Handling](./.claude/ERRORS.md)
-5. Use structured [Logging](./.claude/LOGGING.md)
-6. Write [Tests](./.claude/TESTING.md)
-7. Follow [Database](./.claude/DATABASE.md) patterns
+1. Read the [Architecture](./docs/ai/ARCHITECTURE.md) guide
+2. Follow [Layer Responsibilities](./docs/ai/LAYERS.md)
+3. Implement proper [Validations](./docs/ai/VALIDATIONS.md) (HTTP vs Business)
+4. Implement proper [Error Handling](./docs/ai/ERRORS.md)
+5. Use structured [Logging](./docs/ai/LOGGING.md)
+6. Write [Tests](./docs/ai/TESTING.md)
+7. Follow [Database](./docs/ai/DATABASE.md) patterns
 8. Use `make code-quality` before committing
 
 ## Need Help?
 
 - Check the specific guide for your topic (see [Documentation](#-documentation) above)
 - Review existing code for patterns
-- Consult [Development Guide](./.claude/DEVELOPMENT.md) for troubleshooting
+- Consult [Development Guide](./docs/ai/DEVELOPMENT.md) for troubleshooting
+
+## MCP Tools
+
+- Always use **Context7 MCP** when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+- Always use **Supabase MCP** for database operations, migrations, schema design, querying, and project management without me having to explicitly ask.
 
 ---
 

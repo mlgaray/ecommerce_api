@@ -3,9 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"go.uber.org/fx"
@@ -141,6 +138,9 @@ var Module = fx.Options(
 		// Use Cases depend on Services
 		fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
 		fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
+		fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
+		fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
+		fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewOrderHandler, fx.As(new(ports.OrderHandler))),
 
@@ -158,24 +158,7 @@ var Module = fx.Options(
 
 func main() {
 	log.Println("Starting application...")
-	app := fx.New(Module, fx.StartTimeout(30*time.Second))
-	app.Run()
-	if err := app.Start(context.Background()); err != nil {
-		log.Fatalf("Failed to start: %v", err)
-	}
-
-	// Manejador de señales del sistema
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
-	// Escuchar las señales del sistema en una goroutine
-	go func() {
-		<-signals
-		// Detener la aplicación cuando se recibe una señal del sistema
-		if err := app.Stop(context.Background()); err != nil {
-			log.Fatalf("Failed to stop: %v", err)
-		}
-	}()
+	fx.New(Module, fx.StartTimeout(30*time.Second)).Run()
 }
 
 func InitializeLogger() {

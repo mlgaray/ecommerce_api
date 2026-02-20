@@ -603,6 +603,79 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("when option has quantity greater than 1 then multiplies price by quantity", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		// Unit price = promotional 8500 + (1500*1) + (800*2) + (2000*1) = 8500 + 1500 + 1600 + 2000 = 13600
+		items := []*models.OrderItem{
+			{
+				Product: &models.Product{
+					ID:               1,
+					Name:             "Big Mac",
+					Price:            10000,
+					IsPromotional:    true,
+					PromotionalPrice: 8500,
+					Variants: []*models.Variant{
+						{
+							ID:   1,
+							Name: "Tamaño",
+							Options: []*models.Option{
+								{ID: 2, Name: "Grande", Price: 1500, Quantity: 1},
+							},
+						},
+						{
+							ID:   2,
+							Name: "Ingredientes adicionales", //nolint:misspell // Spanish variant name
+							Options: []*models.Option{
+								{ID: 4, Name: "Extra queso", Price: 800, Quantity: 2},
+							},
+						},
+						{
+							ID:   3,
+							Name: "Bebida",
+							Options: []*models.Option{
+								{ID: 8, Name: "Coca Cola", Price: 2000, Quantity: 1},
+							},
+						},
+					},
+				},
+				Quantity:  2,
+				UnitPrice: 13600, // Correct: 8500 + 1500 + 1600 + 2000
+			},
+		}
+		storeID := 1
+
+		dbProduct := &models.Product{
+			ID:               1,
+			Name:             "Big Mac",
+			Price:            10000,
+			IsPromotional:    true,
+			PromotionalPrice: 8500,
+			IsActive:         true,
+			IsStockeable:     true,
+			Stock:            10,
+			Variants: []*models.Variant{
+				{ID: 1, Name: "Tamaño", Options: []*models.Option{{ID: 2, Name: "Grande", Price: 1500}}},
+				{ID: 2, Name: "Ingredientes adicionales", Options: []*models.Option{{ID: 4, Name: "Extra queso", Price: 800}}}, //nolint:misspell // Spanish variant name
+				{ID: 3, Name: "Bebida", Options: []*models.Option{{ID: 8, Name: "Coca Cola", Price: 2000}}},
+			},
+		}
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		productRepoMock.EXPECT().
+			GetByIDsAndShopID(ctx, []int{1}, storeID).
+			Return(map[int]*models.Product{1: dbProduct}, nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		err := service.ValidateOrderItems(ctx, items, storeID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
 	t.Run("when insufficient stock then returns business rule error", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()

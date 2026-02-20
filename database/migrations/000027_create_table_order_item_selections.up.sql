@@ -15,6 +15,7 @@ CREATE TABLE public.order_item_selections (
     variant_name text NOT NULL,
     option_name text NOT NULL,
     option_price double precision NOT NULL DEFAULT 0,
+    quantity integer NOT NULL DEFAULT 1,
 
     -- Timestamp
     created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -56,6 +57,7 @@ CREATE INDEX idx_order_item_selections_variant_option
 -- Comentarios
 COMMENT ON TABLE order_item_selections IS 'Variant and option selections for each order item. One row per selected option. Snapshots preserve historical data.';
 COMMENT ON COLUMN order_item_selections.option_price IS 'Additional price of the option at order time. Adds to the item unit_price.';
+COMMENT ON COLUMN order_item_selections.quantity IS 'Number of times this option was selected. Defaults to 1 for single-select variants.';
 
 -- Enable Row Level Security
 ALTER TABLE order_item_selections ENABLE ROW LEVEL SECURITY;
