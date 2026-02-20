@@ -14,7 +14,7 @@ CREATE TABLE public.orders (
     store_slug text NOT NULL,
 
     -- Estado
-    status text NOT NULL DEFAULT 'draft',
+    status text NOT NULL DEFAULT 'pending',
 
     -- Cliente (embebido, incluye dirección de entrega)
     customer_name text NOT NULL,
@@ -35,6 +35,11 @@ CREATE TABLE public.orders (
     delivery_method_code text NULL,
     delivery_method_name text NULL,
 
+    -- Zona de entrega (snapshot)
+    delivery_zone_id bigint NULL,
+    delivery_zone_name text NULL,
+    delivery_zone_price double precision NULL,
+
     -- Totales
     subtotal double precision NOT NULL DEFAULT 0,
     shipping_cost double precision NOT NULL DEFAULT 0,
@@ -52,8 +57,10 @@ CREATE TABLE public.orders (
         REFERENCES payment_methods (id) ON DELETE SET NULL,
     CONSTRAINT orders_delivery_method_id_fkey FOREIGN KEY (delivery_method_id)
         REFERENCES delivery_methods (id) ON DELETE SET NULL,
+    CONSTRAINT orders_delivery_zone_id_fkey FOREIGN KEY (delivery_zone_id)
+        REFERENCES delivery_zones (id) ON DELETE SET NULL,
     CONSTRAINT orders_status_check CHECK (
-        status IN ('draft', 'pending', 'confirmed', 'completed', 'cancelled')
+        status IN ('pending', 'confirmed', 'completed', 'cancelled')
     ),
     CONSTRAINT orders_order_number_store_unique UNIQUE (store_id, order_number)
 ) TABLESPACE pg_default;
@@ -108,9 +115,12 @@ CREATE INDEX idx_orders_customer_name_trgm ON public.orders USING gin (customer_
 
 -- Comentarios de documentación
 COMMENT ON TABLE orders IS 'Órdenes del sistema. Contiene snapshots desnormalizados de store, cliente, dirección y métodos para preservar datos históricos.';
-COMMENT ON COLUMN orders.status IS 'Estados: draft (borrador), pending (pendiente), confirmed (confirmada), completed (completada), cancelled (cancelada)';
+COMMENT ON COLUMN orders.status IS 'Estados: pending (pendiente), confirmed (confirmada), completed (completada), cancelled (cancelada)';
 COMMENT ON COLUMN orders.subtotal IS 'Suma de order_items.total_price. Calculado y almacenado para performance.';
 COMMENT ON COLUMN orders.total IS 'subtotal + shipping_cost. Almacenado para evitar recálculos.';
+COMMENT ON COLUMN orders.delivery_zone_id IS 'Snapshot: ID de la zona de entrega seleccionada. NULL si el metodo no usa zonas o si la zona fue eliminada.';
+COMMENT ON COLUMN orders.delivery_zone_name IS 'Snapshot: Nombre de la zona al momento de la orden. Preserva dato historico.';
+COMMENT ON COLUMN orders.delivery_zone_price IS 'Snapshot: Precio de la zona al momento de la orden. Preserva dato historico.';
 
 -- Enable Row Level Security
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;

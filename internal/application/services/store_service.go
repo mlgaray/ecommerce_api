@@ -107,16 +107,20 @@ func (s *StoreService) ValidateOrderItems(ctx context.Context, items []*models.O
 }
 
 // validateUnitPrice validates that the item's unit price matches the calculated price.
-// Calculated price = effective base price + sum of selected option prices.
+// Calculated price = effective base price + sum of (option price * option quantity).
 // Effective base price is promotional_price if promotional, otherwise regular price.
 func (s *StoreService) validateUnitPrice(item *models.OrderItem, dbProduct *models.Product) error {
 	// Calculate expected unit price
 	expectedUnitPrice := dbProduct.GetEffectivePrice()
 
-	// Add option prices from selected variants
+	// Add option prices from selected variants (price * quantity)
 	for _, variant := range item.Product.Variants {
 		for _, option := range variant.Options {
-			expectedUnitPrice += option.Price
+			quantity := option.Quantity
+			if quantity <= 0 {
+				quantity = 1
+			}
+			expectedUnitPrice += option.Price * float64(quantity)
 		}
 	}
 

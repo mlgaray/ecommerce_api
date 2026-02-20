@@ -10,12 +10,54 @@ import (
 type OrderStatus string
 
 const (
-	OrderStatusDraft     OrderStatus = "draft"
 	OrderStatusPending   OrderStatus = "pending"
 	OrderStatusConfirmed OrderStatus = "confirmed"
 	OrderStatusCompleted OrderStatus = "completed"
 	OrderStatusCancelled OrderStatus = "cancelled"
 )
+
+// validTransitions defines the allowed state machine transitions.
+// Terminal states (completed, cancelled) have no outgoing transitions.
+var validTransitions = map[OrderStatus]map[OrderStatus]bool{
+	OrderStatusPending:   {OrderStatusConfirmed: true, OrderStatusCancelled: true},
+	OrderStatusConfirmed: {OrderStatusCompleted: true, OrderStatusCancelled: true},
+}
+
+// CanTransitionTo checks if the order can transition to the given status.
+func (o *Order) CanTransitionTo(newStatus OrderStatus) bool {
+	allowed, ok := validTransitions[o.Status]
+	if !ok {
+		return false
+	}
+	return allowed[newStatus]
+}
+
+// TransitionTo validates and applies a status transition.
+// Returns ValidationError if the transition is not allowed.
+func (o *Order) TransitionTo(newStatus OrderStatus) error {
+	if !o.CanTransitionTo(newStatus) {
+		return &errors.ValidationError{Message: errors.InvalidOrderTransition}
+	}
+	o.Status = newStatus
+	return nil
+}
+
+// IsEditable returns true if the order can be edited.
+// Only pending and confirmed orders can be edited.
+// Completed and cancelled orders are terminal states and cannot be modified.
+func (o *Order) IsEditable() bool {
+	return o.Status == OrderStatusPending || o.Status == OrderStatusConfirmed
+}
+
+// IsValidOrderStatus checks if a string is a valid order status.
+func IsValidOrderStatus(s string) bool {
+	switch OrderStatus(s) {
+	case OrderStatusPending, OrderStatusConfirmed, OrderStatusCompleted, OrderStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
 
 // Order representa una orden del sistema
 type Order struct {

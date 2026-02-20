@@ -1,0 +1,83 @@
+---
+description: Reglas de proyecto para ecommerce_api (Go, Hexagonal, DDD)
+alwaysApply: true
+---
+
+# E-commerce API - Reglas de trabajo
+
+Este proyecto usa Go con Hexagonal Architecture (Ports and Adapters), DDD y separacion clara por capas.
+
+## Documentacion fuente
+
+Usa estos documentos como referencia principal:
+- `CLAUDE.md`
+- `docs/ai/ARCHITECTURE.md`
+- `docs/ai/LAYERS.md`
+- `docs/ai/ERRORS.md`
+- `docs/ai/VALIDATIONS.md`
+- `docs/ai/LOGGING.md`
+- `docs/ai/TESTING.md`
+- `docs/ai/DATABASE.md`
+- `docs/ai/DEVELOPMENT.md`
+- `docs/ai/API_CONTRACTS.md`
+- `docs/ai/JSON_STANDARD.md`
+- `docs/ai/MIGRATIONS.md`
+- `docs/ai/STORED_PROCEDURES.md`
+- `docs/ai/TODO_SEARCH_FILTERS.md`
+
+## Reglas de arquitectura
+
+- Dependency rule: Infrastructure -> Application -> Core (siempre hacia adentro).
+- Core NO depende de Application ni Infrastructure.
+- Application NO depende de Infrastructure.
+- Mantener puertos en `internal/core/ports` y adaptadores en `internal/infraestructure/adapters`.
+
+## Responsabilidad por capa
+
+- Use Cases: solo orquestacion, sin logica de negocio.
+- Services: toda la logica de negocio, reglas de dominio y validaciones.
+- Repositories: solo acceso a datos, sin logica de negocio.
+- Handlers HTTP: solo entrada/salida HTTP, sin logica de negocio.
+- Models: modelos ricos con comportamiento y reglas propias.
+
+## Estrategia de validaciones
+
+- Validaciones HTTP (contratos): campos requeridos, formato, uploads.
+- Validaciones de negocio (modelos): invariantes de dominio via `Model.Validate()`.
+- Los services deben ejecutar `Model.Validate()` antes de persistir.
+
+## Manejo de errores
+
+- Errores de dominio en `internal/core/errors`:
+  - `ValidationError`
+  - `AuthenticationError`
+  - `RecordNotFoundError`
+- Errores HTTP en `internal/infraestructure/adapters/http/errors`.
+- Errores tecnicos inesperados con `fmt.Errorf()`.
+
+## Testing y calidad
+
+- Priorizar tests unitarios por capa y comportamiento.
+- Para integracion usar `tests/integration` (Godog/Cucumber).
+- Generar mocks con `make generate-mocks` cuando aplique.
+- Antes de finalizar cambios, correr `make code-quality` y tests relevantes.
+
+## Stack y convenciones
+
+- Go 1.21+, Gorilla Mux, PostgreSQL (`lib/pq`), JWT (`golang-jwt/jwt/v5`), FX, Logrus + Lumberjack.
+- Mantener nombres de logs estructurados consistentes.
+- Evitar mezclar detalles de infraestructura dentro del dominio.
+
+## Comandos utiles
+
+- `go mod download`
+- `make create-env-file`
+- `make migrate-up`
+- `go run main.go`
+- `go test ./...`
+- `make code-quality`
+
+## MCP
+
+- Para documentacion de librerias y APIs, usar Context7.
+- Para tareas de base de datos, migraciones y esquema, usar Supabase MCP.

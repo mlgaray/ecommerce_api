@@ -251,3 +251,215 @@ func (_c *OrderRepository_GetAllByShopIDWithFilters_Call) RunAndReturn(run func(
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetByID provides a mock function for the type OrderRepository
+func (_mock *OrderRepository) GetByID(ctx context.Context, shopID int, orderID int) (*models.Order, error) {
+	ret := _mock.Called(ctx, shopID, orderID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByID")
+	}
+
+	var r0 *models.Order
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*models.Order, error)); ok {
+		return returnFunc(ctx, shopID, orderID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *models.Order); ok {
+		r0 = returnFunc(ctx, shopID, orderID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Order)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = returnFunc(ctx, shopID, orderID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// OrderRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
+type OrderRepository_GetByID_Call struct {
+	*mock.Call
+}
+
+// GetByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - orderID int
+func (_e *OrderRepository_Expecter) GetByID(ctx interface{}, shopID interface{}, orderID interface{}) *OrderRepository_GetByID_Call {
+	return &OrderRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, shopID, orderID)}
+}
+
+func (_c *OrderRepository_GetByID_Call) Run(run func(ctx context.Context, shopID int, orderID int)) *OrderRepository_GetByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderRepository_GetByID_Call) Return(order *models.Order, err error) *OrderRepository_GetByID_Call {
+	_c.Call.Return(order, err)
+	return _c
+}
+
+func (_c *OrderRepository_GetByID_Call) RunAndReturn(run func(ctx context.Context, shopID int, orderID int) (*models.Order, error)) *OrderRepository_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type OrderRepository
+func (_mock *OrderRepository) Update(ctx context.Context, shopID int, order *models.Order) error {
+	ret := _mock.Called(ctx, shopID, order)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *models.Order) error); ok {
+		r0 = returnFunc(ctx, shopID, order)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrderRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type OrderRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - order *models.Order
+func (_e *OrderRepository_Expecter) Update(ctx interface{}, shopID interface{}, order interface{}) *OrderRepository_Update_Call {
+	return &OrderRepository_Update_Call{Call: _e.mock.On("Update", ctx, shopID, order)}
+}
+
+func (_c *OrderRepository_Update_Call) Run(run func(ctx context.Context, shopID int, order *models.Order)) *OrderRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *models.Order
+		if args[2] != nil {
+			arg2 = args[2].(*models.Order)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderRepository_Update_Call) Return(err error) *OrderRepository_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrderRepository_Update_Call) RunAndReturn(run func(ctx context.Context, shopID int, order *models.Order) error) *OrderRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateStatus provides a mock function for the type OrderRepository
+func (_mock *OrderRepository) UpdateStatus(ctx context.Context, shopID int, orderID int, currentStatus models.OrderStatus, newStatus models.OrderStatus) error {
+	ret := _mock.Called(ctx, shopID, orderID, currentStatus, newStatus)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateStatus")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, models.OrderStatus, models.OrderStatus) error); ok {
+		r0 = returnFunc(ctx, shopID, orderID, currentStatus, newStatus)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrderRepository_UpdateStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateStatus'
+type OrderRepository_UpdateStatus_Call struct {
+	*mock.Call
+}
+
+// UpdateStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - orderID int
+//   - currentStatus models.OrderStatus
+//   - newStatus models.OrderStatus
+func (_e *OrderRepository_Expecter) UpdateStatus(ctx interface{}, shopID interface{}, orderID interface{}, currentStatus interface{}, newStatus interface{}) *OrderRepository_UpdateStatus_Call {
+	return &OrderRepository_UpdateStatus_Call{Call: _e.mock.On("UpdateStatus", ctx, shopID, orderID, currentStatus, newStatus)}
+}
+
+func (_c *OrderRepository_UpdateStatus_Call) Run(run func(ctx context.Context, shopID int, orderID int, currentStatus models.OrderStatus, newStatus models.OrderStatus)) *OrderRepository_UpdateStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 models.OrderStatus
+		if args[3] != nil {
+			arg3 = args[3].(models.OrderStatus)
+		}
+		var arg4 models.OrderStatus
+		if args[4] != nil {
+			arg4 = args[4].(models.OrderStatus)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *OrderRepository_UpdateStatus_Call) Return(err error) *OrderRepository_UpdateStatus_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrderRepository_UpdateStatus_Call) RunAndReturn(run func(ctx context.Context, shopID int, orderID int, currentStatus models.OrderStatus, newStatus models.OrderStatus) error) *OrderRepository_UpdateStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}

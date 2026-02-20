@@ -103,6 +103,7 @@ const (
 
 	// Order related error messages
 	OrderNotFound               = "order_not_found"
+	OrderCannotBeEdited         = "order_cannot_be_edited"
 	OrderMustHaveItems          = "order_must_have_items"
 	OrderCustomerNameRequired   = "order_customer_name_required"
 	OrderItemQuantityInvalid    = "order_item_quantity_must_be_positive"
@@ -129,4 +130,8 @@ const (
 	// Order filters related error messages
 	DateFromCannotBeAfterDateTo = "date_from_cannot_be_after_date_to"
 	InvalidOrderStatus          = "invalid_order_status"
+
+	// Order state machine error messages
+	InvalidOrderTransition      = "invalid_transition"
+	OrderConcurrentModification = "concurrent_modification"
 )

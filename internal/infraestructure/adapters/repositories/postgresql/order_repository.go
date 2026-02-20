@@ -21,6 +21,9 @@ const (
 	OrderCreateFunctionField                = "create"
 	OrderGetAllByShopIDWithFiltersFuncField = "get_all_by_shop_id_with_filters"
 	OrderCountByShopIDWithFiltersFuncField  = "count_by_shop_id_with_filters"
+	OrderGetByIDFuncField                   = "get_by_id"
+	OrderUpdateStatusFuncField              = "update_status"
+	OrderUpdateFuncField                    = "update"
 )
 
 type OrderSQLRepository struct {
@@ -170,6 +173,7 @@ func (r *OrderSQLRepository) serializeItems(items []*models.OrderItem) ([]byte, 
 		VariantName string  `json:"variant_name"`
 		OptionName  string  `json:"option_name"`
 		OptionPrice float64 `json:"option_price"`
+		Quantity    int     `json:"quantity"`
 	}
 
 	type itemJSON struct {
@@ -182,6 +186,7 @@ func (r *OrderSQLRepository) serializeItems(items []*models.OrderItem) ([]byte, 
 		Quantity         int                  `json:"quantity"`
 		UnitPrice        float64              `json:"unit_price"`
 		TotalPrice       float64              `json:"total_price"`
+		Notes            string               `json:"notes,omitempty"`
 		SelectedOptions  []selectedOptionJSON `json:"selected_options,omitempty"`
 	}
 
@@ -191,6 +196,7 @@ func (r *OrderSQLRepository) serializeItems(items []*models.OrderItem) ([]byte, 
 			Quantity:   item.Quantity,
 			UnitPrice:  item.UnitPrice,
 			TotalPrice: item.TotalPrice,
+			Notes:      item.Notes,
 		}
 
 		if item.Product != nil {
@@ -208,12 +214,17 @@ func (r *OrderSQLRepository) serializeItems(items []*models.OrderItem) ([]byte, 
 			// Serialize selected options (from variants)
 			for _, variant := range item.Product.Variants {
 				for _, option := range variant.Options {
+					quantity := option.Quantity
+					if quantity <= 0 {
+						quantity = 1
+					}
 					jItem.SelectedOptions = append(jItem.SelectedOptions, selectedOptionJSON{
 						VariantID:   variant.ID,
 						OptionID:    option.ID,
 						VariantName: variant.Name,
 						OptionName:  option.Name,
 						OptionPrice: option.Price,
+						Quantity:    quantity,
 					})
 				}
 			}
@@ -288,8 +299,9 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			o.customer_name, o.customer_phone, o.customer_email, o.customer_address_name,
 			o.payment_method_id, o.payment_method_code, o.payment_method_name,
 			o.delivery_method_id, o.delivery_method_code, o.delivery_method_name,
+			o.delivery_zone_name,
 			o.subtotal, o.shipping_cost, o.total,
-			o.created_at,
+			o.created_at, o.updated_at,
 			(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
 		FROM orders o
 		WHERE o.store_id = $1`
@@ -422,6 +434,7 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 		var paymentMethodCode, paymentMethodName sql.NullString
 		var deliveryMethodID sql.NullInt64
 		var deliveryMethodCode, deliveryMethodName sql.NullString
+		var deliveryZoneName sql.NullString
 
 		err := rows.Scan(
 			&order.ID,
@@ -437,10 +450,12 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			&deliveryMethodID,
 			&deliveryMethodCode,
 			&deliveryMethodName,
+			&deliveryZoneName,
 			&order.Subtotal,
 			&order.ShippingCost,
 			&order.Total,
 			&order.CreatedAt,
+			&order.UpdatedAt,
 			&order.ItemsCount,
 		)
 		if err != nil {
@@ -473,6 +488,13 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			order.DeliveryMethod.ID = int(deliveryMethodID.Int64)
 			order.DeliveryMethod.Code = models.DeliveryMethodCode(deliveryMethodCode.String)
 			order.DeliveryMethod.Name = deliveryMethodName.String
+
+			// Attach delivery zone name if present (lightweight - only name for list views)
+			if deliveryZoneName.Valid {
+				order.DeliveryMethod.DeliveryZones = []*models.DeliveryZone{
+					{Name: deliveryZoneName.String},
+				}
+			}
 		} else {
 			order.DeliveryMethod = nil
 		}
@@ -580,4 +602,561 @@ func (r *OrderSQLRepository) CountByShopIDWithFilters(ctx context.Context, shopI
 	}).Debug("Orders count completed")
 
 	return count, nil
+}
+
+// GetByID retrieves a single order with full details (items, selected options).
+// Uses CTE-based query with JSON aggregation for items and selections.
+// Filters by both order_id AND store_id for security.
+//
+//nolint:gocyclo // Complexity is intentional - linear field mappings for nullable columns (customer, payment, delivery, address)
+func (r *OrderSQLRepository) GetByID(ctx context.Context, shopID int, orderID int) (*models.Order, error) {
+	startTime := time.Now()
+
+	query := `
+		WITH items_with_selections AS (
+			SELECT
+				oi.id, oi.order_id,
+				oi.product_id, oi.product_name, oi.product_image_url,
+				oi.base_price, oi.is_promotional, oi.promotional_price,
+				oi.quantity, oi.unit_price, oi.total_price, oi.notes,
+				COALESCE(
+					(SELECT json_agg(json_build_object(
+						'variant_id', ois.variant_id,
+						'variant_name', ois.variant_name,
+						'option_id', ois.option_id,
+						'option_name', ois.option_name,
+						'option_price', ois.option_price,
+						'quantity', ois.quantity
+					) ORDER BY ois.id)
+					FROM order_item_selections ois
+					WHERE ois.order_item_id = oi.id),
+					'[]'::json
+				) AS selected_options
+			FROM order_items oi
+			WHERE oi.order_id = $1
+		),
+		items_agg AS (
+			SELECT
+				iws.order_id,
+				json_agg(json_build_object(
+					'id', iws.id,
+					'product_id', iws.product_id,
+					'product_name', iws.product_name,
+					'product_image_url', iws.product_image_url,
+					'base_price', iws.base_price,
+					'is_promotional', iws.is_promotional,
+					'promotional_price', iws.promotional_price,
+					'quantity', iws.quantity,
+					'unit_price', iws.unit_price,
+					'total_price', iws.total_price,
+					'notes', iws.notes,
+					'selected_options', iws.selected_options
+				) ORDER BY iws.id) AS items
+			FROM items_with_selections iws
+			GROUP BY iws.order_id
+		)
+		SELECT
+			o.id, o.order_number, o.status,
+			o.store_id, o.store_name, o.store_slug,
+			o.customer_name, o.customer_phone, o.customer_email,
+			o.customer_address_name, o.customer_address_place_id,
+			o.customer_address_lat, o.customer_address_lng,
+			o.payment_method_id, o.payment_method_code, o.payment_method_name,
+			o.delivery_method_id, o.delivery_method_code, o.delivery_method_name,
+			o.delivery_zone_id, o.delivery_zone_name, o.delivery_zone_price,
+			o.subtotal, o.shipping_cost, o.total,
+			o.created_at, o.updated_at,
+			COALESCE(ia.items, '[]'::json) AS items
+		FROM orders o
+		LEFT JOIN items_agg ia ON ia.order_id = o.id
+		WHERE o.id = $1 AND o.store_id = $2`
+
+	var (
+		customerName                                string
+		customerPhone, customerEmail                sql.NullString
+		customerAddressName, customerAddressPlaceID sql.NullString
+		customerAddressLat, customerAddressLng      sql.NullFloat64
+		paymentMethodID                             sql.NullInt64
+		paymentMethodCode, paymentMethodName        sql.NullString
+		deliveryMethodID                            sql.NullInt64
+		deliveryMethodCode, deliveryMethodName      sql.NullString
+		deliveryZoneID                              sql.NullInt64
+		deliveryZoneName                            sql.NullString
+		deliveryZonePrice                           sql.NullFloat64
+		storeID                                     int
+		storeName, storeSlug                        string
+		itemsJSON                                   []byte
+	)
+
+	order := &models.Order{}
+
+	err := r.db.QueryRowContext(ctx, query, orderID, shopID).Scan(
+		&order.ID,
+		&order.OrderNumber,
+		&order.Status,
+		&storeID,
+		&storeName,
+		&storeSlug,
+		&customerName,
+		&customerPhone,
+		&customerEmail,
+		&customerAddressName,
+		&customerAddressPlaceID,
+		&customerAddressLat,
+		&customerAddressLng,
+		&paymentMethodID,
+		&paymentMethodCode,
+		&paymentMethodName,
+		&deliveryMethodID,
+		&deliveryMethodCode,
+		&deliveryMethodName,
+		&deliveryZoneID,
+		&deliveryZoneName,
+		&deliveryZonePrice,
+		&order.Subtotal,
+		&order.ShippingCost,
+		&order.Total,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+		&itemsJSON,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logs.WithFields(map[string]interface{}{
+				"file":     OrderRepositoryField,
+				"function": OrderGetByIDFuncField,
+				"order_id": orderID,
+				"shop_id":  shopID,
+			}).Warn("Order not found")
+			return nil, &errors.RecordNotFoundError{Message: errors.OrderNotFound}
+		}
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderGetByIDFuncField,
+			"order_id": orderID,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Failed to query order by ID")
+		return nil, fmt.Errorf("database operation failed")
+	}
+
+	// Populate store
+	order.Store = &models.Store{
+		ID:   storeID,
+		Name: storeName,
+		Slug: storeSlug,
+	}
+
+	// Populate customer
+	order.Customer = &models.Customer{Name: customerName}
+	if customerPhone.Valid {
+		order.Customer.Phone = customerPhone.String
+	}
+	if customerEmail.Valid {
+		order.Customer.Email = customerEmail.String
+	}
+	if customerAddressName.Valid {
+		order.Customer.Address = &models.Address{
+			Name: customerAddressName.String,
+		}
+		if customerAddressPlaceID.Valid {
+			order.Customer.Address.PlaceID = customerAddressPlaceID.String
+		}
+		if customerAddressLat.Valid {
+			order.Customer.Address.Lat = customerAddressLat.Float64
+		}
+		if customerAddressLng.Valid {
+			order.Customer.Address.Lng = customerAddressLng.Float64
+		}
+	}
+
+	// Populate payment method
+	if paymentMethodName.Valid {
+		order.PaymentMethod = &models.PaymentMethod{
+			ID:   int(paymentMethodID.Int64),
+			Code: models.PaymentMethodCode(paymentMethodCode.String),
+			Name: paymentMethodName.String,
+		}
+	}
+
+	// Populate delivery method
+	if deliveryMethodName.Valid {
+		order.DeliveryMethod = &models.DeliveryMethod{
+			ID:   int(deliveryMethodID.Int64),
+			Code: models.DeliveryMethodCode(deliveryMethodCode.String),
+			Name: deliveryMethodName.String,
+		}
+	}
+
+	// Populate delivery zone (attached to delivery method)
+	if deliveryZoneName.Valid && order.DeliveryMethod != nil {
+		order.DeliveryMethod.DeliveryZones = []*models.DeliveryZone{
+			{
+				ID:    int(deliveryZoneID.Int64),
+				Name:  deliveryZoneName.String,
+				Price: deliveryZonePrice.Float64,
+			},
+		}
+	}
+
+	// Unmarshal items JSON
+	items, err := r.unmarshalOrderItems(itemsJSON)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderGetByIDFuncField,
+			"sub_func": UnmarshallField,
+			"order_id": orderID,
+			"error":    err.Error(),
+		}).Error("Failed to unmarshal order items")
+		return nil, fmt.Errorf("database operation failed")
+	}
+	order.Items = items
+	order.ItemsCount = len(items)
+
+	queryDuration := time.Since(startTime).Milliseconds()
+
+	logs.WithFields(map[string]interface{}{
+		"file":        OrderRepositoryField,
+		"function":    OrderGetByIDFuncField,
+		"order_id":    orderID,
+		"shop_id":     shopID,
+		"items_count": len(items),
+		"duration_ms": queryDuration,
+	}).Debug("Order retrieved by ID")
+
+	return order, nil
+}
+
+// UpdateStatus updates the order status using optimistic locking.
+// The currentStatus in the WHERE clause ensures no concurrent modification occurred.
+func (r *OrderSQLRepository) UpdateStatus(ctx context.Context, shopID int, orderID int, currentStatus models.OrderStatus, newStatus models.OrderStatus) error {
+	startTime := time.Now()
+
+	query := `
+		UPDATE orders SET status = $1, updated_at = now()
+		WHERE id = $2 AND store_id = $3 AND status = $4`
+
+	result, err := r.db.ExecContext(ctx, query, newStatus, orderID, shopID, currentStatus)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":           OrderRepositoryField,
+			"function":       OrderUpdateStatusFuncField,
+			"order_id":       orderID,
+			"shop_id":        shopID,
+			"current_status": currentStatus,
+			"new_status":     newStatus,
+			"error":          err.Error(),
+		}).Error("Failed to update order status")
+		return fmt.Errorf("database operation failed")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderUpdateStatusFuncField,
+			"order_id": orderID,
+			"error":    err.Error(),
+		}).Error("Failed to get rows affected")
+		return fmt.Errorf("database operation failed")
+	}
+
+	if rowsAffected == 0 {
+		logs.WithFields(map[string]interface{}{
+			"file":           OrderRepositoryField,
+			"function":       OrderUpdateStatusFuncField,
+			"order_id":       orderID,
+			"shop_id":        shopID,
+			"current_status": currentStatus,
+			"new_status":     newStatus,
+		}).Warn("Concurrent modification detected - status changed between read and write")
+		return &errors.ConcurrentModificationError{Message: errors.OrderConcurrentModification}
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":        OrderRepositoryField,
+		"function":    OrderUpdateStatusFuncField,
+		"order_id":    orderID,
+		"shop_id":     shopID,
+		"new_status":  newStatus,
+		"duration_ms": time.Since(startTime).Milliseconds(),
+	}).Info("Order status updated successfully")
+
+	return nil
+}
+
+// unmarshalOrderItems converts the JSON-aggregated items from the CTE query into domain models.
+func (r *OrderSQLRepository) unmarshalOrderItems(itemsJSON []byte) ([]*models.OrderItem, error) {
+	type selectedOptionJSON struct {
+		VariantID   int     `json:"variant_id"`
+		VariantName string  `json:"variant_name"`
+		OptionID    int     `json:"option_id"`
+		OptionName  string  `json:"option_name"`
+		OptionPrice float64 `json:"option_price"`
+		Quantity    int     `json:"quantity"`
+	}
+
+	type itemJSON struct {
+		ID               int                  `json:"id"`
+		ProductID        int                  `json:"product_id"`
+		ProductName      string               `json:"product_name"`
+		ProductImageURL  string               `json:"product_image_url"`
+		BasePrice        float64              `json:"base_price"`
+		IsPromotional    bool                 `json:"is_promotional"`
+		PromotionalPrice float64              `json:"promotional_price"`
+		Quantity         int                  `json:"quantity"`
+		UnitPrice        float64              `json:"unit_price"`
+		TotalPrice       float64              `json:"total_price"`
+		Notes            string               `json:"notes"`
+		SelectedOptions  []selectedOptionJSON `json:"selected_options"`
+	}
+
+	var rawItems []itemJSON
+	if err := json.Unmarshal(itemsJSON, &rawItems); err != nil {
+		return nil, err
+	}
+
+	items := make([]*models.OrderItem, 0, len(rawItems))
+	for _, ri := range rawItems {
+		item := &models.OrderItem{
+			Quantity:   ri.Quantity,
+			UnitPrice:  ri.UnitPrice,
+			TotalPrice: ri.TotalPrice,
+			Notes:      ri.Notes,
+			Product: &models.Product{
+				ID:               ri.ProductID,
+				Name:             ri.ProductName,
+				Price:            ri.BasePrice,
+				IsPromotional:    ri.IsPromotional,
+				PromotionalPrice: ri.PromotionalPrice,
+			},
+		}
+
+		// Set product image if available
+		if ri.ProductImageURL != "" {
+			item.Product.Images = []*models.Image{
+				{URL: ri.ProductImageURL},
+			}
+		}
+
+		// Convert selected options to variant/option structure
+		for _, so := range ri.SelectedOptions {
+			// Find or create the variant
+			var variant *models.Variant
+			for _, v := range item.Product.Variants {
+				if v.ID == so.VariantID {
+					variant = v
+					break
+				}
+			}
+			if variant == nil {
+				variant = &models.Variant{
+					ID:   so.VariantID,
+					Name: so.VariantName,
+				}
+				item.Product.Variants = append(item.Product.Variants, variant)
+			}
+			quantity := so.Quantity
+			if quantity <= 0 {
+				quantity = 1
+			}
+			variant.Options = append(variant.Options, &models.Option{
+				ID:       so.OptionID,
+				Name:     so.OptionName,
+				Price:    so.OptionPrice,
+				Quantity: quantity,
+			})
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// Update updates an order with all its items and selected options.
+// Uses stored procedure to handle transactional update.
+// Recalculates subtotal and total from items.
+// Deletes all existing items (CASCADE handles selections) and inserts new ones.
+//
+//nolint:gocyclo // Complexity is intentional - linear field extraction for nullable delivery method/zone parameters
+func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *models.Order) error {
+	startTime := time.Now()
+
+	// 1. Serialize items to JSONB
+	itemsJSON, err := r.serializeItems(order.Items)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderUpdateFuncField,
+			"sub_func": "serialize_items",
+			"error":    err.Error(),
+		}).Error("Failed to serialize order items")
+		return fmt.Errorf("database operation failed")
+	}
+
+	// 2. Extract address fields (can be nil)
+	var addressName, addressPlaceID *string
+	var addressLat, addressLng *float64
+	if order.Customer != nil && order.Customer.Address != nil {
+		addressName = &order.Customer.Address.Name
+		addressPlaceID = &order.Customer.Address.PlaceID
+		addressLat = &order.Customer.Address.Lat
+		addressLng = &order.Customer.Address.Lng
+	}
+
+	// 3. Extract payment method fields (can be nil)
+	var paymentMethodID *int
+	var paymentMethodCode, paymentMethodName *string
+	if order.PaymentMethod != nil {
+		paymentMethodID = &order.PaymentMethod.ID
+		code := string(order.PaymentMethod.Code)
+		paymentMethodCode = &code
+		paymentMethodName = &order.PaymentMethod.Name
+	}
+
+	// 4. Extract delivery method fields (can be nil)
+	var deliveryMethodID *int
+	var deliveryMethodCode, deliveryMethodName *string
+	if order.DeliveryMethod != nil {
+		deliveryMethodID = &order.DeliveryMethod.ID
+		code := string(order.DeliveryMethod.Code)
+		deliveryMethodCode = &code
+		deliveryMethodName = &order.DeliveryMethod.Name
+	}
+
+	// 5. Extract delivery zone fields (can be nil)
+	var deliveryZoneID *int
+	var deliveryZoneName *string
+	var deliveryZonePrice *float64
+	if order.DeliveryMethod != nil && len(order.DeliveryMethod.DeliveryZones) > 0 {
+		zone := order.DeliveryMethod.DeliveryZones[0]
+		deliveryZoneID = &zone.ID
+		deliveryZoneName = &zone.Name
+		deliveryZonePrice = &zone.Price
+	}
+
+	// 6. Extract customer fields
+	var customerName, customerPhone, customerEmail *string
+	if order.Customer != nil {
+		customerName = &order.Customer.Name
+		customerPhone = &order.Customer.Phone
+		customerEmail = &order.Customer.Email
+	}
+
+	// 7. Call stored procedure
+	var resultJSON []byte
+	err = r.db.QueryRowContext(ctx, `
+		SELECT update_order(
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+			$11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+		)`,
+		order.ID,
+		shopID,
+		customerName,
+		customerPhone,
+		customerEmail,
+		addressName,
+		addressPlaceID,
+		addressLat,
+		addressLng,
+		paymentMethodID,
+		paymentMethodCode,
+		paymentMethodName,
+		deliveryMethodID,
+		deliveryMethodCode,
+		deliveryMethodName,
+		deliveryZoneID,
+		deliveryZoneName,
+		deliveryZonePrice,
+		order.ShippingCost,
+		itemsJSON,
+	).Scan(&resultJSON)
+
+	if err != nil {
+		return r.handleUpdateError(err, shopID, order.ID)
+	}
+
+	// 8. Parse result
+	var result struct {
+		UpdatedAt time.Time `json:"updated_at"`
+		Subtotal  float64   `json:"subtotal"`
+		Total     float64   `json:"total"`
+	}
+
+	if err := json.Unmarshal(resultJSON, &result); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderRepositoryField,
+			"function": OrderUpdateFuncField,
+			"sub_func": UnmarshallField,
+			"error":    err.Error(),
+		}).Error("Failed to unmarshal stored procedure result")
+		return fmt.Errorf("database operation failed")
+	}
+
+	// 9. Update order with DB-calculated values
+	order.Subtotal = result.Subtotal
+	order.Total = result.Total
+	order.UpdatedAt = result.UpdatedAt
+
+	logs.WithFields(map[string]interface{}{
+		"file":              OrderRepositoryField,
+		"function":          OrderUpdateFuncField,
+		"order_id":          order.ID,
+		"store_id":          shopID,
+		"items_count":       len(order.Items),
+		"total_duration_ms": time.Since(startTime).Milliseconds(),
+	}).Info("Order update completed (stored procedure)")
+
+	return nil
+}
+
+// handleUpdateError processes PostgreSQL errors from the update_order stored procedure.
+func (r *OrderSQLRepository) handleUpdateError(err error, storeID int, orderID int) error {
+	logs.WithFields(map[string]interface{}{
+		"file":     OrderRepositoryField,
+		"function": OrderUpdateFuncField,
+		"store_id": storeID,
+		"order_id": orderID,
+		"error":    err.Error(),
+	}).Error("Failed to update order via stored procedure")
+
+	// Check if it's a PostgreSQL error
+	if pqErr, ok := err.(*pq.Error); ok {
+		// Order not found (P0002)
+		if pqErr.Code == PqErrCodeNoDataFound {
+			logs.WithFields(map[string]interface{}{
+				"file":     OrderRepositoryField,
+				"function": OrderUpdateFuncField,
+				"store_id": storeID,
+				"order_id": orderID,
+			}).Warn("Order not found for update")
+			return &errors.RecordNotFoundError{Message: errors.OrderNotFound}
+		}
+
+		// Foreign key violation
+		if pqErr.Code == PqErrCodeForeignKeyViolation {
+			logs.WithFields(map[string]interface{}{
+				"file":       OrderRepositoryField,
+				"function":   OrderUpdateFuncField,
+				"pg_code":    pqErr.Code,
+				"pg_message": pqErr.Message,
+			}).Warn("Foreign key violation during order update")
+			return &errors.ValidationError{Message: pqErr.Message}
+		}
+
+		logs.WithFields(map[string]interface{}{
+			"file":       OrderRepositoryField,
+			"function":   OrderUpdateFuncField,
+			"pg_code":    pqErr.Code,
+			"pg_message": pqErr.Message,
+			"pg_detail":  pqErr.Detail,
+		}).Debug("PostgreSQL error details from stored procedure")
+
+		return fmt.Errorf("stored procedure error: %s", pqErr.Message)
+	}
+
+	return fmt.Errorf("database operation failed: %w", err)
 }

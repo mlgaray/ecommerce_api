@@ -169,14 +169,15 @@ docker-compose logs -f
 
 ```
 .
-├── .claude/                    # Claude Code documentation
-│   ├── ARCHITECTURE.md
-│   ├── ERRORS.md
-│   ├── LOGGING.md
-│   ├── LAYERS.md
-│   ├── TESTING.md
-│   ├── DATABASE.md
-│   └── DEVELOPMENT.md
+├── docs/
+│   └── ai/                     # AI documentation
+│       ├── ARCHITECTURE.md
+│       ├── ERRORS.md
+│       ├── LOGGING.md
+│       ├── LAYERS.md
+│       ├── TESTING.md
+│       ├── DATABASE.md
+│       └── DEVELOPMENT.md
 ├── database/
 │   └── migrations/             # SQL migrations
 │       └── seeds/              # Seed data

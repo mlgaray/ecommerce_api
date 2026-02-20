@@ -6,4 +6,7 @@ import "net/http"
 type OrderHandler interface {
 	Create(http.ResponseWriter, *http.Request)
 	GetAll(http.ResponseWriter, *http.Request)
+	GetByID(http.ResponseWriter, *http.Request)
+	Update(http.ResponseWriter, *http.Request)
+	UpdateStatus(http.ResponseWriter, *http.Request)
 }

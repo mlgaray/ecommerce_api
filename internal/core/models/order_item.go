@@ -14,6 +14,7 @@ type OrderItem struct {
 	Quantity   int       `json:"quantity"`
 	UnitPrice  float64   `json:"unit_price"`
 	TotalPrice float64   `json:"total_price"`
+	Notes      string    `json:"notes,omitempty"`
 	AddedAt    time.Time `json:"added_at,omitempty"`
 }
 

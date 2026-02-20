@@ -66,3 +66,14 @@ type ReferentialIntegrityError struct {
 func (e *ReferentialIntegrityError) Error() string {
 	return e.Message
 }
+
+// ConcurrentModificationError represents an optimistic locking conflict.
+// Used when a resource was modified by another request between read and write.
+// Maps to HTTP 409 Conflict.
+type ConcurrentModificationError struct {
+	Message string
+}
+
+func (e *ConcurrentModificationError) Error() string {
+	return e.Message
+}

@@ -9,11 +9,12 @@ import (
 // OrderResponse represents an order in HTTP responses.
 // Used by all order endpoints (Create, Update, List, GetByID).
 // List endpoints populate partial data (no items, minimal nested objects).
-// Detail endpoints populate all fields.
+// Detail endpoints populate all fields including Store and UpdatedAt.
 type OrderResponse struct {
 	ID             int                          `json:"id"`
 	OrderNumber    string                       `json:"order_number"`
 	Status         string                       `json:"status"`
+	Store          *OrderStoreResponse          `json:"store,omitempty"`
 	Customer       OrderCustomerResponse        `json:"customer"`
 	PaymentMethod  *OrderPaymentMethodResponse  `json:"payment_method,omitempty"`
 	DeliveryMethod *OrderDeliveryMethodResponse `json:"delivery_method,omitempty"`
@@ -23,6 +24,14 @@ type OrderResponse struct {
 	ShippingCost   float64                      `json:"shipping_cost"`
 	Total          float64                      `json:"total"`
 	CreatedAt      time.Time                    `json:"created_at"`
+	UpdatedAt      *time.Time                   `json:"updated_at,omitempty"`
+}
+
+// OrderStoreResponse represents store snapshot data in order responses.
+type OrderStoreResponse struct {
+	ID   int    `json:"id"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
 }
 
 // OrderCustomerResponse represents customer data in order responses.
@@ -69,6 +78,7 @@ type OrderItemResponse struct {
 	Quantity        int                            `json:"quantity"`
 	UnitPrice       float64                        `json:"unit_price"`
 	TotalPrice      float64                        `json:"total_price"`
+	Notes           string                         `json:"notes,omitempty"`
 	SelectedOptions []*OrderSelectedOptionResponse `json:"selected_options"`
 }
 
@@ -89,6 +99,7 @@ type OrderSelectedOptionResponse struct {
 	OptionID    int     `json:"option_id"`
 	OptionName  string  `json:"option_name"`
 	OptionPrice float64 `json:"option_price"`
+	Quantity    int     `json:"quantity"`
 }
 
 // OrderResponseFromModel converts a domain Order to an OrderResponse.
@@ -108,6 +119,20 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 		ShippingCost: order.ShippingCost,
 		Total:        order.Total,
 		CreatedAt:    order.CreatedAt,
+	}
+
+	// Populate store (only present in GetByID, not in list)
+	if order.Store != nil {
+		response.Store = &OrderStoreResponse{
+			ID:   order.Store.ID,
+			Slug: order.Store.Slug,
+			Name: order.Store.Name,
+		}
+	}
+
+	// Populate updated_at (only present in GetByID, not in list)
+	if !order.UpdatedAt.IsZero() {
+		response.UpdatedAt = &order.UpdatedAt
 	}
 
 	// Convert customer
@@ -160,6 +185,7 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 			Quantity:   item.Quantity,
 			UnitPrice:  item.UnitPrice,
 			TotalPrice: item.TotalPrice,
+			Notes:      item.Notes,
 		}
 
 		// Convert product snapshot
@@ -181,12 +207,17 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 		if item.Product != nil {
 			for _, variant := range item.Product.Variants {
 				for _, option := range variant.Options {
+					quantity := option.Quantity
+					if quantity <= 0 {
+						quantity = 1
+					}
 					itemResponse.SelectedOptions = append(itemResponse.SelectedOptions, &OrderSelectedOptionResponse{
 						VariantID:   variant.ID,
 						VariantName: variant.Name,
 						OptionID:    option.ID,
 						OptionName:  option.Name,
 						OptionPrice: option.Price,
+						Quantity:    quantity,
 					})
 				}
 			}
@@ -213,6 +244,21 @@ func OrderResponsesFromModels(orders []*models.Order) []*OrderResponse {
 
 // CreateOrderResponse represents the response for order creation.
 type CreateOrderResponse struct {
+	Order *OrderResponse `json:"order"`
+}
+
+// GetOrderResponse represents the response for order detail retrieval.
+type GetOrderResponse struct {
+	Order *OrderResponse `json:"order"`
+}
+
+// UpdateOrderResponse represents the response for order update.
+type UpdateOrderResponse struct {
+	Order *OrderResponse `json:"order"`
+}
+
+// UpdateOrderStatusResponse represents the response for order status update.
+type UpdateOrderStatusResponse struct {
 	Order *OrderResponse `json:"order"`
 }
 
