@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +12,6 @@ import (
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	"github.com/mlgaray/ecommerce_api/mocks"
 )
@@ -42,17 +40,12 @@ func newTestShop() *models.Shop {
 	}
 }
 
-func contextWithShopIDs(shopIDs []int) context.Context {
-	ctx := context.Background()
-	return context.WithValue(ctx, claims.KeyShopIDs, shopIDs)
-}
-
 // =============================================================================
 // GetByID Tests
 // =============================================================================
 
 func TestShopHandler_GetByID(t *testing.T) {
-	t.Run("when shop exists and user owns shop then returns 200 with shop data", func(t *testing.T) {
+	t.Run("when shop exists then returns 200 with shop data", func(t *testing.T) {
 		// Arrange
 		shop := newTestShop()
 
@@ -64,7 +57,6 @@ func TestShopHandler_GetByID(t *testing.T) {
 		handler := NewShopHandler(useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/shops/1", nil)
-		req = req.WithContext(contextWithShopIDs([]int{1, 2, 3}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -95,7 +87,6 @@ func TestShopHandler_GetByID(t *testing.T) {
 		handler := NewShopHandler(useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/shops/999", nil)
-		req = req.WithContext(contextWithShopIDs([]int{999}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "999"})
 		rr := httptest.NewRecorder()
 
@@ -104,22 +95,6 @@ func TestShopHandler_GetByID(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, http.StatusNotFound, rr.Code)
-	})
-
-	t.Run("when user does not own shop then returns 403", func(t *testing.T) {
-		// Arrange
-		handler := NewShopHandler(nil, nil)
-
-		req := httptest.NewRequest(http.MethodGet, "/shops/1", nil)
-		req = req.WithContext(contextWithShopIDs([]int{2, 3}))
-		req = mux.SetURLVars(req, map[string]string{"shop_id": "1"}) // User owns shops 2 and 3, not 1
-		rr := httptest.NewRecorder()
-
-		// Act
-		handler.GetByID(rr, req)
-
-		// Assert
-		assert.Equal(t, http.StatusForbidden, rr.Code)
 	})
 
 	t.Run("when shop_id is invalid format then returns 400", func(t *testing.T) {
@@ -182,23 +157,7 @@ func TestShopHandler_GetByID(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 
-	t.Run("when user has no shops then returns 403", func(t *testing.T) {
-		// Arrange
-		handler := NewShopHandler(nil, nil)
-
-		req := httptest.NewRequest(http.MethodGet, "/shops/1", nil)
-		req = req.WithContext(contextWithShopIDs([]int{}))
-		req = mux.SetURLVars(req, map[string]string{"shop_id": "1"}) // User owns no shops
-		rr := httptest.NewRecorder()
-
-		// Act
-		handler.GetByID(rr, req)
-
-		// Assert
-		assert.Equal(t, http.StatusForbidden, rr.Code)
-	})
-
-	t.Run("when user owns single shop and requests it then returns 200", func(t *testing.T) {
+	t.Run("when shop exists with single result then returns 200", func(t *testing.T) {
 		// Arrange
 		shop := newTestShop()
 
@@ -210,8 +169,7 @@ func TestShopHandler_GetByID(t *testing.T) {
 		handler := NewShopHandler(useCaseMock, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/shops/1", nil)
-		req = req.WithContext(contextWithShopIDs([]int{1}))
-		req = mux.SetURLVars(req, map[string]string{"shop_id": "1"}) // User owns only shop 1
+		req = mux.SetURLVars(req, map[string]string{"shop_id": "1"})
 		rr := httptest.NewRecorder()
 
 		// Act
@@ -219,62 +177,6 @@ func TestShopHandler_GetByID(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-}
-
-// =============================================================================
-// userOwnsShop Tests
-// =============================================================================
-
-func TestShopHandler_userOwnsShop(t *testing.T) {
-	handler := &ShopHandler{}
-
-	t.Run("when shop ID is in user shops then returns true", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop([]int{1, 2, 3}, 2)
-
-		// Assert
-		assert.True(t, result)
-	})
-
-	t.Run("when shop ID is not in user shops then returns false", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop([]int{1, 2, 3}, 5)
-
-		// Assert
-		assert.False(t, result)
-	})
-
-	t.Run("when user shops is empty then returns false", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop([]int{}, 1)
-
-		// Assert
-		assert.False(t, result)
-	})
-
-	t.Run("when user shops is nil then returns false", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop(nil, 1)
-
-		// Assert
-		assert.False(t, result)
-	})
-
-	t.Run("when shop ID is first in list then returns true", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop([]int{5, 10, 15}, 5)
-
-		// Assert
-		assert.True(t, result)
-	})
-
-	t.Run("when shop ID is last in list then returns true", func(t *testing.T) {
-		// Act
-		result := handler.userOwnsShop([]int{5, 10, 15}, 15)
-
-		// Assert
-		assert.True(t, result)
 	})
 }
 

@@ -34,6 +34,9 @@ var Module = fx.Options(
 		// AUTH MIDDLEWARE
 		middleware.NewAuthMiddleware,
 
+		// SHOP OWNERSHIP MIDDLEWARE
+		middleware.NewShopOwnershipMiddleware,
+
 		// AUTH
 		fx.Annotate(http.NewAuthHandler, fx.As(new(ports.AuthHandler))),
 		fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),

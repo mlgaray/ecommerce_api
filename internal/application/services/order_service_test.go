@@ -204,6 +204,43 @@ func TestOrderService_Create(t *testing.T) {
 		assert.Equal(t, 200.00, order.Items[0].TotalPrice)
 	})
 
+	t.Run("when order has delivery zone then preserves zone data to repository", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		order := newTestOrder()
+		order.DeliveryMethod.DeliveryZones = []*models.DeliveryZone{
+			{ID: 5, Name: "Zona Norte", Price: 25.00},
+		}
+		order.ShippingCost = 25.00
+		order.Total = 225.00
+		store := newTestStore()
+
+		expectedOrder := newTestOrder()
+		expectedOrder.ID = 1
+		expectedOrder.DeliveryMethod.DeliveryZones = []*models.DeliveryZone{
+			{ID: 5, Name: "Zona Norte", Price: 25.00},
+		}
+
+		orderRepoMock := mocks.NewOrderRepository(t)
+		orderRepoMock.EXPECT().
+			Create(ctx, order).
+			Return(expectedOrder, nil)
+
+		service := NewOrderService(orderRepoMock)
+
+		// Act
+		result, err := service.Create(ctx, order, store)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.DeliveryMethod)
+		assert.Len(t, result.DeliveryMethod.DeliveryZones, 1)
+		assert.Equal(t, 5, result.DeliveryMethod.DeliveryZones[0].ID)
+		assert.Equal(t, "Zona Norte", result.DeliveryMethod.DeliveryZones[0].Name)
+		assert.Equal(t, 25.00, result.DeliveryMethod.DeliveryZones[0].Price)
+	})
+
 	t.Run("when multiple items with correct totals then passes validation", func(t *testing.T) {
 		// Arrange
 		ctx := context.Background()

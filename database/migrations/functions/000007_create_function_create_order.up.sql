@@ -22,6 +22,9 @@ CREATE OR REPLACE FUNCTION create_order(
     p_delivery_method_id bigint,
     p_delivery_method_code text,
     p_delivery_method_name text,
+    p_delivery_zone_id bigint,
+    p_delivery_zone_name text,
+    p_delivery_zone_price double precision,
     p_shipping_cost double precision,
     p_items jsonb  -- [{product_id, product_name, product_image_url, base_price, is_promotional, promotional_price, quantity, unit_price, total_price, notes, selected_options: [{variant_id, option_id, variant_name, option_name, option_price, quantity}]}]
 ) RETURNS jsonb AS $$
@@ -58,6 +61,7 @@ BEGIN
         customer_address_name, customer_address_place_id, customer_address_lat, customer_address_lng,
         payment_method_id, payment_method_code, payment_method_name,
         delivery_method_id, delivery_method_code, delivery_method_name,
+        delivery_zone_id, delivery_zone_name, delivery_zone_price,
         subtotal, shipping_cost, total
     ) VALUES (
         v_order_number,
@@ -67,6 +71,7 @@ BEGIN
         p_customer_address_name, p_customer_address_place_id, p_customer_address_lat, p_customer_address_lng,
         p_payment_method_id, p_payment_method_code, p_payment_method_name,
         p_delivery_method_id, p_delivery_method_code, p_delivery_method_name,
+        p_delivery_zone_id, p_delivery_zone_name, p_delivery_zone_price,
         v_subtotal, COALESCE(p_shipping_cost, 0), v_total
     ) RETURNING id, created_at INTO v_order_id, v_created_at;
 
