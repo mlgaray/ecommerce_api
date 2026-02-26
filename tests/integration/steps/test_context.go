@@ -14,6 +14,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
@@ -452,14 +453,18 @@ func (ctx *TestContext) SetupShopTestApp() error {
 
 			// Provide handler
 			fx.Annotate(authhttp.NewShopHandler, fx.As(new(ports.ShopHandler))),
+
+			// Provide shop ownership middleware
+			middleware.NewShopOwnershipMiddleware,
 		),
-		fx.Invoke(func(handler ports.ShopHandler, authMiddleware *middleware.AuthMiddleware) {
+		fx.Invoke(func(handler ports.ShopHandler, authMiddleware *middleware.AuthMiddleware, shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware) {
 			// Create HTTP router and server
 			router := mux.NewRouter()
 
-			// Protected routes (require auth) - using REAL auth middleware
+			// Protected routes (require auth + shop ownership) - using REAL middlewares
 			protectedShops := router.PathPrefix("/shops").Subrouter()
 			protectedShops.Use(authMiddleware.Authenticate)
+			protectedShops.Use(shopOwnershipMiddleware.Authorize)
 			protectedShops.HandleFunc("/{shop_id}", handler.GetByID).Methods("GET")
 			protectedShops.HandleFunc("/{shop_id}", handler.Update).Methods("PUT")
 
@@ -542,6 +547,179 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			router.HandleFunc("/stores/{slug}/products", handler.GetProducts).Methods("GET")
 			router.HandleFunc("/stores/{slug}/categories", handler.GetCategories).Methods("GET")
 			router.HandleFunc("/stores/{slug}", handler.GetBySlug).Methods("GET")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupCreateOrderTestApp initializes the test application for create order tests (public endpoint)
+func (ctx *TestContext) SetupCreateOrderTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order
+	sqlMock.MatchExpectationsInOrder(false)
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide repository dependencies
+			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
+			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+
+			// Provide services
+			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
+			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Order],
+				fx.As(new(ports.PaginationService[*models.Order])),
+			),
+
+			// Provide use cases (all 5 required by NewOrderHandler)
+			fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
+			fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
+			fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
+			fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
+			fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
+
+			// Provide handler
+			fx.Annotate(authhttp.NewOrderHandler, fx.As(new(ports.OrderHandler))),
+		),
+		fx.Invoke(func(handler ports.OrderHandler) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+
+			// Public route: POST /stores/{slug}/orders
+			storeRouter := router.PathPrefix("/stores").Subrouter()
+			storeRouter.HandleFunc("/{slug}/orders", handler.Create).Methods("POST")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupOrderTestApp initializes the test application for order tests (protected endpoints)
+func (ctx *TestContext) SetupOrderTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order
+	sqlMock.MatchExpectationsInOrder(false)
+
+	// Create TokenService for auth middleware
+	tokenService := jwt.NewTokenService()
+
+	// Generate test token for authenticated requests
+	// - Shop 1, 2: standard test shops
+	// - Shop 888: for "not found" tests (passes auth, but order doesn't exist in DB)
+	// - Shop 999: intentionally excluded for "not owned" tests
+	testUser := &models.User{
+		ID:    1,
+		Email: "test@example.com",
+	}
+	testShopIDs := []int{1, 2, 888}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	if err != nil {
+		return err
+	}
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide TokenService for auth middleware
+			fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
+
+			// Provide auth middleware
+			middleware.NewAuthMiddleware,
+
+			// Provide repository dependencies
+			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(postgresql.NewProductRepository, fx.As(new(ports.ProductRepository))),
+			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
+			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
+			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+
+			// Provide services
+			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
+			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
+			fx.Annotate(
+				services.NewPaginationService[*models.Order],
+				fx.As(new(ports.PaginationService[*models.Order])),
+			),
+
+			// Provide use cases (all 5 required by NewOrderHandler)
+			fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
+			fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
+			fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
+			fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
+			fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
+
+			// Provide handler
+			fx.Annotate(authhttp.NewOrderHandler, fx.As(new(ports.OrderHandler))),
+
+			// Provide shop ownership middleware
+			middleware.NewShopOwnershipMiddleware,
+		),
+		fx.Invoke(func(handler ports.OrderHandler, authMiddleware *middleware.AuthMiddleware, shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+
+			// Protected routes (require auth + shop ownership)
+			protected := router.PathPrefix("/shops").Subrouter()
+			protected.Use(authMiddleware.Authenticate)
+			protected.Use(shopOwnershipMiddleware.Authorize)
+			protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/status", handler.UpdateStatus).Methods("PATCH")
+			protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", handler.Update).Methods("PUT")
+			protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", handler.GetByID).Methods("GET")
+			protected.HandleFunc("/{shop_id}/orders", handler.GetAll).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),

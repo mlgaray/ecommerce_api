@@ -15,16 +15,17 @@ type Router interface {
 	RouteApp() *mux.Router
 }
 type router struct {
-	router          *mux.Router
-	authHandler     ports.AuthHandler
-	healthHandler   ports.HealthHandler
-	productHandler  ports.ProductHandler
-	categoryHandler ports.CategoryHandler
-	shopHandler     ports.ShopHandler
-	storeHandler    ports.StoreHandler
-	orderHandler    ports.OrderHandler
-	orderWSHandler  *httpAdapter.OrderWSHandler
-	authMiddleware  *middleware.AuthMiddleware
+	router                  *mux.Router
+	authHandler             ports.AuthHandler
+	healthHandler           ports.HealthHandler
+	productHandler          ports.ProductHandler
+	categoryHandler         ports.CategoryHandler
+	shopHandler             ports.ShopHandler
+	storeHandler            ports.StoreHandler
+	orderHandler            ports.OrderHandler
+	orderWSHandler          *httpAdapter.OrderWSHandler
+	authMiddleware          *middleware.AuthMiddleware
+	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware
 }
 
 func NewRouter(
@@ -37,21 +38,23 @@ func NewRouter(
 	orderHandler ports.OrderHandler,
 	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
+	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware,
 ) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 	r.Use(middleware.PrometheusMiddleware)
 	return &router{
-		router:          r,
-		authHandler:     authHandler,
-		healthHandler:   healthHandler,
-		productHandler:  productHandler,
-		categoryHandler: categoryHandler,
-		shopHandler:     shopHandler,
-		storeHandler:    storeHandler,
-		orderHandler:    orderHandler,
-		orderWSHandler:  orderWSHandler,
-		authMiddleware:  authMiddleware,
+		router:                  r,
+		authHandler:             authHandler,
+		healthHandler:           healthHandler,
+		productHandler:          productHandler,
+		categoryHandler:         categoryHandler,
+		shopHandler:             shopHandler,
+		storeHandler:            storeHandler,
+		orderHandler:            orderHandler,
+		orderWSHandler:          orderWSHandler,
+		authMiddleware:          authMiddleware,
+		shopOwnershipMiddleware: shopOwnershipMiddleware,
 	}
 }
 
@@ -110,6 +113,7 @@ func (r *router) shopRoutes() {
 	// Protected routes (auth required)
 	protected := r.router.PathPrefix("/shops").Subrouter()
 	protected.Use(r.authMiddleware.Authenticate)
+	protected.Use(r.shopOwnershipMiddleware.Authorize)
 	// PATCH /shops/{shop_id}/orders/{order_id}/status - Update order status (owner only)
 	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/status", r.orderHandler.UpdateStatus).Methods(http.MethodPatch)
 	// PUT /shops/{shop_id}/orders/{order_id} - Update order (owner only)

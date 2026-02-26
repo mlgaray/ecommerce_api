@@ -467,7 +467,7 @@ func TestOrderHandler_Create_WithCustomerAddress(t *testing.T) {
 // =============================================================================
 
 func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
-	t.Run("when request has delivery zone then passes to use case", func(t *testing.T) {
+	t.Run("when request has delivery zone then maps zone data to domain model", func(t *testing.T) {
 		// Arrange
 		request := newValidOrderRequest()
 		request.Order.DeliveryMethod.DeliveryZone = &requests.OrderDeliveryZoneRequest{
@@ -477,10 +477,63 @@ func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
 		}
 		request.Order.DeliveryMethod.ShippingCost = 25.00
 		createdOrder := newCreatedOrder()
+		createdOrder.DeliveryMethod = &models.DeliveryMethod{
+			ID:   1,
+			Name: "Retiro en local",
+			Code: "pickup",
+			DeliveryZones: []*models.DeliveryZone{
+				{ID: 5, Name: "Zona Norte", Price: 25.00},
+			},
+		}
 
 		useCaseMock := mocks.NewCreateOrderUseCase(t)
 		useCaseMock.EXPECT().
-			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
+			Execute(mock.Anything, mock.MatchedBy(func(order *models.Order) bool {
+				return order.DeliveryMethod != nil &&
+					len(order.DeliveryMethod.DeliveryZones) == 1 &&
+					order.DeliveryMethod.DeliveryZones[0].ID == 5 &&
+					order.DeliveryMethod.DeliveryZones[0].Name == "Zona Norte" &&
+					order.DeliveryMethod.DeliveryZones[0].Price == 25.00
+			}), "test-store").
+			Return(createdOrder, nil)
+
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+
+		body, _ := json.Marshal(request)
+		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req = mux.SetURLVars(req, map[string]string{"slug": "test-store"})
+		rr := httptest.NewRecorder()
+
+		// Act
+		handler.Create(rr, req)
+
+		// Assert
+		assert.Equal(t, http.StatusCreated, rr.Code)
+
+		var response responses.CreateOrderResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		if assert.NotNil(t, response.Order) && assert.NotNil(t, response.Order.DeliveryMethod) {
+			assert.NotNil(t, response.Order.DeliveryMethod.DeliveryZone)
+			assert.Equal(t, 5, response.Order.DeliveryMethod.DeliveryZone.ID)
+			assert.Equal(t, "Zona Norte", response.Order.DeliveryMethod.DeliveryZone.Name)
+			assert.Equal(t, 25.00, response.Order.DeliveryMethod.DeliveryZone.Price)
+		}
+	})
+
+	t.Run("when request has no delivery zone then zone is nil in domain model", func(t *testing.T) {
+		// Arrange
+		request := newValidOrderRequest()
+		// No DeliveryZone set (default is nil)
+		createdOrder := newCreatedOrder()
+
+		useCaseMock := mocks.NewCreateOrderUseCase(t)
+		useCaseMock.EXPECT().
+			Execute(mock.Anything, mock.MatchedBy(func(order *models.Order) bool {
+				return order.DeliveryMethod != nil &&
+					len(order.DeliveryMethod.DeliveryZones) == 0
+			}), "test-store").
 			Return(createdOrder, nil)
 
 		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
@@ -532,7 +585,6 @@ func TestOrderHandler_UpdateStatus(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -553,30 +605,6 @@ func TestOrderHandler_UpdateStatus(t *testing.T) {
 }
 
 // =============================================================================
-// UpdateStatus Tests - Authorization
-// =============================================================================
-
-func TestOrderHandler_UpdateStatus_Forbidden(t *testing.T) {
-	t.Run("when user does not own shop then returns 403", func(t *testing.T) {
-		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
-
-		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
-		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{99}))
-		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
-		rr := httptest.NewRecorder()
-
-		// Act
-		handler.UpdateStatus(rr, req)
-
-		// Assert
-		assert.Equal(t, http.StatusForbidden, rr.Code)
-	})
-}
-
-// =============================================================================
 // UpdateStatus Tests - Invalid Request
 // =============================================================================
 
@@ -588,7 +616,6 @@ func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest(""))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -606,7 +633,6 @@ func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest("invalid_status"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -623,7 +649,6 @@ func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer([]byte("invalid")))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -652,7 +677,6 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/999/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "999"})
 		rr := httptest.NewRecorder()
 
@@ -675,7 +699,6 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest("completed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -698,7 +721,6 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -800,7 +822,6 @@ func TestOrderHandler_Update(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -822,30 +843,6 @@ func TestOrderHandler_Update(t *testing.T) {
 }
 
 // =============================================================================
-// Update Tests - Authorization
-// =============================================================================
-
-func TestOrderHandler_Update_Forbidden(t *testing.T) {
-	t.Run("when user does not own shop then returns 403", func(t *testing.T) {
-		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
-
-		body, _ := json.Marshal(newValidUpdateOrderRequest())
-		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{99}))
-		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
-		rr := httptest.NewRecorder()
-
-		// Act
-		handler.Update(rr, req)
-
-		// Assert
-		assert.Equal(t, http.StatusForbidden, rr.Code)
-	})
-}
-
-// =============================================================================
 // Update Tests - Invalid Request
 // =============================================================================
 
@@ -856,7 +853,6 @@ func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer([]byte("invalid")))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -877,7 +873,6 @@ func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -898,7 +893,6 @@ func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -929,7 +923,6 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/999", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "999"})
 		rr := httptest.NewRecorder()
 
@@ -954,7 +947,6 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 
@@ -979,7 +971,6 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(contextWithShopIDs([]int{1}))
 		req = mux.SetURLVars(req, map[string]string{"shop_id": "1", "order_id": "1"})
 		rr := httptest.NewRecorder()
 

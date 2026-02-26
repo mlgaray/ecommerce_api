@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
@@ -151,21 +150,7 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Authorization: verify user owns this shop
-	shopIDs := claims.GetShopIDsFromContext(ctx)
-	if !h.userOwnsShop(shopIDs, shopID) {
-		logs.WithFields(map[string]interface{}{
-			"file":       OrderHandlerField,
-			"function":   UpdateOrderFunctionField,
-			"shop_id":    shopID,
-			"order_id":   orderID,
-			"user_shops": shopIDs,
-		}).Warn("Unauthorized access attempt to update order")
-		httpErrors.HandleError(w, &httpErrors.ForbiddenError{Message: "access_denied_to_shop"})
-		return
-	}
-
-	// 4. Parse JSON body
+	// 3. Parse JSON body
 	var request requests.UpdateOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -179,7 +164,7 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Validate HTTP request (format, types)
+	// 4. Validate HTTP request (format, types)
 	if err := request.Validate(); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderHandlerField,
@@ -192,10 +177,10 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6. Convert to domain model
+	// 5. Convert to domain model
 	order := request.ToModel()
 
-	// 7. Execute use case
+	// 6. Execute use case
 	updatedOrder, err := h.updateOrderUseCase.Execute(ctx, shopID, orderID, order)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -354,21 +339,7 @@ func (h *OrderHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Authorization: verify user owns this shop
-	shopIDs := claims.GetShopIDsFromContext(ctx)
-	if !h.userOwnsShop(shopIDs, shopID) {
-		logs.WithFields(map[string]interface{}{
-			"file":       OrderHandlerField,
-			"function":   GetOrderByIDFunctionField,
-			"shop_id":    shopID,
-			"order_id":   orderID,
-			"user_shops": shopIDs,
-		}).Warn("Unauthorized access attempt to shop orders")
-		httpErrors.HandleError(w, &httpErrors.ForbiddenError{Message: "access_denied_to_shop"})
-		return
-	}
-
-	// 4. Execute use case
+	// 3. Execute use case
 	order, err := h.getOrderByIDUseCase.Execute(ctx, shopID, orderID)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -426,21 +397,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Authorization: verify user owns this shop
-	shopIDs := claims.GetShopIDsFromContext(ctx)
-	if !h.userOwnsShop(shopIDs, shopID) {
-		logs.WithFields(map[string]interface{}{
-			"file":       OrderHandlerField,
-			"function":   UpdateOrderStatusFunctionField,
-			"shop_id":    shopID,
-			"order_id":   orderID,
-			"user_shops": shopIDs,
-		}).Warn("Unauthorized access attempt to update order status")
-		httpErrors.HandleError(w, &httpErrors.ForbiddenError{Message: "access_denied_to_shop"})
-		return
-	}
-
-	// 4. Parse JSON body
+	// 3. Parse JSON body
 	var request requests.UpdateOrderStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -454,7 +411,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Validate HTTP request
+	// 4. Validate HTTP request
 	if err := request.Validate(); err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderHandlerField,
@@ -467,7 +424,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6. Execute use case
+	// 5. Execute use case
 	updatedOrder, err := h.updateOrderStatusUseCase.Execute(ctx, shopID, orderID, request.ToStatus())
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
@@ -543,14 +500,4 @@ func (h *OrderHandler) parseOrderID(r *http.Request) (int, error) {
 	}
 
 	return orderID, nil
-}
-
-// userOwnsShop checks if the authenticated user owns the given shop.
-func (h *OrderHandler) userOwnsShop(userShopIDs []int, shopID int) bool {
-	for _, id := range userShopIDs {
-		if id == shopID {
-			return true
-		}
-	}
-	return false
 }

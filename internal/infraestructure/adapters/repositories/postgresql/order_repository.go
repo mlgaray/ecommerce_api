@@ -36,6 +36,62 @@ func NewOrderRepository(dataBaseConnection DataBaseConnection) ports.OrderReposi
 	}
 }
 
+// orderFieldParams holds nullable field values extracted from an order for stored procedure calls.
+type orderFieldParams struct {
+	customerName, customerPhone, customerEmail *string
+	addressName, addressPlaceID                *string
+	addressLat, addressLng                     *float64
+	paymentMethodID                            *int
+	paymentMethodCode, paymentMethodName       *string
+	deliveryMethodID                           *int
+	deliveryMethodCode, deliveryMethodName     *string
+	deliveryZoneID                             *int
+	deliveryZoneName                           *string
+	deliveryZonePrice                          *float64
+}
+
+// extractOrderFieldParams extracts nullable fields from an order model for stored procedure parameters.
+// Used by both Create and Update to avoid code duplication.
+func (r *OrderSQLRepository) extractOrderFieldParams(order *models.Order) orderFieldParams {
+	var p orderFieldParams
+
+	if order.Customer != nil {
+		p.customerName = &order.Customer.Name
+		p.customerPhone = &order.Customer.Phone
+		p.customerEmail = &order.Customer.Email
+
+		if order.Customer.Address != nil {
+			p.addressName = &order.Customer.Address.Name
+			p.addressPlaceID = &order.Customer.Address.PlaceID
+			p.addressLat = &order.Customer.Address.Lat
+			p.addressLng = &order.Customer.Address.Lng
+		}
+	}
+
+	if order.PaymentMethod != nil {
+		p.paymentMethodID = &order.PaymentMethod.ID
+		code := string(order.PaymentMethod.Code)
+		p.paymentMethodCode = &code
+		p.paymentMethodName = &order.PaymentMethod.Name
+	}
+
+	if order.DeliveryMethod != nil {
+		p.deliveryMethodID = &order.DeliveryMethod.ID
+		code := string(order.DeliveryMethod.Code)
+		p.deliveryMethodCode = &code
+		p.deliveryMethodName = &order.DeliveryMethod.Name
+
+		if len(order.DeliveryMethod.DeliveryZones) > 0 {
+			zone := order.DeliveryMethod.DeliveryZones[0]
+			p.deliveryZoneID = &zone.ID
+			p.deliveryZoneName = &zone.Name
+			p.deliveryZonePrice = &zone.Price
+		}
+	}
+
+	return p
+}
+
 // Create creates a new order with all its items and selected options.
 // Uses stored procedure to handle transactional insert.
 func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*models.Order, error) {
@@ -53,67 +109,36 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		return nil, fmt.Errorf("database operation failed")
 	}
 
-	// 2. Extract address fields (can be nil)
-	var addressName, addressPlaceID *string
-	var addressLat, addressLng *float64
-	if order.Customer != nil && order.Customer.Address != nil {
-		addressName = &order.Customer.Address.Name
-		addressPlaceID = &order.Customer.Address.PlaceID
-		addressLat = &order.Customer.Address.Lat
-		addressLng = &order.Customer.Address.Lng
-	}
+	// 2. Extract nullable fields from order
+	p := r.extractOrderFieldParams(order)
 
-	// 3. Extract payment method fields (can be nil)
-	var paymentMethodID *int
-	var paymentMethodCode, paymentMethodName *string
-	if order.PaymentMethod != nil {
-		paymentMethodID = &order.PaymentMethod.ID
-		code := string(order.PaymentMethod.Code)
-		paymentMethodCode = &code
-		paymentMethodName = &order.PaymentMethod.Name
-	}
-
-	// 4. Extract delivery method fields (can be nil)
-	var deliveryMethodID *int
-	var deliveryMethodCode, deliveryMethodName *string
-	if order.DeliveryMethod != nil {
-		deliveryMethodID = &order.DeliveryMethod.ID
-		code := string(order.DeliveryMethod.Code)
-		deliveryMethodCode = &code
-		deliveryMethodName = &order.DeliveryMethod.Name
-	}
-
-	// 5. Extract customer fields
-	var customerName, customerPhone, customerEmail *string
-	if order.Customer != nil {
-		customerName = &order.Customer.Name
-		customerPhone = &order.Customer.Phone
-		customerEmail = &order.Customer.Email
-	}
-
-	// 6. Call stored procedure
+	// 3. Call stored procedure
 	var resultJSON []byte
 	err = r.db.QueryRowContext(ctx, `
 		SELECT create_order(
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15, $16, $17, $18
+			$11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+			$21
 		)`,
 		order.Store.ID,
 		order.Store.Name,
 		order.Store.Slug,
-		customerName,
-		customerPhone,
-		customerEmail,
-		addressName,
-		addressPlaceID,
-		addressLat,
-		addressLng,
-		paymentMethodID,
-		paymentMethodCode,
-		paymentMethodName,
-		deliveryMethodID,
-		deliveryMethodCode,
-		deliveryMethodName,
+		p.customerName,
+		p.customerPhone,
+		p.customerEmail,
+		p.addressName,
+		p.addressPlaceID,
+		p.addressLat,
+		p.addressLng,
+		p.paymentMethodID,
+		p.paymentMethodCode,
+		p.paymentMethodName,
+		p.deliveryMethodID,
+		p.deliveryMethodCode,
+		p.deliveryMethodName,
+		p.deliveryZoneID,
+		p.deliveryZoneName,
+		p.deliveryZonePrice,
 		order.ShippingCost,
 		itemsJSON,
 	).Scan(&resultJSON)
@@ -122,7 +147,7 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		return r.handleCreateError(err, order.Store.ID)
 	}
 
-	// 7. Parse result
+	// 8. Parse result
 	var result struct {
 		ID           int       `json:"id"`
 		OrderNumber  string    `json:"order_number"`
@@ -143,7 +168,7 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		return nil, fmt.Errorf("database operation failed")
 	}
 
-	// 8. Update order with DB-generated values
+	// 9. Update order with DB-generated values
 	order.ID = result.ID
 	order.OrderNumber = result.OrderNumber
 	order.Status = models.OrderStatus(result.Status)
@@ -980,8 +1005,6 @@ func (r *OrderSQLRepository) unmarshalOrderItems(itemsJSON []byte) ([]*models.Or
 // Uses stored procedure to handle transactional update.
 // Recalculates subtotal and total from items.
 // Deletes all existing items (CASCADE handles selections) and inserts new ones.
-//
-//nolint:gocyclo // Complexity is intentional - linear field extraction for nullable delivery method/zone parameters
 func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *models.Order) error {
 	startTime := time.Now()
 
@@ -997,56 +1020,10 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 		return fmt.Errorf("database operation failed")
 	}
 
-	// 2. Extract address fields (can be nil)
-	var addressName, addressPlaceID *string
-	var addressLat, addressLng *float64
-	if order.Customer != nil && order.Customer.Address != nil {
-		addressName = &order.Customer.Address.Name
-		addressPlaceID = &order.Customer.Address.PlaceID
-		addressLat = &order.Customer.Address.Lat
-		addressLng = &order.Customer.Address.Lng
-	}
+	// 2. Extract nullable fields from order
+	p := r.extractOrderFieldParams(order)
 
-	// 3. Extract payment method fields (can be nil)
-	var paymentMethodID *int
-	var paymentMethodCode, paymentMethodName *string
-	if order.PaymentMethod != nil {
-		paymentMethodID = &order.PaymentMethod.ID
-		code := string(order.PaymentMethod.Code)
-		paymentMethodCode = &code
-		paymentMethodName = &order.PaymentMethod.Name
-	}
-
-	// 4. Extract delivery method fields (can be nil)
-	var deliveryMethodID *int
-	var deliveryMethodCode, deliveryMethodName *string
-	if order.DeliveryMethod != nil {
-		deliveryMethodID = &order.DeliveryMethod.ID
-		code := string(order.DeliveryMethod.Code)
-		deliveryMethodCode = &code
-		deliveryMethodName = &order.DeliveryMethod.Name
-	}
-
-	// 5. Extract delivery zone fields (can be nil)
-	var deliveryZoneID *int
-	var deliveryZoneName *string
-	var deliveryZonePrice *float64
-	if order.DeliveryMethod != nil && len(order.DeliveryMethod.DeliveryZones) > 0 {
-		zone := order.DeliveryMethod.DeliveryZones[0]
-		deliveryZoneID = &zone.ID
-		deliveryZoneName = &zone.Name
-		deliveryZonePrice = &zone.Price
-	}
-
-	// 6. Extract customer fields
-	var customerName, customerPhone, customerEmail *string
-	if order.Customer != nil {
-		customerName = &order.Customer.Name
-		customerPhone = &order.Customer.Phone
-		customerEmail = &order.Customer.Email
-	}
-
-	// 7. Call stored procedure
+	// 3. Call stored procedure
 	var resultJSON []byte
 	err = r.db.QueryRowContext(ctx, `
 		SELECT update_order(
@@ -1055,22 +1032,22 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 		)`,
 		order.ID,
 		shopID,
-		customerName,
-		customerPhone,
-		customerEmail,
-		addressName,
-		addressPlaceID,
-		addressLat,
-		addressLng,
-		paymentMethodID,
-		paymentMethodCode,
-		paymentMethodName,
-		deliveryMethodID,
-		deliveryMethodCode,
-		deliveryMethodName,
-		deliveryZoneID,
-		deliveryZoneName,
-		deliveryZonePrice,
+		p.customerName,
+		p.customerPhone,
+		p.customerEmail,
+		p.addressName,
+		p.addressPlaceID,
+		p.addressLat,
+		p.addressLng,
+		p.paymentMethodID,
+		p.paymentMethodCode,
+		p.paymentMethodName,
+		p.deliveryMethodID,
+		p.deliveryMethodCode,
+		p.deliveryMethodName,
+		p.deliveryZoneID,
+		p.deliveryZoneName,
+		p.deliveryZonePrice,
 		order.ShippingCost,
 		itemsJSON,
 	).Scan(&resultJSON)

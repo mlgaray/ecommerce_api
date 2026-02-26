@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
@@ -47,19 +46,6 @@ func (h *ShopHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authorization: verify user owns this shop
-	shopIDs := claims.GetShopIDsFromContext(ctx)
-	if !h.userOwnsShop(shopIDs, shopID) {
-		logs.WithFields(map[string]interface{}{
-			"file":       ShopHandlerField,
-			"function":   GetShopByIDFunctionField,
-			"shop_id":    shopID,
-			"user_shops": shopIDs,
-		}).Warn("Unauthorized access attempt to shop")
-		httpErrors.HandleError(w, &httpErrors.ForbiddenError{Message: "access_denied_to_shop"})
-		return
-	}
-
 	// Execute use case
 	shop, err := h.getShopByID.Execute(ctx, shopID)
 	if err != nil {
@@ -93,15 +79,6 @@ func (h *ShopHandler) parseShopID(r *http.Request) (int, error) {
 	return shopID, nil
 }
 
-func (h *ShopHandler) userOwnsShop(userShopIDs []int, shopID int) bool {
-	for _, id := range userShopIDs {
-		if id == shopID {
-			return true
-		}
-	}
-	return false
-}
-
 //nolint:gocyclo // Complexity is intentional for readability - sequential request handling
 func (h *ShopHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -110,19 +87,6 @@ func (h *ShopHandler) Update(w http.ResponseWriter, r *http.Request) {
 	shopID, err := h.parseShopID(r)
 	if err != nil {
 		httpErrors.HandleError(w, err)
-		return
-	}
-
-	// Authorization: verify user owns this shop
-	shopIDs := claims.GetShopIDsFromContext(ctx)
-	if !h.userOwnsShop(shopIDs, shopID) {
-		logs.WithFields(map[string]interface{}{
-			"file":       ShopHandlerField,
-			"function":   UpdateShopFunctionField,
-			"shop_id":    shopID,
-			"user_shops": shopIDs,
-		}).Warn("Unauthorized access attempt to shop")
-		httpErrors.HandleError(w, &httpErrors.ForbiddenError{Message: "access_denied_to_shop"})
 		return
 	}
 
