@@ -43,7 +43,7 @@ BEGIN
         USING ERRCODE = 'P0002';  -- No data found
     END IF;
 
-    -- 2. Generate order number
+    -- 2. Generate order number (uses global SEQUENCE, no lock needed)
     v_order_number := generate_order_number(p_store_id);
 
     -- 3. Calculate subtotal from items using jsonb_to_recordset (typed, no casts)
@@ -190,7 +190,7 @@ COMMENT ON FUNCTION create_order IS
 'Creates an order with items and selected options in a single call.
 Validations:
 - Store existence (P0002 if not found)
-- Uses generate_order_number() for sequential order numbers
+- Uses generate_order_number() with global SEQUENCE (lock-free, no contention)
 Performance:
 - 1 INSERT (order)
 - 1 batch INSERT (all items via INSERT...SELECT with jsonb_to_recordset)

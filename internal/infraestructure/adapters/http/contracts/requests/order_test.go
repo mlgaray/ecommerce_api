@@ -1027,7 +1027,7 @@ func TestOrderFiltersRequest_ToOrderFilters(t *testing.T) {
 		assert.Equal(t, expected, *result.DateFrom)
 	})
 
-	t.Run("when date_to provided then sets end of day", func(t *testing.T) {
+	t.Run("when date_to provided then sets start of next day", func(t *testing.T) {
 		// Arrange
 		dateTo := "2026-02-10"
 		request := &OrderFiltersRequest{
@@ -1039,8 +1039,8 @@ func TestOrderFiltersRequest_ToOrderFilters(t *testing.T) {
 
 		// Assert
 		require.NotNil(t, result.DateTo)
-		// End of day = start of day + 24h - 1 microsecond = 23:59:59.999999
-		expected := time.Date(2026, 2, 10, 23, 59, 59, 999999000, time.UTC)
+		// Exclusive upper bound = start of next day (queries use < $3)
+		expected := time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC)
 		assert.Equal(t, expected, *result.DateTo)
 	})
 

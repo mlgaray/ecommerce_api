@@ -23,6 +23,7 @@ type router struct {
 	shopHandler             ports.ShopHandler
 	storeHandler            ports.StoreHandler
 	orderHandler            ports.OrderHandler
+	metricsHandler          ports.MetricsHandler
 	orderWSHandler          *httpAdapter.OrderWSHandler
 	authMiddleware          *middleware.AuthMiddleware
 	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware
@@ -36,6 +37,7 @@ func NewRouter(
 	shopHandler ports.ShopHandler,
 	storeHandler ports.StoreHandler,
 	orderHandler ports.OrderHandler,
+	metricsHandler ports.MetricsHandler,
 	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware,
@@ -52,6 +54,7 @@ func NewRouter(
 		shopHandler:             shopHandler,
 		storeHandler:            storeHandler,
 		orderHandler:            orderHandler,
+		metricsHandler:          metricsHandler,
 		orderWSHandler:          orderWSHandler,
 		authMiddleware:          authMiddleware,
 		shopOwnershipMiddleware: shopOwnershipMiddleware,
@@ -64,6 +67,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.productRoutes()
 	r.categoryRoutes()
 	r.metricsRoutes()
+	r.shopMetricsRoutes()
 	r.shopRoutes()
 	r.storeRoutes()
 	r.websocketRoutes()
@@ -131,6 +135,16 @@ func (r *router) shopRoutes() {
 
 func (r *router) metricsRoutes() {
 	r.router.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
+}
+
+func (r *router) shopMetricsRoutes() {
+	protected := r.router.PathPrefix("/shops").Subrouter()
+	protected.Use(r.authMiddleware.Authenticate)
+	protected.Use(r.shopOwnershipMiddleware.Authorize)
+	protected.HandleFunc("/{shop_id}/metrics/dashboard", r.metricsHandler.GetDashboard).Methods(http.MethodGet)
+	protected.HandleFunc("/{shop_id}/metrics/revenue/trend", r.metricsHandler.GetRevenueTrend).Methods(http.MethodGet)
+	protected.HandleFunc("/{shop_id}/metrics/products/top", r.metricsHandler.GetTopProducts).Methods(http.MethodGet)
+	protected.HandleFunc("/{shop_id}/metrics/customers/top", r.metricsHandler.GetTopCustomers).Methods(http.MethodGet)
 }
 
 func (r *router) storeRoutes() {

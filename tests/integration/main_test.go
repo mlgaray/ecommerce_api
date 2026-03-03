@@ -67,6 +67,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getOrderByIDSteps := steps.NewGetOrderByIDSteps()
 	updateOrderStatusSteps := steps.NewUpdateOrderStatusSteps()
 	updateOrderSteps := steps.NewUpdateOrderSteps()
+	metricsSteps := steps.NewMetricsSteps()
 	commonSteps := steps.NewCommonSteps()
 
 	// Register steps
@@ -93,6 +94,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	getOrderByIDSteps.RegisterSteps(sc)
 	updateOrderStatusSteps.RegisterSteps(sc)
 	updateOrderSteps.RegisterSteps(sc)
+	metricsSteps.RegisterSteps(sc)
 	commonSteps.RegisterSteps(sc)
 
 	// Setup hooks
