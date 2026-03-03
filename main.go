@@ -10,6 +10,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	metricsUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
@@ -146,6 +147,19 @@ var Module = fx.Options(
 		fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewOrderHandler, fx.As(new(ports.OrderHandler))),
+
+		// METRICS
+		// Repository first (no dependencies)
+		fx.Annotate(postgresql.NewMetricsRepository, fx.As(new(ports.MetricsRepository))),
+		// Service depends on Repository
+		fx.Annotate(services.NewMetricsService, fx.As(new(ports.MetricsService))),
+		// Use Cases depend on MetricsService only (timezone comes from frontend)
+		fx.Annotate(metricsUC.NewGetDashboardUseCase, fx.As(new(ports.GetDashboardMetricsUseCase))),
+		fx.Annotate(metricsUC.NewGetRevenueTrendUseCase, fx.As(new(ports.GetRevenueTrendUseCase))),
+		fx.Annotate(metricsUC.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
+		fx.Annotate(metricsUC.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
+		// Handler depends on Use Cases
+		fx.Annotate(http.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),
 
 		// SERVER
 		server.NewServer,

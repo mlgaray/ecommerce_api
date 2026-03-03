@@ -14,6 +14,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	"github.com/mlgaray/ecommerce_api/internal/application/usecases/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
@@ -720,6 +721,93 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 			protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", handler.Update).Methods("PUT")
 			protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", handler.GetByID).Methods("GET")
 			protected.HandleFunc("/{shop_id}/orders", handler.GetAll).Methods("GET")
+
+			ctx.server = httptest.NewServer(router)
+		}),
+		fx.NopLogger, // Suppress fx logs during tests
+	)
+
+	return ctx.app.Start(context.Background())
+}
+
+// SetupMetricsTestApp initializes the test application for metrics tests (protected endpoints)
+func (ctx *TestContext) SetupMetricsTestApp() error {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	// Initialize logger for tests
+	logs.Init()
+
+	// Setup SQL mock
+	db, sqlMock, err := sqlmock.New()
+	if err != nil {
+		return err
+	}
+	ctx.mockDB = db
+	ctx.mockSQLMock = sqlMock
+
+	// Allow queries to be executed in any order (dashboard runs 7 queries in parallel)
+	sqlMock.MatchExpectationsInOrder(false)
+
+	// Create TokenService for auth middleware
+	tokenService := jwt.NewTokenService()
+
+	// Generate test token for authenticated requests
+	// - Shop 1, 2: standard test shops
+	// - Shop 888: for "not found" tests (passes auth, but no data)
+	// - Shop 999: intentionally excluded for "not owned" tests
+	testUser := &models.User{
+		ID:    1,
+		Email: "test@example.com",
+	}
+	testShopIDs := []int{1, 2, 888}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	if err != nil {
+		return err
+	}
+
+	// Create FX app with real services but mocked DB
+	ctx.app = fx.New(
+		fx.Provide(
+			// Provide mocked database connection
+			func() postgresql.DataBaseConnection {
+				return &mockDataBaseConnection{db: db}
+			},
+
+			// Provide TokenService for auth middleware
+			fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
+
+			// Provide auth middleware
+			middleware.NewAuthMiddleware,
+
+			// Provide metrics dependencies
+			fx.Annotate(postgresql.NewMetricsRepository, fx.As(new(ports.MetricsRepository))),
+			fx.Annotate(services.NewMetricsService, fx.As(new(ports.MetricsService))),
+
+			// Provide use cases
+			fx.Annotate(metrics.NewGetDashboardUseCase, fx.As(new(ports.GetDashboardMetricsUseCase))),
+			fx.Annotate(metrics.NewGetRevenueTrendUseCase, fx.As(new(ports.GetRevenueTrendUseCase))),
+			fx.Annotate(metrics.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
+			fx.Annotate(metrics.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
+
+			// Provide handler
+			fx.Annotate(authhttp.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),
+
+			// Provide shop ownership middleware
+			middleware.NewShopOwnershipMiddleware,
+		),
+		fx.Invoke(func(handler ports.MetricsHandler, authMiddleware *middleware.AuthMiddleware, shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware) {
+			// Create HTTP router and server
+			router := mux.NewRouter()
+
+			// Protected routes (require auth + shop ownership)
+			protected := router.PathPrefix("/shops").Subrouter()
+			protected.Use(authMiddleware.Authenticate)
+			protected.Use(shopOwnershipMiddleware.Authorize)
+			protected.HandleFunc("/{shop_id}/metrics/dashboard", handler.GetDashboard).Methods("GET")
+			protected.HandleFunc("/{shop_id}/metrics/revenue/trend", handler.GetRevenueTrend).Methods("GET")
+			protected.HandleFunc("/{shop_id}/metrics/products/top", handler.GetTopProducts).Methods("GET")
+			protected.HandleFunc("/{shop_id}/metrics/customers/top", handler.GetTopCustomers).Methods("GET")
 
 			ctx.server = httptest.NewServer(router)
 		}),
