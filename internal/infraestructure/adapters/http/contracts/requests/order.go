@@ -142,12 +142,20 @@ func (r *OrderRequest) Validate() error {
 	return nil
 }
 
-// validateCustomer validates customer data.
-func (r *OrderRequest) validateCustomer() error {
-	if strings.TrimSpace(r.Customer.Name) == "" {
+// Validate validates customer data (shared by Create and Update).
+func (c *OrderCustomerRequest) Validate() error {
+	if strings.TrimSpace(c.Name) == "" {
 		return &httpErrors.BadRequestError{Message: "customer_name_is_required"}
 	}
+	if strings.TrimSpace(c.Phone) == "" {
+		return &httpErrors.BadRequestError{Message: "customer_phone_is_required"}
+	}
 	return nil
+}
+
+// validateCustomer validates customer data.
+func (r *OrderRequest) validateCustomer() error {
+	return r.Customer.Validate()
 }
 
 // validateDeliveryMethod validates delivery method data.
@@ -395,8 +403,8 @@ func (r *UpdateOrderRequest) Validate() error {
 //nolint:gocyclo // Complexity is intentional for readability - linear field validations per item and selected option
 func (r *UpdateOrderDataRequest) Validate() error {
 	// Validate customer (required)
-	if strings.TrimSpace(r.Customer.Name) == "" {
-		return &httpErrors.BadRequestError{Message: "customer_name_is_required"}
+	if err := r.Customer.Validate(); err != nil {
+		return err
 	}
 
 	// Validate payment method (optional — pointer)
@@ -679,12 +687,12 @@ func (r *OrderFiltersRequest) ToOrderFilters() models.OrderFilters {
 		}
 	}
 
-	// Parse date_to to time.Time (end of day in UTC)
+	// Parse date_to to time.Time (exclusive upper bound: start of next day)
 	// The use case will re-interpret these dates in the shop's timezone
 	if r.DateTo != nil {
 		if dateTo, err := time.Parse("2006-01-02", *r.DateTo); err == nil {
-			endOfDay := dateTo.Add(24*time.Hour - time.Microsecond)
-			filters.DateTo = &endOfDay
+			nextDay := dateTo.AddDate(0, 0, 1)
+			filters.DateTo = &nextDay
 		}
 	}
 
