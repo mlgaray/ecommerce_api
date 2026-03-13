@@ -109,14 +109,16 @@ func (g *GetAllOrdersSteps) iSendAGetAllOrdersRequestWithInvalidShopID(invalidSh
 // ===== SQL Mock Setup =====
 
 func (g *GetAllOrdersSteps) setupGetAllSQLExpectations(ctx *TestContext, shopID int) {
-	// 20 columns returned by GetAllByShopIDWithFilters query (lightweight - no items)
+	// 26 columns returned by GetAllByShopIDWithFilters query (lightweight - no items)
 	columns := []string{
 		"id", "order_number", "status",
 		"customer_name", "customer_phone", "customer_email", "customer_address_name",
 		"payment_method_id", "payment_method_code", "payment_method_name",
 		"delivery_method_id", "delivery_method_code", "delivery_method_name",
 		"delivery_zone_name",
-		"subtotal", "shipping_cost", "total",
+		"subtotal", "shipping_cost", "discount", "total",
+		"coupon_code", "coupon_type", "coupon_value",
+		"coupon_discount_amount", "coupon_min_order_amount",
 		"created_at", "updated_at",
 		"items_count",
 	}
@@ -134,7 +136,8 @@ func (g *GetAllOrdersSteps) setupGetAllSQLExpectations(ctx *TestContext, shopID 
 				1, "transfer", "Transferencia",
 				1, "delivery", "Delivery",
 				nil,
-				200.0, 50.0, 250.0,
+				200.0, 50.0, 0.0, 250.0,
+				nil, nil, nil, nil, nil,
 				now, now,
 				2,
 			).
@@ -144,7 +147,8 @@ func (g *GetAllOrdersSteps) setupGetAllSQLExpectations(ctx *TestContext, shopID 
 				1, "cash", "Efectivo",
 				1, "pickup", "Retiro",
 				nil,
-				100.0, 0.0, 100.0,
+				100.0, 0.0, 0.0, 100.0,
+				nil, nil, nil, nil, nil,
 				now, now,
 				1,
 			)
