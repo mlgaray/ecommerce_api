@@ -1153,3 +1153,82 @@ func TestProductService_Delete(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+// =============================================================================
+// GetByIDAndShopID Tests
+// =============================================================================
+
+func TestProductService_GetByIDAndShopID(t *testing.T) {
+	t.Run("when product exists and belongs to shop then returns product", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+		expectedProduct := newValidProductWithID(productID)
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			GetByIDAndShopID(ctx, productID, shopID).
+			Return(expectedProduct, nil)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, productID, result.ID)
+	})
+
+	t.Run("when product not found then returns RecordNotFoundError", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 999
+		shopID := 1
+		notFoundError := &errors.RecordNotFoundError{Message: errors.ProductNotFound}
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			GetByIDAndShopID(ctx, productID, shopID).
+			Return(nil, notFoundError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		var notFound *errors.RecordNotFoundError
+		assert.True(t, stdErrors.As(err, &notFound))
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		productID := 1
+		shopID := 1
+		expectedError := stdErrors.New("database timeout")
+
+		repoMock := mocks.NewProductRepository(t)
+		repoMock.EXPECT().
+			GetByIDAndShopID(ctx, productID, shopID).
+			Return(nil, expectedError)
+
+		assetMock := mocks.NewAssetService(t)
+		service := NewProductService(repoMock, assetMock)
+
+		// Act
+		result, err := service.GetByIDAndShopID(ctx, productID, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, expectedError, err)
+	})
+}

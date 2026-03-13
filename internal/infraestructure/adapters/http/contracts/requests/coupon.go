@@ -35,7 +35,7 @@ func (r *couponRequestBase) validate() error {
 	if len(r.Code) > models.MaxCouponCodeLength {
 		return &httpErrors.BadRequestError{Message: "coupon_code_exceeds_max_length"}
 	}
-	if r.Type != "percentage" && r.Type != "fixed" {
+	if r.Type != string(models.CouponTypePercentage) && r.Type != string(models.CouponTypeFixed) {
 		return &httpErrors.BadRequestError{Message: "coupon_type_must_be_percentage_or_fixed"}
 	}
 	if err := validateNumericFields(r.Value, r.MinOrderAmount, r.UsageLimit, r.MaxUsesPerPhone); err != nil {
@@ -232,7 +232,8 @@ func (r *CouponFiltersRequest) ToCouponFilters() models.CouponFilters {
 
 	// Convert is_active string to bool pointer
 	if r.IsActive != nil {
-		isActive := *r.IsActive == "true"
+		isActive, _ := strconv.ParseBool(*r.IsActive)
+		// Safe: Validate() already verified it's a valid bool string
 		filters.IsActive = &isActive
 	}
 
