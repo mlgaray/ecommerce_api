@@ -48,6 +48,14 @@ type orderFieldParams struct {
 	deliveryZoneID                             *int
 	deliveryZoneName                           *string
 	deliveryZonePrice                          *float64
+	discount                                   float64
+	couponCode                                 *string
+	couponType                                 *string
+	couponValue                                *float64
+	couponDiscAmt                              *float64
+	couponMinOrder                             *float64
+	couponID                                   *int
+	couponPhone                                *string
 }
 
 // extractOrderFieldParams extracts nullable fields from an order model for stored procedure parameters.
@@ -89,6 +97,21 @@ func (r *OrderSQLRepository) extractOrderFieldParams(order *models.Order) orderF
 		}
 	}
 
+	p.discount = order.Discount
+
+	if order.Coupon != nil {
+		p.couponCode = &order.Coupon.Code
+		couponType := string(order.Coupon.Type)
+		p.couponType = &couponType
+		p.couponValue = &order.Coupon.Value
+		p.couponDiscAmt = &order.Coupon.DiscountAmount
+		p.couponMinOrder = &order.Coupon.MinOrderAmount
+		p.couponID = &order.Coupon.ID
+		if order.Customer != nil && order.Customer.Phone != "" {
+			p.couponPhone = &order.Customer.Phone
+		}
+	}
+
 	return p
 }
 
@@ -118,7 +141,7 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		SELECT create_order(
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
 			$11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-			$21
+			$21, $22, $23, $24, $25, $26, $27, $28, $29
 		)`,
 		order.Store.ID,
 		order.Store.Name,
@@ -140,6 +163,14 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		p.deliveryZoneName,
 		p.deliveryZonePrice,
 		order.ShippingCost,
+		p.discount,
+		p.couponCode,
+		p.couponType,
+		p.couponValue,
+		p.couponDiscAmt,
+		p.couponMinOrder,
+		p.couponID,
+		p.couponPhone,
 		itemsJSON,
 	).Scan(&resultJSON)
 
@@ -153,6 +184,7 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 		OrderNumber  string    `json:"order_number"`
 		Status       string    `json:"status"`
 		Subtotal     float64   `json:"subtotal"`
+		Discount     float64   `json:"discount"`
 		ShippingCost float64   `json:"shipping_cost"`
 		Total        float64   `json:"total"`
 		CreatedAt    time.Time `json:"created_at"`
@@ -173,6 +205,7 @@ func (r *OrderSQLRepository) Create(ctx context.Context, order *models.Order) (*
 	order.OrderNumber = result.OrderNumber
 	order.Status = models.OrderStatus(result.Status)
 	order.Subtotal = result.Subtotal
+	order.Discount = result.Discount
 	order.ShippingCost = result.ShippingCost
 	order.Total = result.Total
 	order.CreatedAt = result.CreatedAt
@@ -293,6 +326,11 @@ func (r *OrderSQLRepository) handleCreateError(err error, storeID int) (*models.
 			return nil, &errors.ValidationError{Message: pqErr.Message}
 		}
 
+		// Coupon usage limit errors (P0003 from SP)
+		if pqErr.Code == PqErrCodeRaiseException {
+			return nil, mapCouponLimitError(pqErr.Message)
+		}
+
 		logs.WithFields(map[string]interface{}{
 			"file":       OrderRepositoryField,
 			"function":   OrderCreateFunctionField,
@@ -305,6 +343,18 @@ func (r *OrderSQLRepository) handleCreateError(err error, storeID int) (*models.
 	}
 
 	return nil, fmt.Errorf("database operation failed: %w", err)
+}
+
+// mapCouponLimitError maps SP coupon limit error messages to domain errors.
+func mapCouponLimitError(message string) error {
+	switch message {
+	case errors.CouponUsageLimitReached:
+		return &errors.BusinessRuleError{Message: errors.CouponUsageLimitReached}
+	case errors.CouponPhoneLimitReached:
+		return &errors.BusinessRuleError{Message: errors.CouponPhoneLimitReached}
+	default:
+		return &errors.BusinessRuleError{Message: message}
+	}
 }
 
 // GetAllByShopIDWithFilters returns orders for a shop with filters applied.
@@ -325,7 +375,9 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			o.payment_method_id, o.payment_method_code, o.payment_method_name,
 			o.delivery_method_id, o.delivery_method_code, o.delivery_method_name,
 			o.delivery_zone_name,
-			o.subtotal, o.shipping_cost, o.total,
+			o.subtotal, o.shipping_cost, o.discount, o.total,
+			o.coupon_code, o.coupon_type, o.coupon_value,
+			o.coupon_discount_amount, o.coupon_min_order_amount,
 			o.created_at, o.updated_at,
 			(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
 		FROM orders o
@@ -460,6 +512,8 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 		var deliveryMethodID sql.NullInt64
 		var deliveryMethodCode, deliveryMethodName sql.NullString
 		var deliveryZoneName sql.NullString
+		var couponCode, couponType sql.NullString
+		var couponValue, couponDiscAmt, couponMinOrder sql.NullFloat64
 
 		err := rows.Scan(
 			&order.ID,
@@ -478,7 +532,13 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			&deliveryZoneName,
 			&order.Subtotal,
 			&order.ShippingCost,
+			&order.Discount,
 			&order.Total,
+			&couponCode,
+			&couponType,
+			&couponValue,
+			&couponDiscAmt,
+			&couponMinOrder,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 			&order.ItemsCount,
@@ -522,6 +582,17 @@ func (r *OrderSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, shop
 			}
 		} else {
 			order.DeliveryMethod = nil
+		}
+
+		// Populate coupon snapshot (lightweight — no usage_count needed in list)
+		if couponCode.Valid {
+			order.Coupon = &models.Coupon{
+				Code:           couponCode.String,
+				Type:           models.CouponType(couponType.String),
+				Value:          couponValue.Float64,
+				DiscountAmount: couponDiscAmt.Float64,
+				MinOrderAmount: couponMinOrder.Float64,
+			}
 		}
 
 		orders = append(orders, order)
@@ -689,7 +760,9 @@ func (r *OrderSQLRepository) GetByID(ctx context.Context, shopID int, orderID in
 			o.payment_method_id, o.payment_method_code, o.payment_method_name,
 			o.delivery_method_id, o.delivery_method_code, o.delivery_method_name,
 			o.delivery_zone_id, o.delivery_zone_name, o.delivery_zone_price,
-			o.subtotal, o.shipping_cost, o.total,
+			o.subtotal, o.shipping_cost, o.discount, o.total,
+			o.coupon_code, o.coupon_type, o.coupon_value,
+			o.coupon_discount_amount, o.coupon_min_order_amount,
 			o.created_at, o.updated_at,
 			COALESCE(ia.items, '[]'::json) AS items
 		FROM orders o
@@ -708,6 +781,8 @@ func (r *OrderSQLRepository) GetByID(ctx context.Context, shopID int, orderID in
 		deliveryZoneID                              sql.NullInt64
 		deliveryZoneName                            sql.NullString
 		deliveryZonePrice                           sql.NullFloat64
+		couponCode, couponType                      sql.NullString
+		couponValue, couponDiscAmt, couponMinOrder  sql.NullFloat64
 		storeID                                     int
 		storeName, storeSlug                        string
 		itemsJSON                                   []byte
@@ -740,7 +815,13 @@ func (r *OrderSQLRepository) GetByID(ctx context.Context, shopID int, orderID in
 		&deliveryZonePrice,
 		&order.Subtotal,
 		&order.ShippingCost,
+		&order.Discount,
 		&order.Total,
+		&couponCode,
+		&couponType,
+		&couponValue,
+		&couponDiscAmt,
+		&couponMinOrder,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 		&itemsJSON,
@@ -822,6 +903,17 @@ func (r *OrderSQLRepository) GetByID(ctx context.Context, shopID int, orderID in
 				Name:  deliveryZoneName.String,
 				Price: deliveryZonePrice.Float64,
 			},
+		}
+	}
+
+	// Populate coupon (snapshot from order)
+	if couponCode.Valid {
+		order.Coupon = &models.Coupon{
+			Code:           couponCode.String,
+			Type:           models.CouponType(couponType.String),
+			Value:          couponValue.Float64,
+			DiscountAmount: couponDiscAmt.Float64,
+			MinOrderAmount: couponMinOrder.Float64,
 		}
 	}
 
@@ -1028,7 +1120,8 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 	err = r.db.QueryRowContext(ctx, `
 		SELECT update_order(
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+			$11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+			$21, $22, $23, $24, $25, $26, $27, $28
 		)`,
 		order.ID,
 		shopID,
@@ -1049,6 +1142,14 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 		p.deliveryZoneName,
 		p.deliveryZonePrice,
 		order.ShippingCost,
+		p.discount,
+		p.couponCode,
+		p.couponType,
+		p.couponValue,
+		p.couponDiscAmt,
+		p.couponMinOrder,
+		p.couponID,
+		p.couponPhone,
 		itemsJSON,
 	).Scan(&resultJSON)
 
@@ -1060,6 +1161,7 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 	var result struct {
 		UpdatedAt time.Time `json:"updated_at"`
 		Subtotal  float64   `json:"subtotal"`
+		Discount  float64   `json:"discount"`
 		Total     float64   `json:"total"`
 	}
 
@@ -1075,6 +1177,7 @@ func (r *OrderSQLRepository) Update(ctx context.Context, shopID int, order *mode
 
 	// 9. Update order with DB-calculated values
 	order.Subtotal = result.Subtotal
+	order.Discount = result.Discount
 	order.Total = result.Total
 	order.UpdatedAt = result.UpdatedAt
 
@@ -1122,6 +1225,11 @@ func (r *OrderSQLRepository) handleUpdateError(err error, storeID int, orderID i
 				"pg_message": pqErr.Message,
 			}).Warn("Foreign key violation during order update")
 			return &errors.ValidationError{Message: pqErr.Message}
+		}
+
+		// Coupon usage limit errors (P0003 from SP)
+		if pqErr.Code == PqErrCodeRaiseException {
+			return mapCouponLimitError(pqErr.Message)
 		}
 
 		logs.WithFields(map[string]interface{}{

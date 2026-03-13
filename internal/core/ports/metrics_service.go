@@ -22,4 +22,7 @@ type MetricsService interface {
 
 	// GetTopCustomers returns top customers with applied filters.
 	GetTopCustomers(ctx context.Context, shopID int, from, to time.Time, limit int) ([]models.TopCustomer, error)
+
+	// GetShippingSummary returns aggregated shipping metrics for a date range.
+	GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error)
 }

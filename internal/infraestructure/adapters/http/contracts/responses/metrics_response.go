@@ -103,6 +103,22 @@ type TopCustomersResponse struct {
 	Customers []TopCustomerResponse `json:"customers"`
 }
 
+// ShippingSummaryResponse represents the HTTP response for the shipping summary endpoint.
+type ShippingSummaryResponse struct {
+	TotalShippingRevenue float64 `json:"total_shipping_revenue"`
+	OrderCount           int     `json:"order_count"`
+	AverageShippingCost  float64 `json:"average_shipping_cost"`
+}
+
+// NewShippingSummaryResponse converts a domain ShippingSummary to an HTTP response.
+func NewShippingSummaryResponse(s models.ShippingSummary) *ShippingSummaryResponse {
+	return &ShippingSummaryResponse{
+		TotalShippingRevenue: s.TotalShippingRevenue,
+		OrderCount:           s.OrderCount,
+		AverageShippingCost:  s.AverageShippingCost,
+	}
+}
+
 // NewDashboardResponse converts a domain DashboardMetrics to an HTTP response.
 func NewDashboardResponse(d *models.DashboardMetrics) *DashboardResponse {
 	response := &DashboardResponse{

@@ -1,72 +1,9 @@
 package services
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
-
-// CursorData represents the internal structure of a pagination cursor
-// This structure is encoded as base64 and sent to clients as an opaque string
-type CursorData struct {
-	ID        int         `json:"id"`          // Required: unique identifier for tie-breaking
-	SortValue interface{} `json:"v,omitempty"` // Optional: value of the field being sorted by
-}
-
-// EncodeCursor converts cursor data to an opaque base64 string
-// This is what gets sent to clients in API responses
-//
-// Example:
-//
-//	data := CursorData{ID: 123, SortValue: "2024-01-01T10:00:00"}
-//	cursor, _ := EncodeCursor(data)
-//	// Returns: "eyJpZCI6MTIzLCJ2IjoiMjAyNC0wMS0wMVQxMDowMDowMCJ9"
-func EncodeCursor(data CursorData) (string, error) {
-	// Convert to JSON
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal cursor data: %w", err)
-	}
-
-	// Encode to base64 (URL-safe encoding)
-	encoded := base64.URLEncoding.EncodeToString(jsonData)
-	return encoded, nil
-}
-
-// DecodeCursor converts an opaque cursor string back to cursor data
-// This is used internally by the backend to parse client-provided cursors
-//
-// Example:
-//
-//	cursor := "eyJpZCI6MTIzLCJ2IjoiMjAyNC0wMS0wMVQxMDowMDowMCJ9"
-//	data, _ := DecodeCursor(cursor)
-//	// Returns: &CursorData{ID: 123, SortValue: "2024-01-01T10:00:00"}
-func DecodeCursor(cursor string) (*CursorData, error) {
-	if cursor == "" {
-		return nil, nil
-	}
-
-	// Decode from base64
-	jsonData, err := base64.URLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, fmt.Errorf("invalid cursor format: %w", err)
-	}
-
-	// Parse JSON
-	var data CursorData
-	if err := json.Unmarshal(jsonData, &data); err != nil {
-		return nil, fmt.Errorf("invalid cursor data: %w", err)
-	}
-
-	// Validate required fields
-	if data.ID <= 0 {
-		return nil, fmt.Errorf("invalid cursor: missing or invalid id")
-	}
-
-	return &data, nil
-}
 
 // PaginationService handles cursor-based pagination logic
 // Type parameter T must implement both Identifiable and Sortable interfaces
@@ -167,13 +104,13 @@ func (p *PaginationService[T]) buildCursor(item T, sortBy string) string {
 	sortValue := item.GetSortValue(sortBy)
 
 	// Build cursor data
-	cursorData := CursorData{
+	cursorData := pagination.CursorData{
 		ID:        item.GetID(),
 		SortValue: sortValue,
 	}
 
 	// Encode to base64
-	encoded, err := EncodeCursor(cursorData)
+	encoded, err := pagination.EncodeCursor(cursorData)
 	if err != nil {
 		// Fallback to empty cursor on encoding error (should rarely happen)
 		return ""

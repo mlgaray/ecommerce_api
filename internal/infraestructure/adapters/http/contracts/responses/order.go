@@ -20,8 +20,10 @@ type OrderResponse struct {
 	DeliveryMethod *OrderDeliveryMethodResponse `json:"delivery_method,omitempty"`
 	Items          []*OrderItemResponse         `json:"items"`
 	ItemsCount     int                          `json:"items_count"`
+	Coupon         *OrderCouponResponse         `json:"coupon,omitempty"`
 	Subtotal       float64                      `json:"subtotal"`
 	ShippingCost   float64                      `json:"shipping_cost"`
+	Discount       float64                      `json:"discount"`
 	Total          float64                      `json:"total"`
 	CreatedAt      time.Time                    `json:"created_at"`
 	UpdatedAt      *time.Time                   `json:"updated_at,omitempty"`
@@ -117,8 +119,20 @@ func OrderResponseFromModel(order *models.Order) *OrderResponse {
 		ItemsCount:   order.ItemsCount,
 		Subtotal:     order.Subtotal,
 		ShippingCost: order.ShippingCost,
+		Discount:     order.Discount,
 		Total:        order.Total,
 		CreatedAt:    order.CreatedAt,
+	}
+
+	// Populate coupon (if present)
+	if order.Coupon != nil {
+		response.Coupon = &OrderCouponResponse{
+			Code:           order.Coupon.Code,
+			Type:           string(order.Coupon.Type),
+			Value:          order.Coupon.Value,
+			DiscountAmount: order.Coupon.DiscountAmount,
+			MinOrderAmount: order.Coupon.MinOrderAmount,
+		}
 	}
 
 	// Populate store (only present in GetByID, not in list)

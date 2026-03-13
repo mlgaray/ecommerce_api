@@ -43,7 +43,15 @@ CREATE TABLE public.orders (
     -- Totales
     subtotal double precision NOT NULL DEFAULT 0,
     shipping_cost double precision NOT NULL DEFAULT 0,
+    discount double precision NOT NULL DEFAULT 0,
     total double precision NOT NULL DEFAULT 0,
+
+    -- Cupón (snapshot al momento de la orden)
+    coupon_code text NULL,
+    coupon_type text NULL,
+    coupon_value double precision NULL,
+    coupon_discount_amount double precision NULL,
+    coupon_min_order_amount double precision NULL,
 
     -- Timestamps
     created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -61,6 +69,9 @@ CREATE TABLE public.orders (
         REFERENCES delivery_zones (id) ON DELETE SET NULL,
     CONSTRAINT orders_status_check CHECK (
         status IN ('pending', 'confirmed', 'completed', 'cancelled')
+    ),
+    CONSTRAINT orders_coupon_type_check CHECK (
+        coupon_type IS NULL OR coupon_type IN ('percentage', 'fixed')
     ),
     CONSTRAINT orders_order_number_store_unique UNIQUE (store_id, order_number)
 ) TABLESPACE pg_default;
@@ -117,7 +128,8 @@ CREATE INDEX idx_orders_customer_name_trgm ON public.orders USING gin (customer_
 COMMENT ON TABLE orders IS 'Órdenes del sistema. Contiene snapshots desnormalizados de store, cliente, dirección y métodos para preservar datos históricos.';
 COMMENT ON COLUMN orders.status IS 'Estados: pending (pendiente), confirmed (confirmada), completed (completada), cancelled (cancelada)';
 COMMENT ON COLUMN orders.subtotal IS 'Suma de order_items.total_price. Calculado y almacenado para performance.';
-COMMENT ON COLUMN orders.total IS 'subtotal + shipping_cost. Almacenado para evitar recálculos.';
+COMMENT ON COLUMN orders.discount IS 'Monto de descuento aplicado por cupón. 0 si no hay cupón.';
+COMMENT ON COLUMN orders.total IS 'subtotal - discount + shipping_cost. Almacenado para evitar recálculos.';
 COMMENT ON COLUMN orders.delivery_zone_id IS 'Snapshot: ID de la zona de entrega seleccionada. NULL si el metodo no usa zonas o si la zona fue eliminada.';
 COMMENT ON COLUMN orders.delivery_zone_name IS 'Snapshot: Nombre de la zona al momento de la orden. Preserva dato historico.';
 COMMENT ON COLUMN orders.delivery_zone_price IS 'Snapshot: Precio de la zona al momento de la orden. Preserva dato historico.';

@@ -23,6 +23,7 @@ type router struct {
 	shopHandler             ports.ShopHandler
 	storeHandler            ports.StoreHandler
 	orderHandler            ports.OrderHandler
+	couponHandler           ports.CouponHandler
 	metricsHandler          ports.MetricsHandler
 	orderWSHandler          *httpAdapter.OrderWSHandler
 	authMiddleware          *middleware.AuthMiddleware
@@ -37,6 +38,7 @@ func NewRouter(
 	shopHandler ports.ShopHandler,
 	storeHandler ports.StoreHandler,
 	orderHandler ports.OrderHandler,
+	couponHandler ports.CouponHandler,
 	metricsHandler ports.MetricsHandler,
 	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
@@ -54,6 +56,7 @@ func NewRouter(
 		shopHandler:             shopHandler,
 		storeHandler:            storeHandler,
 		orderHandler:            orderHandler,
+		couponHandler:           couponHandler,
 		metricsHandler:          metricsHandler,
 		orderWSHandler:          orderWSHandler,
 		authMiddleware:          authMiddleware,
@@ -68,6 +71,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.categoryRoutes()
 	r.metricsRoutes()
 	r.shopMetricsRoutes()
+	r.couponRoutes()
 	r.shopRoutes()
 	r.storeRoutes()
 	r.websocketRoutes()
@@ -104,6 +108,23 @@ func (r *router) categoryRoutes() {
 	sub.HandleFunc("/{category_id}", r.categoryHandler.Delete).Methods(http.MethodDelete)
 }
 
+func (r *router) couponRoutes() {
+	// Protected routes (auth + shop ownership required)
+	protected := r.router.PathPrefix("/shops").Subrouter()
+	protected.Use(r.authMiddleware.Authenticate)
+	protected.Use(r.shopOwnershipMiddleware.Authorize)
+	// POST /shops/{shop_id}/coupons - Create coupon (owner only)
+	protected.HandleFunc("/{shop_id}/coupons", r.couponHandler.Create).Methods(http.MethodPost)
+	// GET /shops/{shop_id}/coupons - List coupons (owner only)
+	protected.HandleFunc("/{shop_id}/coupons", r.couponHandler.GetAll).Methods(http.MethodGet)
+	// GET /shops/{shop_id}/coupons/{coupon_id} - Get coupon by ID (owner only)
+	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.GetByID).Methods(http.MethodGet)
+	// PUT /shops/{shop_id}/coupons/{coupon_id} - Update coupon (owner only)
+	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.Update).Methods(http.MethodPut)
+	// DELETE /shops/{shop_id}/coupons/{coupon_id} - Delete coupon (owner only)
+	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.Delete).Methods(http.MethodDelete)
+}
+
 func (r *router) shopRoutes() {
 	// Public routes (no auth required)
 	sub := r.router.PathPrefix("/shops").Subrouter()
@@ -120,6 +141,8 @@ func (r *router) shopRoutes() {
 	protected.Use(r.shopOwnershipMiddleware.Authorize)
 	// PATCH /shops/{shop_id}/orders/{order_id}/status - Update order status (owner only)
 	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/status", r.orderHandler.UpdateStatus).Methods(http.MethodPatch)
+	// DELETE /shops/{shop_id}/orders/{order_id}/coupon - Remove coupon from order (owner only)
+	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/coupon", r.orderHandler.RemoveOrderCoupon).Methods(http.MethodDelete)
 	// PUT /shops/{shop_id}/orders/{order_id} - Update order (owner only)
 	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", r.orderHandler.Update).Methods(http.MethodPut)
 	// GET /shops/{shop_id}/orders/{order_id} - Get order by ID (owner only)
@@ -145,6 +168,7 @@ func (r *router) shopMetricsRoutes() {
 	protected.HandleFunc("/{shop_id}/metrics/revenue/trend", r.metricsHandler.GetRevenueTrend).Methods(http.MethodGet)
 	protected.HandleFunc("/{shop_id}/metrics/products/top", r.metricsHandler.GetTopProducts).Methods(http.MethodGet)
 	protected.HandleFunc("/{shop_id}/metrics/customers/top", r.metricsHandler.GetTopCustomers).Methods(http.MethodGet)
+	protected.HandleFunc("/{shop_id}/metrics/shipping/summary", r.metricsHandler.GetShippingSummary).Methods(http.MethodGet)
 }
 
 func (r *router) storeRoutes() {
@@ -159,6 +183,8 @@ func (r *router) storeRoutes() {
 	sub.HandleFunc("/{slug}/products", r.storeHandler.GetProducts).Methods(http.MethodGet)
 	// GET /stores/{slug}/categories - Get store categories (public)
 	sub.HandleFunc("/{slug}/categories", r.storeHandler.GetCategories).Methods(http.MethodGet)
+	// POST /stores/{slug}/coupons/validate - Validate coupon (public)
+	sub.HandleFunc("/{slug}/coupons/validate", r.storeHandler.ValidateCoupon).Methods(http.MethodPost)
 	// POST /stores/{slug}/orders - Create order (public)
 	sub.HandleFunc("/{slug}/orders", r.orderHandler.Create).Methods(http.MethodPost)
 	// GET /stores/{slug} - Get store by slug (public)

@@ -69,13 +69,15 @@ type Order struct {
 	PaymentMethod  *PaymentMethod  `json:"payment_method,omitempty"`
 	DeliveryMethod *DeliveryMethod `json:"delivery_method,omitempty"`
 	Items          []*OrderItem    `json:"items,omitempty"`
+	Coupon         *Coupon         `json:"coupon,omitempty"`
 	Subtotal       float64         `json:"subtotal"`
 	ShippingCost   float64         `json:"shipping_cost"`
+	Discount       float64         `json:"discount"`
 	Total          float64         `json:"total"`
 	CreatedAt      time.Time       `json:"created_at,omitempty"`
 	UpdatedAt      time.Time       `json:"updated_at,omitempty"`
 
-	// Transient field for list views (not persisted)
+	// Transient fields (not persisted)
 	ItemsCount int `json:"items_count,omitempty"`
 }
 
@@ -96,6 +98,18 @@ func (o *Order) GetSortValue(sortBy string) interface{} {
 	default:
 		return nil
 	}
+}
+
+// RemoveCoupon clears the coupon from the order and recalculates the total.
+// Returns false if the order had no coupon (no-op).
+func (o *Order) RemoveCoupon() bool {
+	if o.Coupon == nil {
+		return false
+	}
+	o.Coupon = nil
+	o.Discount = 0
+	o.Total = o.Subtotal + o.ShippingCost
+	return true
 }
 
 // Validate validates business rules for the Order domain model

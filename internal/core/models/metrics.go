@@ -94,6 +94,13 @@ type DashboardMetrics struct {
 	Customers            CustomerOverview     `json:"customers"`
 }
 
+// ShippingSummary contains aggregated shipping metrics for a date range.
+type ShippingSummary struct {
+	TotalShippingRevenue float64 `json:"total_shipping_revenue"`
+	OrderCount           int     `json:"order_count"`
+	AverageShippingCost  float64 `json:"average_shipping_cost"`
+}
+
 // MetricsFilters contains filter parameters for metrics endpoints.
 type MetricsFilters struct {
 	DateFrom *time.Time

@@ -27,6 +27,14 @@ CREATE OR REPLACE FUNCTION update_order(
     p_delivery_zone_name text,
     p_delivery_zone_price double precision,
     p_shipping_cost double precision,
+    p_discount double precision,
+    p_coupon_code text,
+    p_coupon_type text,
+    p_coupon_value double precision,
+    p_coupon_discount_amount double precision,
+    p_coupon_min_order_amount double precision,
+    p_coupon_id bigint,
+    p_coupon_phone text,
     p_items jsonb  -- [{product_id, product_name, product_image_url, base_price, is_promotional, promotional_price, quantity, unit_price, total_price, notes, selected_options: [{variant_id, option_id, variant_name, option_name, option_price, quantity}]}]
 ) RETURNS jsonb AS $$
 DECLARE
@@ -34,14 +42,17 @@ DECLARE
     v_total double precision := 0;
     v_updated_at timestamp with time zone;
     v_result jsonb;
+    v_usage_limit integer;
+    v_max_uses_per_phone integer;
+    v_current_usages integer;
 BEGIN
     -- 1. Calculate subtotal from items using jsonb_to_recordset (typed, no casts)
     SELECT COALESCE(SUM(i.total_price), 0) INTO v_subtotal
     FROM jsonb_to_recordset(p_items) AS i(total_price double precision);
 
-    v_total := v_subtotal + COALESCE(p_shipping_cost, 0);
+    v_total := v_subtotal - COALESCE(p_discount, 0) + COALESCE(p_shipping_cost, 0);
 
-    -- 2. Update order fields (customer, payment, delivery, delivery_zone, totals)
+    -- 2. Update order fields (customer, payment, delivery, delivery_zone, coupon, totals)
     UPDATE orders SET
         customer_name = p_customer_name,
         customer_phone = p_customer_phone,
@@ -61,7 +72,13 @@ BEGIN
         delivery_zone_price = p_delivery_zone_price,
         subtotal = v_subtotal,
         shipping_cost = COALESCE(p_shipping_cost, 0),
+        discount = COALESCE(p_discount, 0),
         total = v_total,
+        coupon_code = p_coupon_code,
+        coupon_type = p_coupon_type,
+        coupon_value = p_coupon_value,
+        coupon_discount_amount = p_coupon_discount_amount,
+        coupon_min_order_amount = p_coupon_min_order_amount,
         updated_at = now()
     WHERE id = p_order_id AND store_id = p_store_id
     RETURNING updated_at INTO v_updated_at;
@@ -70,6 +87,43 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Order not found: order_id=%, store_id=%', p_order_id, p_store_id
         USING ERRCODE = 'P0002';  -- No data found
+    END IF;
+
+    -- 3b. Manage coupon_usages atomically with limit enforcement
+    -- Lock coupon FIRST to serialize concurrent usage attempts, then clean + re-insert.
+    IF p_coupon_id IS NOT NULL THEN
+        SELECT usage_limit, max_uses_per_phone INTO v_usage_limit, v_max_uses_per_phone
+        FROM coupons WHERE id = p_coupon_id FOR UPDATE;
+    END IF;
+
+    DELETE FROM coupon_usages WHERE order_id = p_order_id;
+
+    IF p_coupon_id IS NOT NULL THEN
+
+        -- Enforce global usage limit (after DELETE, so re-applying same coupon doesn't double-count)
+        IF v_usage_limit IS NOT NULL THEN
+            SELECT COUNT(*) INTO v_current_usages
+            FROM coupon_usages WHERE coupon_id = p_coupon_id;
+
+            IF v_current_usages >= v_usage_limit THEN
+                RAISE EXCEPTION 'coupon_usage_limit_reached'
+                USING ERRCODE = 'P0003';
+            END IF;
+        END IF;
+
+        -- Enforce per-phone usage limit
+        IF v_max_uses_per_phone IS NOT NULL AND p_coupon_phone IS NOT NULL THEN
+            SELECT COUNT(*) INTO v_current_usages
+            FROM coupon_usages WHERE coupon_id = p_coupon_id AND phone = p_coupon_phone;
+
+            IF v_current_usages >= v_max_uses_per_phone THEN
+                RAISE EXCEPTION 'coupon_phone_usage_limit_reached'
+                USING ERRCODE = 'P0003';
+            END IF;
+        END IF;
+
+        INSERT INTO coupon_usages (coupon_id, order_id, phone)
+        VALUES (p_coupon_id, p_order_id, p_coupon_phone);
     END IF;
 
     -- 4. Delete all existing order_items (CASCADE handles order_item_selections)
@@ -167,6 +221,7 @@ BEGIN
     v_result := jsonb_build_object(
         'updated_at', v_updated_at,
         'subtotal', v_subtotal,
+        'discount', COALESCE(p_discount, 0),
         'total', v_total
     );
 

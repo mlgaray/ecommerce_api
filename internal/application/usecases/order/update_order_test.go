@@ -112,7 +112,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateDeliveryMethod(newTestStore(), updatedData.DeliveryMethod, updatedData.ShippingCost).
 			Return(nil)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -137,7 +138,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 
 		storeServiceMock := mocks.NewStoreService(t)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -165,7 +167,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 
 		storeServiceMock := mocks.NewStoreService(t)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -194,7 +197,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 
 		storeServiceMock := mocks.NewStoreService(t)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -226,7 +230,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
 			Return(validationError)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -260,7 +265,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			GetBySlug(ctx, existingOrder.Store.Slug).
 			Return(nil, storeError)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -298,7 +304,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateDeliveryMethod(store, updatedData.DeliveryMethod, updatedData.ShippingCost).
 			Return(validationError)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -333,7 +340,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
 			Return(nil)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -370,7 +378,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
 			Return(nil)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -408,7 +417,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
 			Return(nil)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -449,7 +459,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			Return(nil)
 		// GetBySlug and ValidateDeliveryMethod should NOT be called
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
@@ -457,6 +468,150 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
+	})
+
+	t.Run("when coupon_code provided then validates and applies new coupon", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		orderID := 1
+		existingOrder := newEditableOrder()
+		updatedData := newUpdatedData()
+		updatedData.DeliveryMethod = nil
+		updatedData.Coupon = &models.Coupon{Code: "SAVE20"}
+
+		validatedCoupon := &models.Coupon{
+			ID:             5,
+			Code:           "SAVE20",
+			Type:           models.CouponTypePercentage,
+			Value:          20,
+			DiscountAmount: 60.0,
+		}
+
+		orderServiceMock := mocks.NewOrderService(t)
+		orderServiceMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(existingOrder, nil).Once()
+		orderServiceMock.EXPECT().
+			CalculateAndValidateTotals(existingOrder).
+			Return(nil)
+		orderServiceMock.EXPECT().
+			Update(ctx, shopID, existingOrder).
+			Return(nil)
+		orderServiceMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(existingOrder, nil).Once()
+
+		storeServiceMock := mocks.NewStoreService(t)
+		storeServiceMock.EXPECT().
+			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
+			Return(nil)
+
+		couponServiceMock := mocks.NewCouponService(t)
+		couponServiceMock.EXPECT().
+			ValidateCoupon(ctx, "SAVE20", existingOrder.Store.ID, updatedData.Customer.Phone, updatedData.Subtotal).
+			Return(validatedCoupon, nil)
+
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
+
+		// Act
+		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, validatedCoupon, existingOrder.Coupon)
+		assert.Equal(t, 60.0, existingOrder.Discount)
+	})
+
+	t.Run("when coupon validation fails then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		orderID := 1
+		existingOrder := newEditableOrder()
+		updatedData := newUpdatedData()
+		updatedData.DeliveryMethod = nil
+		updatedData.Coupon = &models.Coupon{Code: "EXPIRED"}
+
+		orderServiceMock := mocks.NewOrderService(t)
+		orderServiceMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(existingOrder, nil)
+
+		storeServiceMock := mocks.NewStoreService(t)
+		storeServiceMock.EXPECT().
+			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
+			Return(nil)
+
+		couponServiceMock := mocks.NewCouponService(t)
+		couponServiceMock.EXPECT().
+			ValidateCoupon(ctx, "EXPIRED", existingOrder.Store.ID, updatedData.Customer.Phone, updatedData.Subtotal).
+			Return(nil, &errors.BusinessRuleError{Message: errors.CouponExpired})
+
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
+
+		// Act
+		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
+
+		// Assert
+		assert.Nil(t, result)
+		var bizErr *errors.BusinessRuleError
+		assert.ErrorAs(t, err, &bizErr)
+		assert.Equal(t, errors.CouponExpired, bizErr.Message)
+	})
+
+	t.Run("when no coupon_code and order has coupon then preserves and recalculates", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		orderID := 1
+		existingOrder := newEditableOrder()
+		existingOrder.Coupon = &models.Coupon{
+			ID:    5,
+			Code:  "SAVE10",
+			Type:  models.CouponTypePercentage,
+			Value: 10,
+		}
+		existingOrder.Discount = 20.0 // 10% of 200
+
+		updatedData := newUpdatedData()
+		updatedData.DeliveryMethod = nil
+		// No coupon in update → should preserve existing
+
+		orderServiceMock := mocks.NewOrderService(t)
+		orderServiceMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(existingOrder, nil).Once()
+		orderServiceMock.EXPECT().
+			CalculateAndValidateTotals(existingOrder).
+			Return(nil)
+		orderServiceMock.EXPECT().
+			Update(ctx, shopID, existingOrder).
+			Return(nil)
+		orderServiceMock.EXPECT().
+			GetByID(ctx, shopID, orderID).
+			Return(existingOrder, nil).Once()
+
+		storeServiceMock := mocks.NewStoreService(t)
+		storeServiceMock.EXPECT().
+			ValidateOrderItems(ctx, updatedData.Items, existingOrder.Store.ID).
+			Return(nil)
+
+		couponServiceMock := mocks.NewCouponService(t)
+		// ValidateCoupon should NOT be called — coupon is preserved, not re-validated
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
+
+		// Act
+		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		// Coupon preserved, discount recalculated for new subtotal (300)
+		assert.NotNil(t, existingOrder.Coupon)
+		assert.Equal(t, "SAVE10", existingOrder.Coupon.Code)
+		assert.Equal(t, 30.0, existingOrder.Discount) // 10% of 300
 	})
 
 	t.Run("when confirmed order then allows editing", func(t *testing.T) {
@@ -489,7 +644,8 @@ func TestUpdateOrderUseCase_Execute(t *testing.T) {
 			ValidateOrderItems(ctx, updatedData.Items, confirmedOrder.Store.ID).
 			Return(nil)
 
-		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewUpdateOrderUseCase(orderServiceMock, storeServiceMock, couponServiceMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, shopID, orderID, updatedData)

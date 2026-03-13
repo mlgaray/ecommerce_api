@@ -2,11 +2,18 @@ package services
 
 import (
 	"context"
+	"math"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 )
+
+// roundMoney rounds a float64 to 2 decimal places (cents).
+// Used to avoid IEEE 754 precision issues when comparing monetary values.
+func roundMoney(amount float64) float64 {
+	return math.Round(amount*100) / 100
+}
 
 // OrderService contains business logic for order operations.
 // Persists orders to the database.
@@ -95,20 +102,21 @@ func (s *OrderService) CalculateAndValidateTotals(order *models.Order) error {
 	// Calculate item totals and subtotal
 	var calculatedSubtotal float64
 	for _, item := range order.Items {
-		item.TotalPrice = item.UnitPrice * float64(item.Quantity)
+		item.TotalPrice = roundMoney(item.UnitPrice * float64(item.Quantity))
 		calculatedSubtotal += item.TotalPrice
 	}
+	calculatedSubtotal = roundMoney(calculatedSubtotal)
 
 	// Validate subtotal matches frontend value
-	if order.Subtotal != calculatedSubtotal {
+	if roundMoney(order.Subtotal) != calculatedSubtotal {
 		return &errors.ValidationError{Message: errors.SubtotalMismatch}
 	}
 
-	// Calculate total
-	calculatedTotal := calculatedSubtotal + order.ShippingCost
+	// Calculate total (subtotal - discount + shipping)
+	calculatedTotal := roundMoney(calculatedSubtotal - order.Discount + order.ShippingCost)
 
 	// Validate total matches frontend value
-	if order.Total != calculatedTotal {
+	if roundMoney(order.Total) != calculatedTotal {
 		return &errors.ValidationError{Message: errors.TotalMismatch}
 	}
 

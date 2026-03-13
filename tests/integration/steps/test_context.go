@@ -590,10 +590,12 @@ func (ctx *TestContext) SetupCreateOrderTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
 			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
@@ -684,10 +686,12 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
 			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),

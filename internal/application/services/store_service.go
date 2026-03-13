@@ -124,8 +124,8 @@ func (s *StoreService) validateUnitPrice(item *models.OrderItem, dbProduct *mode
 		}
 	}
 
-	// Compare with item's unit price
-	if item.UnitPrice != expectedUnitPrice {
+	// Compare with item's unit price (round to cents to avoid IEEE 754 precision issues)
+	if roundMoney(item.UnitPrice) != roundMoney(expectedUnitPrice) {
 		return &errors.ValidationError{Message: errors.UnitPriceMismatch}
 	}
 

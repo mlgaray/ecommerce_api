@@ -23,6 +23,7 @@ const (
 	GetOrderByIDFunctionField      = "get_by_id"
 	UpdateOrderFunctionField       = "update"
 	UpdateOrderStatusFunctionField = "update_status"
+	RemoveOrderCouponFunctionField = "remove_order_coupon"
 	ParseOrderShopIDSubFuncField   = "parse_shop_id"
 	ParseOrderIDSubFuncField       = "parse_order_id"
 )
@@ -33,6 +34,7 @@ type OrderHandler struct {
 	getOrderByIDUseCase      ports.GetOrderByIDUseCase
 	updateOrderStatusUseCase ports.UpdateOrderStatusUseCase
 	updateOrderUseCase       ports.UpdateOrderUseCase
+	removeOrderCouponUseCase ports.RemoveOrderCouponUseCase
 }
 
 func NewOrderHandler(
@@ -41,6 +43,7 @@ func NewOrderHandler(
 	getOrderByIDUseCase ports.GetOrderByIDUseCase,
 	updateOrderStatusUseCase ports.UpdateOrderStatusUseCase,
 	updateOrderUseCase ports.UpdateOrderUseCase,
+	removeOrderCouponUseCase ports.RemoveOrderCouponUseCase,
 ) ports.OrderHandler {
 	return &OrderHandler{
 		createOrderUseCase:       createOrderUseCase,
@@ -48,6 +51,7 @@ func NewOrderHandler(
 		getOrderByIDUseCase:      getOrderByIDUseCase,
 		updateOrderStatusUseCase: updateOrderStatusUseCase,
 		updateOrderUseCase:       updateOrderUseCase,
+		removeOrderCouponUseCase: removeOrderCouponUseCase,
 	}
 }
 
@@ -457,6 +461,63 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderHandlerField,
 			"function": UpdateOrderStatusFunctionField,
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
+}
+
+// RemoveOrderCoupon handles DELETE /shops/{shop_id}/orders/{order_id}/coupon requests.
+// Protected endpoint - authentication and shop ownership required.
+// Removes the coupon from an order and recalculates totals.
+func (h *OrderHandler) RemoveOrderCoupon(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// 1. Parse shop_id from URL path
+	shopID, err := h.parseShopID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// 2. Parse order_id from URL path
+	orderID, err := h.parseOrderID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	// 3. Execute use case
+	updatedOrder, err := h.removeOrderCouponUseCase.Execute(ctx, orderID, shopID)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderHandlerField,
+			"function": RemoveOrderCouponFunctionField,
+			"shop_id":  shopID,
+			"order_id": orderID,
+			"error":    err.Error(),
+		}).Error("Error removing order coupon")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":     OrderHandlerField,
+		"function": RemoveOrderCouponFunctionField,
+		"shop_id":  shopID,
+		"order_id": orderID,
+	}).Info("Order coupon removed successfully")
+
+	response := responses.UpdateOrderResponse{
+		Order: responses.OrderResponseFromModel(updatedOrder),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     OrderHandlerField,
+			"function": RemoveOrderCouponFunctionField,
 			"sub_func": "json.Encode",
 			"error":    err.Error(),
 		}).Error("Error encoding response")

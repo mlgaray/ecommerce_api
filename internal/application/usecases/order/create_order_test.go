@@ -99,7 +99,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		notifierMock.EXPECT().
 			NotifyNewOrder(ctx, expectedOrder)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -125,7 +126,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		orderServiceMock := mocks.NewOrderService(t)
 		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -156,7 +158,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		orderServiceMock := mocks.NewOrderService(t)
 		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -190,7 +193,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		orderServiceMock := mocks.NewOrderService(t)
 		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -228,7 +232,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 
 		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)
@@ -258,7 +263,8 @@ func TestCreateOrderUseCase_Execute(t *testing.T) {
 		orderServiceMock := mocks.NewOrderService(t)
 		notifierMock := mocks.NewOrderEventNotifier(t)
 
-		useCase := NewCreateOrderUseCase(storeServiceMock, orderServiceMock, notifierMock)
+		couponServiceMock := mocks.NewCouponService(t)
+		useCase := NewCreateOrderUseCase(storeServiceMock, couponServiceMock, orderServiceMock, notifierMock)
 
 		// Act
 		result, err := useCase.Execute(ctx, order, storeSlug)

@@ -10,6 +10,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	couponUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/coupon"
 	metricsUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
@@ -72,6 +73,7 @@ var Module = fx.Options(
 		fx.Annotate(services.NewPaginationService[*models.Product], fx.As(new(ports.PaginationService[*models.Product]))),
 		fx.Annotate(services.NewPaginationService[*models.Category], fx.As(new(ports.PaginationService[*models.Category]))),
 		fx.Annotate(services.NewPaginationService[*models.Order], fx.As(new(ports.PaginationService[*models.Order]))),
+		fx.Annotate(services.NewPaginationService[*models.Coupon], fx.As(new(ports.PaginationService[*models.Coupon]))),
 
 		// PRODUCT
 		// Repository first (no dependencies)
@@ -134,6 +136,21 @@ var Module = fx.Options(
 		// WebSocket handler for order notifications
 		http.NewOrderWSHandler,
 
+		// COUPON
+		// Repository first (no dependencies)
+		fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
+		// Service depends on Repository
+		fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
+		// Use Cases depend on Services
+		fx.Annotate(couponUC.NewCreateCouponUseCase, fx.As(new(ports.CreateCouponUseCase))),
+		fx.Annotate(couponUC.NewUpdateCouponUseCase, fx.As(new(ports.UpdateCouponUseCase))),
+		fx.Annotate(couponUC.NewDeleteCouponUseCase, fx.As(new(ports.DeleteCouponUseCase))),
+		fx.Annotate(couponUC.NewGetCouponByIDUseCase, fx.As(new(ports.GetCouponByIDUseCase))),
+		fx.Annotate(couponUC.NewGetAllCouponsByShopIDUseCase, fx.As(new(ports.GetAllCouponsByShopIDUseCase))),
+		fx.Annotate(couponUC.NewValidateStoreCouponUseCase, fx.As(new(ports.ValidateStoreCouponUseCase))),
+		// Handler depends on Use Cases
+		fx.Annotate(http.NewCouponHandler, fx.As(new(ports.CouponHandler))),
+
 		// ORDER
 		// Repository first (no dependencies)
 		fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
@@ -145,6 +162,7 @@ var Module = fx.Options(
 		fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
 		fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
 		fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
+		fx.Annotate(order.NewRemoveOrderCouponUseCase, fx.As(new(ports.RemoveOrderCouponUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewOrderHandler, fx.As(new(ports.OrderHandler))),
 
@@ -158,6 +176,7 @@ var Module = fx.Options(
 		fx.Annotate(metricsUC.NewGetRevenueTrendUseCase, fx.As(new(ports.GetRevenueTrendUseCase))),
 		fx.Annotate(metricsUC.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
 		fx.Annotate(metricsUC.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
+		fx.Annotate(metricsUC.NewGetShippingSummaryUseCase, fx.As(new(ports.GetShippingSummaryUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),
 

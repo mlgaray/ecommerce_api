@@ -205,6 +205,84 @@ func (_c *MetricsService_GetRevenueTrend_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// GetShippingSummary provides a mock function for the type MetricsService
+func (_mock *MetricsService) GetShippingSummary(ctx context.Context, shopID int, from time.Time, to time.Time) (models.ShippingSummary, error) {
+	ret := _mock.Called(ctx, shopID, from, to)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetShippingSummary")
+	}
+
+	var r0 models.ShippingSummary
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time) (models.ShippingSummary, error)); ok {
+		return returnFunc(ctx, shopID, from, to)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time) models.ShippingSummary); ok {
+		r0 = returnFunc(ctx, shopID, from, to)
+	} else {
+		r0 = ret.Get(0).(models.ShippingSummary)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, time.Time, time.Time) error); ok {
+		r1 = returnFunc(ctx, shopID, from, to)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MetricsService_GetShippingSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetShippingSummary'
+type MetricsService_GetShippingSummary_Call struct {
+	*mock.Call
+}
+
+// GetShippingSummary is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - from time.Time
+//   - to time.Time
+func (_e *MetricsService_Expecter) GetShippingSummary(ctx interface{}, shopID interface{}, from interface{}, to interface{}) *MetricsService_GetShippingSummary_Call {
+	return &MetricsService_GetShippingSummary_Call{Call: _e.mock.On("GetShippingSummary", ctx, shopID, from, to)}
+}
+
+func (_c *MetricsService_GetShippingSummary_Call) Run(run func(ctx context.Context, shopID int, from time.Time, to time.Time)) *MetricsService_GetShippingSummary_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsService_GetShippingSummary_Call) Return(shippingSummary models.ShippingSummary, err error) *MetricsService_GetShippingSummary_Call {
+	_c.Call.Return(shippingSummary, err)
+	return _c
+}
+
+func (_c *MetricsService_GetShippingSummary_Call) RunAndReturn(run func(ctx context.Context, shopID int, from time.Time, to time.Time) (models.ShippingSummary, error)) *MetricsService_GetShippingSummary_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetTopCustomers provides a mock function for the type MetricsService
 func (_mock *MetricsService) GetTopCustomers(ctx context.Context, shopID int, from time.Time, to time.Time, limit int) ([]models.TopCustomer, error) {
 	ret := _mock.Called(ctx, shopID, from, to, limit)

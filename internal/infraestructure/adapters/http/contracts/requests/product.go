@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -448,7 +448,7 @@ func (r *ProductFiltersRequest) ToProductFilters() models.ProductFilters {
 	// Decode cursor if present
 	// HTTP layer responsibility: convert opaque cursor string to primitive values
 	if r.Cursor != "" {
-		cursorData, err := services.DecodeCursor(r.Cursor)
+		cursorData, err := pagination.DecodeCursor(r.Cursor)
 		if err != nil {
 			// If cursor is invalid, treat as first page (LastID = nil)
 			// This is graceful degradation - don't fail the request

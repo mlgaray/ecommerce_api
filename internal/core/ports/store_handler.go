@@ -19,4 +19,7 @@ type StoreHandler interface {
 
 	// GetProductByID handles GET /stores/{slug}/products/{productId}
 	GetProductByID(http.ResponseWriter, *http.Request)
+
+	// ValidateCoupon handles POST /stores/{slug}/coupons/validate
+	ValidateCoupon(http.ResponseWriter, *http.Request)
 }
