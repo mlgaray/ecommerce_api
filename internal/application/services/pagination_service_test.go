@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 )
 
 // mockIdentifiable is a test helper that implements both Identifiable and Sortable interfaces
@@ -197,7 +198,7 @@ func TestPaginationService_ApplyPagination(t *testing.T) {
 
 		// Verify cursor can be decoded and contains sort value
 		// The cursor should point to the LAST VALID item (Product B, not the extra Product C)
-		decoded, err := DecodeCursor(nextCursor)
+		decoded, err := pagination.DecodeCursor(nextCursor)
 		assert.NoError(t, err, "cursor should be decodable")
 		assert.Equal(t, 2, decoded.ID, "decoded ID should match last valid item")
 		assert.Equal(t, "Product B", decoded.SortValue, "decoded SortValue should match last valid item's name")

@@ -26,6 +26,14 @@ CREATE OR REPLACE FUNCTION create_order(
     p_delivery_zone_name text,
     p_delivery_zone_price double precision,
     p_shipping_cost double precision,
+    p_discount double precision,
+    p_coupon_code text,
+    p_coupon_type text,
+    p_coupon_value double precision,
+    p_coupon_discount_amount double precision,
+    p_coupon_min_order_amount double precision,
+    p_coupon_id bigint,
+    p_coupon_phone text,
     p_items jsonb  -- [{product_id, product_name, product_image_url, base_price, is_promotional, promotional_price, quantity, unit_price, total_price, notes, selected_options: [{variant_id, option_id, variant_name, option_name, option_price, quantity}]}]
 ) RETURNS jsonb AS $$
 DECLARE
@@ -35,6 +43,9 @@ DECLARE
     v_total double precision := 0;
     v_created_at timestamp with time zone;
     v_result jsonb;
+    v_usage_limit integer;
+    v_max_uses_per_phone integer;
+    v_current_usages integer;
 BEGIN
     -- 1. Validate store exists
     PERFORM 1 FROM shops WHERE id = p_store_id;
@@ -50,7 +61,7 @@ BEGIN
     SELECT COALESCE(SUM(i.total_price), 0) INTO v_subtotal
     FROM jsonb_to_recordset(p_items) AS i(total_price double precision);
 
-    v_total := v_subtotal + COALESCE(p_shipping_cost, 0);
+    v_total := v_subtotal - COALESCE(p_discount, 0) + COALESCE(p_shipping_cost, 0);
 
     -- 4. Insert order
     INSERT INTO orders (
@@ -62,7 +73,8 @@ BEGIN
         payment_method_id, payment_method_code, payment_method_name,
         delivery_method_id, delivery_method_code, delivery_method_name,
         delivery_zone_id, delivery_zone_name, delivery_zone_price,
-        subtotal, shipping_cost, total
+        subtotal, shipping_cost, discount, total,
+        coupon_code, coupon_type, coupon_value, coupon_discount_amount, coupon_min_order_amount
     ) VALUES (
         v_order_number,
         p_store_id, p_store_name, p_store_slug,
@@ -72,8 +84,43 @@ BEGIN
         p_payment_method_id, p_payment_method_code, p_payment_method_name,
         p_delivery_method_id, p_delivery_method_code, p_delivery_method_name,
         p_delivery_zone_id, p_delivery_zone_name, p_delivery_zone_price,
-        v_subtotal, COALESCE(p_shipping_cost, 0), v_total
+        v_subtotal, COALESCE(p_shipping_cost, 0), COALESCE(p_discount, 0), v_total,
+        p_coupon_code, p_coupon_type, p_coupon_value, p_coupon_discount_amount, p_coupon_min_order_amount
     ) RETURNING id, created_at INTO v_order_id, v_created_at;
+
+    -- 4b. Register coupon usage atomically with limit enforcement (if coupon applied)
+    -- SELECT FOR UPDATE serializes concurrent requests for the same coupon,
+    -- preventing TOCTOU race conditions on usage limits.
+    IF p_coupon_id IS NOT NULL THEN
+        -- Lock coupon row to serialize concurrent usage attempts
+        SELECT usage_limit, max_uses_per_phone INTO v_usage_limit, v_max_uses_per_phone
+        FROM coupons WHERE id = p_coupon_id FOR UPDATE;
+
+        -- Enforce global usage limit
+        IF v_usage_limit IS NOT NULL THEN
+            SELECT COUNT(*) INTO v_current_usages
+            FROM coupon_usages WHERE coupon_id = p_coupon_id;
+
+            IF v_current_usages >= v_usage_limit THEN
+                RAISE EXCEPTION 'coupon_usage_limit_reached'
+                USING ERRCODE = 'P0003';
+            END IF;
+        END IF;
+
+        -- Enforce per-phone usage limit
+        IF v_max_uses_per_phone IS NOT NULL AND p_coupon_phone IS NOT NULL THEN
+            SELECT COUNT(*) INTO v_current_usages
+            FROM coupon_usages WHERE coupon_id = p_coupon_id AND phone = p_coupon_phone;
+
+            IF v_current_usages >= v_max_uses_per_phone THEN
+                RAISE EXCEPTION 'coupon_phone_usage_limit_reached'
+                USING ERRCODE = 'P0003';
+            END IF;
+        END IF;
+
+        INSERT INTO coupon_usages (coupon_id, order_id, phone)
+        VALUES (p_coupon_id, v_order_id, p_coupon_phone);
+    END IF;
 
     -- 5. Insert items and their selected options using set-based CTE chain
     IF COALESCE(jsonb_array_length(p_items), 0) > 0 THEN
@@ -169,6 +216,7 @@ BEGIN
         'order_number', v_order_number,
         'status', 'pending',
         'subtotal', v_subtotal,
+        'discount', COALESCE(p_discount, 0),
         'shipping_cost', COALESCE(p_shipping_cost, 0),
         'total', v_total,
         'created_at', v_created_at

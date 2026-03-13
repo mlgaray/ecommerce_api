@@ -118,7 +118,7 @@ func (g *GetOrderByIDSteps) iSendAGetOrderByIDRequestWithInvalidShopIDAndOrder(i
 // ===== SQL Mock Setup =====
 
 func (g *GetOrderByIDSteps) setupGetByIDSQLExpectations(ctx *TestContext, shopID int, orderID int) {
-	// 28 columns returned by GetByID CTE query
+	// 34 columns returned by GetByID CTE query
 	columns := []string{
 		"id", "order_number", "status",
 		"store_id", "store_name", "store_slug",
@@ -128,7 +128,9 @@ func (g *GetOrderByIDSteps) setupGetByIDSQLExpectations(ctx *TestContext, shopID
 		"payment_method_id", "payment_method_code", "payment_method_name",
 		"delivery_method_id", "delivery_method_code", "delivery_method_name",
 		"delivery_zone_id", "delivery_zone_name", "delivery_zone_price",
-		"subtotal", "shipping_cost", "total",
+		"subtotal", "shipping_cost", "discount", "total",
+		"coupon_code", "coupon_type", "coupon_value",
+		"coupon_discount_amount", "coupon_min_order_amount",
 		"created_at", "updated_at",
 		"items",
 	}
@@ -147,7 +149,8 @@ func (g *GetOrderByIDSteps) setupGetByIDSQLExpectations(ctx *TestContext, shopID
 				1, "transfer", "Transfer",
 				1, "delivery", "Delivery",
 				nil, nil, nil,
-				200.0, 50.0, 250.0,
+				200.0, 50.0, 0.0, 250.0,
+				nil, nil, nil, nil, nil,
 				now, now,
 				itemsJSON,
 			)

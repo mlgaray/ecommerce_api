@@ -134,4 +134,25 @@ const (
 	// Order state machine error messages
 	InvalidOrderTransition      = "invalid_transition"
 	OrderConcurrentModification = "concurrent_modification"
+
+	// Coupon related error messages
+	CouponNotFound                 = "coupon_not_found"
+	CouponNotActive                = "coupon_is_not_active"
+	CouponExpired                  = "coupon_is_expired"
+	CouponNotYetStarted            = "coupon_has_not_started_yet"
+	CouponMinOrderNotMet           = "coupon_min_order_amount_not_met"
+	CouponUsageLimitReached        = "coupon_usage_limit_reached"
+	CouponPhoneLimitReached        = "coupon_phone_usage_limit_reached"
+	CouponCodeIsRequired           = "coupon_code_is_required"
+	CouponCodeTooLong              = "coupon_code_exceeds_max_length"
+	CouponTypeInvalid              = "coupon_type_must_be_percentage_or_fixed"
+	CouponValueMustBePositive      = "coupon_value_must_be_positive"
+	CouponPercentageExceedsMax     = "coupon_percentage_cannot_exceed_100"
+	CouponMinOrderCannotBeNegative = "coupon_min_order_amount_cannot_be_negative"
+	CouponUsageLimitMustBePositive = "coupon_usage_limit_must_be_positive"
+	CouponPhoneLimitMustBePositive = "coupon_max_uses_per_phone_must_be_positive"
+	CouponExpiresBeforeStarts      = "coupon_expires_at_must_be_after_starts_at"
+	CouponAlreadyExists            = "coupon_already_exists_in_shop"
+	CouponInvalidCursor            = "invalid_cursor_format"
+	OrderAlreadyHasCoupon          = "order_already_has_coupon"
 )

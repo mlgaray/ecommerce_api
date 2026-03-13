@@ -23,6 +23,7 @@ const (
 	GetStoreProductsFunctionField         = "get_products"
 	GetStoreFeaturedProductsFunctionField = "get_featured_products"
 	GetStoreProductByIDFunctionField      = "get_product_by_id"
+	ValidateCouponFunctionField           = "validate_coupon"
 )
 
 type StoreHandler struct {
@@ -31,6 +32,7 @@ type StoreHandler struct {
 	getStoreProducts         ports.GetStoreProductsUseCase
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase
 	getStoreProductByID      ports.GetStoreProductByIDUseCase
+	validateStoreCoupon      ports.ValidateStoreCouponUseCase
 }
 
 func NewStoreHandler(
@@ -39,6 +41,7 @@ func NewStoreHandler(
 	getStoreProducts ports.GetStoreProductsUseCase,
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase,
 	getStoreProductByID ports.GetStoreProductByIDUseCase,
+	validateStoreCoupon ports.ValidateStoreCouponUseCase,
 ) ports.StoreHandler {
 	return &StoreHandler{
 		getStoreBySlug:           getStoreBySlug,
@@ -46,6 +49,7 @@ func NewStoreHandler(
 		getStoreProducts:         getStoreProducts,
 		getStoreFeaturedProducts: getStoreFeaturedProducts,
 		getStoreProductByID:      getStoreProductByID,
+		validateStoreCoupon:      validateStoreCoupon,
 	}
 }
 
@@ -384,4 +388,55 @@ func (h *StoreHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 			"error":    err.Error(),
 		}).Error("Error encoding response")
 	}
+}
+
+// ValidateCoupon handles POST /stores/{slug}/coupons/validate requests.
+// Public endpoint — used by customers to validate a coupon before placing an order.
+// Returns {valid: true, ...} on success or {valid: false, message: "..."} on validation failure.
+func (h *StoreHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	slug, err := h.parseSlug(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	var request requests.ValidateCouponRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     StoreHandlerField,
+			"function": ValidateCouponFunctionField,
+			"slug":     slug,
+			"error":    err.Error(),
+		}).Warn("Invalid JSON body")
+		httpErrors.HandleError(w, &httpErrors.BadRequestError{Message: "invalid_json_body"})
+		return
+	}
+
+	if err := request.Validate(); err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	coupon, err := h.validateStoreCoupon.Execute(ctx, slug, request.Code, request.Phone, request.Subtotal)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     StoreHandlerField,
+			"function": ValidateCouponFunctionField,
+			"slug":     slug,
+			"code":     request.Code,
+			"error":    err.Error(),
+		}).Error("Error validating coupon")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(responses.ValidateCouponResponse{
+		CouponType:     string(coupon.Type),
+		CouponValue:    coupon.Value,
+		DiscountAmount: coupon.DiscountAmount,
+	})
 }

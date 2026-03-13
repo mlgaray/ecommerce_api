@@ -17,10 +17,31 @@ const loggerKey contextKey = "logger"
 
 func Init() {
 	globalLogger = logrus.New()
-	globalLogger.SetLevel(logrus.DebugLevel) // Permite todos los niveles
+	globalLogger.SetLevel(resolveLogLevel())
 	globalLogger.SetOutput(io.MultiWriter(os.Stdout))
 
-	fmt.Println("Successfully initialized global logger!")
+	fmt.Printf("Successfully initialized global logger! Level: %s\n", globalLogger.GetLevel())
+}
+
+func resolveLogLevel() logrus.Level {
+	// LOG_LEVEL tiene prioridad si está definido (permite override explícito)
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		parsed, err := logrus.ParseLevel(level)
+		if err == nil {
+			return parsed
+		}
+		fmt.Printf("Invalid LOG_LEVEL '%s', falling back to environment-based level\n", level)
+	}
+
+	// Si no hay LOG_LEVEL, se determina por ENVIRONMENT
+	switch os.Getenv("ENVIRONMENT") {
+	case "production":
+		return logrus.ErrorLevel
+	case "test":
+		return logrus.WarnLevel
+	default: // develop, development, o vacío
+		return logrus.DebugLevel
+	}
 }
 
 func WithFields(fields map[string]interface{}) *logrus.Entry {

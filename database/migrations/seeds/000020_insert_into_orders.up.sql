@@ -45,7 +45,7 @@ BEGIN
         total
     )
     VALUES (
-        '0001',
+        'ORD-260101-0000001',
         v_shop_id,
         v_shop_name,
         v_shop_slug,

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -277,7 +277,7 @@ func (r *CategoryFiltersRequest) ToCategoryFilters() models.CategoryFilters {
 
 	// Decode cursor if present
 	if r.Cursor != "" {
-		cursorData, err := services.DecodeCursor(r.Cursor)
+		cursorData, err := pagination.DecodeCursor(r.Cursor)
 		if err != nil {
 			// If cursor is invalid, treat as first page (graceful degradation)
 			return filters

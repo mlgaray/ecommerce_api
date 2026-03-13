@@ -9,4 +9,5 @@ type OrderHandler interface {
 	GetByID(http.ResponseWriter, *http.Request)
 	Update(http.ResponseWriter, *http.Request)
 	UpdateStatus(http.ResponseWriter, *http.Request)
+	RemoveOrderCoupon(http.ResponseWriter, *http.Request)
 }

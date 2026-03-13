@@ -164,6 +164,11 @@ func (s *MetricsService) GetTopCustomers(ctx context.Context, shopID int, from, 
 	return customers, nil
 }
 
+// GetShippingSummary returns aggregated shipping metrics for a date range.
+func (s *MetricsService) GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error) {
+	return s.metricsRepository.GetShippingSummary(ctx, shopID, from, to)
+}
+
 // --- Period calculation helpers (pure functions) ---
 
 // todayBounds returns [start of today, start of tomorrow) in the given timezone.

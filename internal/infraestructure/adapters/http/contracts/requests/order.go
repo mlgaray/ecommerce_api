@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -27,8 +27,14 @@ type OrderRequest struct {
 	PaymentMethod  OrderPaymentMethodRequest  `json:"payment_method"`
 	DeliveryMethod OrderDeliveryMethodRequest `json:"delivery_method"`
 	Items          []OrderItemRequest         `json:"items"`
+	Coupon         *OrderCouponRequest        `json:"coupon,omitempty"`
 	Subtotal       float64                    `json:"subtotal"`
 	Total          float64                    `json:"total"`
+}
+
+// OrderCouponRequest represents coupon data in an order request.
+type OrderCouponRequest struct {
+	Code string `json:"code"`
 }
 
 // OrderCustomerRequest represents customer data in the order request.
@@ -286,63 +292,72 @@ func (r *OrderRequest) ToModel() *models.Order {
 		}
 	}
 
+	// Set coupon if provided (triggers validation in use case)
+	if r.Coupon != nil {
+		code := strings.TrimSpace(r.Coupon.Code)
+		if code != "" {
+			order.Coupon = &models.Coupon{Code: code}
+		}
+	}
+
 	// Convert items with snapshot data
 	for _, item := range r.Items {
-		// Build product with snapshot and image
-		product := &models.Product{
-			ID:               item.Product.ID,
-			Name:             item.Product.Name,
-			Price:            item.Product.Price,
-			IsPromotional:    item.Product.IsPromotional,
-			PromotionalPrice: item.Product.PromotionalPrice,
-			Variants:         make([]*models.Variant, 0),
-		}
-
-		// Add image if provided
-		if item.Product.ImageURL != "" {
-			product.Images = []*models.Image{{URL: item.Product.ImageURL}}
-		}
-
-		orderItem := &models.OrderItem{
-			Product:   product,
-			Quantity:  item.Quantity,
-			UnitPrice: item.UnitPrice,
-			Notes:     item.Notes,
-		}
-
-		// Group selected options by variant with snapshot data
-		variantMap := make(map[int]*models.Variant)
-		for _, opt := range item.SelectedOptions {
-			variant, exists := variantMap[opt.VariantID]
-			if !exists {
-				variant = &models.Variant{
-					ID:      opt.VariantID,
-					Name:    opt.VariantName,
-					Options: make([]*models.Option, 0),
-				}
-				variantMap[opt.VariantID] = variant
-			}
-			quantity := opt.Quantity
-			if quantity <= 0 {
-				quantity = 1
-			}
-			variant.Options = append(variant.Options, &models.Option{
-				ID:       opt.OptionID,
-				Name:     opt.OptionName,
-				Price:    opt.OptionPrice,
-				Quantity: quantity,
-			})
-		}
-
-		// Convert map to slice
-		for _, variant := range variantMap {
-			orderItem.Product.Variants = append(orderItem.Product.Variants, variant)
-		}
-
-		order.Items = append(order.Items, orderItem)
+		order.Items = append(order.Items, buildOrderItem(&item))
 	}
 
 	return order
+}
+
+// buildOrderItem converts a request item to a domain OrderItem with snapshot data.
+func buildOrderItem(item *OrderItemRequest) *models.OrderItem {
+	product := &models.Product{
+		ID:               item.Product.ID,
+		Name:             item.Product.Name,
+		Price:            item.Product.Price,
+		IsPromotional:    item.Product.IsPromotional,
+		PromotionalPrice: item.Product.PromotionalPrice,
+		Variants:         make([]*models.Variant, 0),
+	}
+
+	if item.Product.ImageURL != "" {
+		product.Images = []*models.Image{{URL: item.Product.ImageURL}}
+	}
+
+	orderItem := &models.OrderItem{
+		Product:   product,
+		Quantity:  item.Quantity,
+		UnitPrice: item.UnitPrice,
+		Notes:     item.Notes,
+	}
+
+	variantMap := make(map[int]*models.Variant)
+	for _, opt := range item.SelectedOptions {
+		variant, exists := variantMap[opt.VariantID]
+		if !exists {
+			variant = &models.Variant{
+				ID:      opt.VariantID,
+				Name:    opt.VariantName,
+				Options: make([]*models.Option, 0),
+			}
+			variantMap[opt.VariantID] = variant
+		}
+		quantity := opt.Quantity
+		if quantity <= 0 {
+			quantity = 1
+		}
+		variant.Options = append(variant.Options, &models.Option{
+			ID:       opt.OptionID,
+			Name:     opt.OptionName,
+			Price:    opt.OptionPrice,
+			Quantity: quantity,
+		})
+	}
+
+	for _, variant := range variantMap {
+		orderItem.Product.Variants = append(orderItem.Product.Variants, variant)
+	}
+
+	return orderItem
 }
 
 // =============================================================================
@@ -376,19 +391,20 @@ func (r *UpdateOrderStatusRequest) ToStatus() models.OrderStatus {
 // =============================================================================
 
 // UpdateOrderRequest represents the HTTP request for updating an order.
-// PaymentMethod and DeliveryMethod are pointers (nullable — can be removed).
-// Customer and Items follow the same rules as CreateOrderRequest.
+// Wraps UpdateOrderDataRequest for extensibility (mirrors CreateOrderRequest pattern).
 type UpdateOrderRequest struct {
 	Order UpdateOrderDataRequest `json:"order"`
 }
 
 // UpdateOrderDataRequest represents the order data in the update request.
 // PaymentMethod and DeliveryMethod are pointers to allow null (removal).
+// Coupon controls coupon application inside the order object.
 type UpdateOrderDataRequest struct {
 	Customer       OrderCustomerRequest        `json:"customer"`
 	PaymentMethod  *OrderPaymentMethodRequest  `json:"payment_method"`
 	DeliveryMethod *OrderDeliveryMethodRequest `json:"delivery_method"`
 	Items          []OrderItemRequest          `json:"items"`
+	Coupon         *OrderCouponRequest         `json:"coupon,omitempty"`
 	Subtotal       float64                     `json:"subtotal"`
 	Total          float64                     `json:"total"`
 }
@@ -547,6 +563,14 @@ func (r *UpdateOrderDataRequest) ToModel() *models.Order {
 		}
 	}
 
+	// Set coupon if provided (triggers validation in use case)
+	if r.Coupon != nil {
+		code := strings.TrimSpace(r.Coupon.Code)
+		if code != "" {
+			order.Coupon = &models.Coupon{Code: code}
+		}
+	}
+
 	// Convert items with snapshot data
 	for i := range r.Items {
 		order.Items = append(order.Items, r.Items[i].toOrderItem())
@@ -699,7 +723,7 @@ func (r *OrderFiltersRequest) ToOrderFilters() models.OrderFilters {
 	// Decode cursor if present
 	// HTTP layer responsibility: convert opaque cursor string to primitive values
 	if r.Cursor != "" {
-		cursorData, err := services.DecodeCursor(r.Cursor)
+		cursorData, err := pagination.DecodeCursor(r.Cursor)
 		if err != nil {
 			// If cursor is invalid, treat as first page (LastID = nil)
 			// This is graceful degradation - don't fail the request

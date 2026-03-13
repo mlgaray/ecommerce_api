@@ -266,3 +266,49 @@ func (_c *StoreHandler_GetProducts_Call) RunAndReturn(run func(responseWriter ht
 	_c.Run(run)
 	return _c
 }
+
+// ValidateCoupon provides a mock function for the type StoreHandler
+func (_mock *StoreHandler) ValidateCoupon(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// StoreHandler_ValidateCoupon_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateCoupon'
+type StoreHandler_ValidateCoupon_Call struct {
+	*mock.Call
+}
+
+// ValidateCoupon is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *StoreHandler_Expecter) ValidateCoupon(responseWriter interface{}, request interface{}) *StoreHandler_ValidateCoupon_Call {
+	return &StoreHandler_ValidateCoupon_Call{Call: _e.mock.On("ValidateCoupon", responseWriter, request)}
+}
+
+func (_c *StoreHandler_ValidateCoupon_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_ValidateCoupon_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreHandler_ValidateCoupon_Call) Return() *StoreHandler_ValidateCoupon_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *StoreHandler_ValidateCoupon_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_ValidateCoupon_Call {
+	_c.Run(run)
+	return _c
+}

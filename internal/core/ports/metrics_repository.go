@@ -43,4 +43,7 @@ type MetricsRepository interface {
 	// GetRevenueTrend returns daily revenue data points within a date range.
 	// Only considers completed orders. tz is the IANA timezone for date_trunc.
 	GetRevenueTrend(ctx context.Context, shopID int, from, to time.Time, tz string) ([]models.RevenueTrendPoint, error)
+
+	// GetShippingSummary returns aggregated shipping metrics for completed orders with shipping in a date range.
+	GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error)
 }

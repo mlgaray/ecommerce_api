@@ -103,7 +103,7 @@ func TestOrderHandler_Create(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -136,7 +136,7 @@ func TestOrderHandler_Create(t *testing.T) {
 func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 	t.Run("when slug is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores//orders", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": ""})
@@ -151,7 +151,7 @@ func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 
 	t.Run("when slug is whitespace then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/whitespace/orders", nil)
 		req = mux.SetURLVars(req, map[string]string{"slug": "   "})
@@ -172,7 +172,7 @@ func TestOrderHandler_Create_InvalidSlug(t *testing.T) {
 func TestOrderHandler_Create_InvalidJSON(t *testing.T) {
 	t.Run("when body is not valid JSON then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer([]byte("invalid json")))
 		req.Header.Set("Content-Type", "application/json")
@@ -188,7 +188,7 @@ func TestOrderHandler_Create_InvalidJSON(t *testing.T) {
 
 	t.Run("when body is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", nil)
 		req.Header.Set("Content-Type", "application/json")
@@ -213,7 +213,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.Customer.Name = ""
 
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -233,7 +233,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.PaymentMethod.ID = 0
 
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -253,7 +253,7 @@ func TestOrderHandler_Create_RequestValidation(t *testing.T) {
 		request := newValidOrderRequest()
 		request.Order.Items = []requests.OrderItemRequest{}
 
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -283,7 +283,7 @@ func TestOrderHandler_Create_StoreNotFound(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "non-existent-store").
 			Return(nil, &domainErrors.RecordNotFoundError{Message: domainErrors.StoreNotFound})
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/non-existent-store/orders", bytes.NewBuffer(body))
@@ -313,7 +313,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.PaymentMethodNotFound})
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -337,7 +337,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.BusinessRuleError{Message: domainErrors.InsufficientStock})
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -361,7 +361,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.ShippingCostMismatch})
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -409,7 +409,7 @@ func TestOrderHandler_Create_WithSelectedOptions(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -446,7 +446,7 @@ func TestOrderHandler_Create_WithCustomerAddress(t *testing.T) {
 			Execute(mock.Anything, mock.AnythingOfType("*models.Order"), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -497,7 +497,7 @@ func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
 			}), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -536,7 +536,7 @@ func TestOrderHandler_Create_WithDeliveryZone(t *testing.T) {
 			}), "test-store").
 			Return(createdOrder, nil)
 
-		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil)
+		handler := NewOrderHandler(useCaseMock, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPost, "/stores/test-store/orders", bytes.NewBuffer(body))
@@ -580,7 +580,7 @@ func TestOrderHandler_UpdateStatus(t *testing.T) {
 			Execute(mock.Anything, 1, 1, models.OrderStatusConfirmed).
 			Return(updatedOrder, nil)
 
-		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil)
+		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
@@ -611,7 +611,7 @@ func TestOrderHandler_UpdateStatus(t *testing.T) {
 func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 	t.Run("when status is empty then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest(""))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
@@ -628,7 +628,7 @@ func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 
 	t.Run("when status is invalid then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest("invalid_status"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
@@ -645,7 +645,7 @@ func TestOrderHandler_UpdateStatus_InvalidRequest(t *testing.T) {
 
 	t.Run("when body is invalid JSON then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer([]byte("invalid")))
 		req.Header.Set("Content-Type", "application/json")
@@ -672,7 +672,7 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 999, models.OrderStatusConfirmed).
 			Return(nil, &domainErrors.RecordNotFoundError{Message: domainErrors.OrderNotFound})
 
-		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil)
+		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/999/status", bytes.NewBuffer(body))
@@ -694,7 +694,7 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 1, models.OrderStatusCompleted).
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.InvalidOrderTransition})
 
-		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil)
+		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest("completed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
@@ -716,7 +716,7 @@ func TestOrderHandler_UpdateStatus_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 1, models.OrderStatusConfirmed).
 			Return(nil, &domainErrors.ConcurrentModificationError{Message: domainErrors.OrderConcurrentModification})
 
-		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil)
+		handler := NewOrderHandler(nil, nil, nil, useCaseMock, nil, nil)
 
 		body, _ := json.Marshal(newUpdateStatusRequest("confirmed"))
 		req := httptest.NewRequest(http.MethodPatch, "/shops/1/orders/1/status", bytes.NewBuffer(body))
@@ -817,7 +817,7 @@ func TestOrderHandler_Update(t *testing.T) {
 			Execute(mock.Anything, 1, 1, mock.AnythingOfType("*models.Order")).
 			Return(updatedOrder, nil)
 
-		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock)
+		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
@@ -849,7 +849,7 @@ func TestOrderHandler_Update(t *testing.T) {
 func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 	t.Run("when body is invalid JSON then returns 400", func(t *testing.T) {
 		// Arrange
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer([]byte("invalid")))
 		req.Header.Set("Content-Type", "application/json")
@@ -868,7 +868,7 @@ func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 		request := newValidUpdateOrderRequest()
 		request.Order.Customer.Name = ""
 
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
@@ -888,7 +888,7 @@ func TestOrderHandler_Update_InvalidRequest(t *testing.T) {
 		request := newValidUpdateOrderRequest()
 		request.Order.Items = []requests.OrderItemRequest{}
 
-		handler := NewOrderHandler(nil, nil, nil, nil, nil)
+		handler := NewOrderHandler(nil, nil, nil, nil, nil, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
@@ -918,7 +918,7 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 999, mock.AnythingOfType("*models.Order")).
 			Return(nil, &domainErrors.RecordNotFoundError{Message: domainErrors.OrderNotFound})
 
-		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock)
+		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/999", bytes.NewBuffer(body))
@@ -942,7 +942,7 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 1, mock.AnythingOfType("*models.Order")).
 			Return(nil, &domainErrors.BusinessRuleError{Message: domainErrors.OrderCannotBeEdited})
 
-		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock)
+		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))
@@ -966,7 +966,7 @@ func TestOrderHandler_Update_DomainErrors(t *testing.T) {
 			Execute(mock.Anything, 1, 1, mock.AnythingOfType("*models.Order")).
 			Return(nil, &domainErrors.ValidationError{Message: domainErrors.SubtotalMismatch})
 
-		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock)
+		handler := NewOrderHandler(nil, nil, nil, nil, useCaseMock, nil)
 
 		body, _ := json.Marshal(request)
 		req := httptest.NewRequest(http.MethodPut, "/shops/1/orders/1", bytes.NewBuffer(body))

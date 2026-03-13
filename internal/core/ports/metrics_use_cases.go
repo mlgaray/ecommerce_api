@@ -25,3 +25,8 @@ type GetTopProductsUseCase interface {
 type GetTopCustomersUseCase interface {
 	Execute(ctx context.Context, shopID int, filters models.MetricsFilters) ([]models.TopCustomer, error)
 }
+
+// GetShippingSummaryUseCase orchestrates the shipping summary retrieval.
+type GetShippingSummaryUseCase interface {
+	Execute(ctx context.Context, shopID int, filters models.MetricsFilters) (models.ShippingSummary, error)
+}

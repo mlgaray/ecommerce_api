@@ -23,6 +23,7 @@ const (
 	MetricsPaymentDistFuncField      = "get_payment_method_distribution"
 	MetricsDeliveryDistFuncField     = "get_delivery_method_distribution"
 	MetricsRevenueTrendFuncField     = "get_revenue_trend"
+	MetricsShippingSummaryFuncField  = "get_shipping_summary"
 )
 
 type MetricsSQLRepository struct {
@@ -38,7 +39,7 @@ func NewMetricsRepository(dataBaseConnection DataBaseConnection) ports.MetricsRe
 // GetRevenueSummary returns revenue aggregation for completed orders in a date range.
 func (r *MetricsSQLRepository) GetRevenueSummary(ctx context.Context, shopID int, from, to time.Time) (models.RevenueSummary, error) {
 	query := `
-		SELECT COALESCE(SUM(total), 0), COUNT(*)
+		SELECT COALESCE(SUM(subtotal - discount), 0), COUNT(*)
 		FROM orders
 		WHERE store_id = $1
 		  AND status = 'completed'
@@ -86,7 +87,7 @@ func (r *MetricsSQLRepository) GetRevenueSummaryBatch(ctx context.Context, shopI
 			selectCols += ",\n\t\t       "
 		}
 		selectCols += fmt.Sprintf(
-			"COALESCE(SUM(total) FILTER (WHERE created_at >= $%d AND created_at < $%d), 0),\n\t\t       COUNT(*) FILTER (WHERE created_at >= $%d AND created_at < $%d)",
+			"COALESCE(SUM(subtotal - discount) FILTER (WHERE created_at >= $%d AND created_at < $%d), 0),\n\t\t       COUNT(*) FILTER (WHERE created_at >= $%d AND created_at < $%d)",
 			paramIdx, paramIdx+1, paramIdx, paramIdx+1,
 		)
 		args = append(args, p.From, p.To)
@@ -216,7 +217,7 @@ func (r *MetricsSQLRepository) GetTopProducts(ctx context.Context, shopID int, f
 		       (ARRAY_AGG(oi.product_name ORDER BY o.created_at DESC))[1] AS product_name,
 		       (ARRAY_AGG(oi.product_image_url ORDER BY o.created_at DESC) FILTER (WHERE oi.product_image_url IS NOT NULL))[1] AS product_image_url,
 		       SUM(oi.quantity) AS quantity_sold,
-		       SUM(oi.total_price) AS revenue
+		       SUM(oi.total_price * (o.subtotal - o.discount) / NULLIF(o.subtotal, 0)) AS revenue
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id
 		WHERE o.store_id = $1
@@ -233,7 +234,7 @@ func (r *MetricsSQLRepository) GetTopProducts(ctx context.Context, shopID int, f
 		       (ARRAY_AGG(oi.product_name ORDER BY o.created_at DESC))[1] AS product_name,
 		       (ARRAY_AGG(oi.product_image_url ORDER BY o.created_at DESC) FILTER (WHERE oi.product_image_url IS NOT NULL))[1] AS product_image_url,
 		       SUM(oi.quantity) AS quantity_sold,
-		       SUM(oi.total_price) AS revenue
+		       SUM(oi.total_price * (o.subtotal - o.discount) / NULLIF(o.subtotal, 0)) AS revenue
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id
 		WHERE o.store_id = $1
@@ -242,7 +243,7 @@ func (r *MetricsSQLRepository) GetTopProducts(ctx context.Context, shopID int, f
 		  AND o.created_at < $3
 		  AND oi.product_id IS NOT NULL
 		GROUP BY oi.product_id
-		ORDER BY SUM(oi.total_price) DESC
+		ORDER BY SUM(oi.total_price * (o.subtotal - o.discount) / NULLIF(o.subtotal, 0)) DESC
 		LIMIT $4`
 
 	query := topProductsByQuantity
@@ -325,7 +326,7 @@ func (r *MetricsSQLRepository) GetTopCustomers(ctx context.Context, shopID int, 
 			(ARRAY_AGG(customer_name ORDER BY created_at DESC))[1] AS customer_name,
 			customer_phone,
 			COUNT(*) AS order_count,
-			SUM(total) AS total_spent
+			SUM(subtotal - discount) AS total_spent
 		FROM orders
 		WHERE store_id = $1
 		  AND status = 'completed'
@@ -450,7 +451,7 @@ func (r *MetricsSQLRepository) GetRevenueTrend(ctx context.Context, shopID int, 
 	query := `
 		SELECT
 			date_trunc('day', created_at AT TIME ZONE $4)::date AS day,
-			COALESCE(SUM(total), 0) AS revenue,
+			COALESCE(SUM(subtotal - discount), 0) AS revenue,
 			COUNT(*) AS order_count
 		FROM orders
 		WHERE store_id = $1
@@ -488,4 +489,34 @@ func (r *MetricsSQLRepository) GetRevenueTrend(ctx context.Context, shopID int, 
 	}
 
 	return trend, nil
+}
+
+// GetShippingSummary returns aggregated shipping metrics for completed orders with shipping in a date range.
+func (r *MetricsSQLRepository) GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error) {
+	query := `
+		SELECT COALESCE(SUM(shipping_cost), 0), COUNT(*)
+		FROM orders
+		WHERE store_id = $1
+		  AND status = 'completed'
+		  AND shipping_cost > 0
+		  AND created_at >= $2
+		  AND created_at < $3`
+
+	var summary models.ShippingSummary
+	err := r.db.QueryRowContext(ctx, query, shopID, from, to).Scan(&summary.TotalShippingRevenue, &summary.OrderCount)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsRepositoryField,
+			"function": MetricsShippingSummaryFuncField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Error querying shipping summary")
+		return models.ShippingSummary{}, fmt.Errorf("error querying shipping summary: %w", err)
+	}
+
+	if summary.OrderCount > 0 {
+		summary.AverageShippingCost = summary.TotalShippingRevenue / float64(summary.OrderCount)
+	}
+
+	return summary, nil
 }

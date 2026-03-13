@@ -129,6 +129,52 @@ func (_c *MetricsHandler_GetRevenueTrend_Call) RunAndReturn(run func(responseWri
 	return _c
 }
 
+// GetShippingSummary provides a mock function for the type MetricsHandler
+func (_mock *MetricsHandler) GetShippingSummary(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// MetricsHandler_GetShippingSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetShippingSummary'
+type MetricsHandler_GetShippingSummary_Call struct {
+	*mock.Call
+}
+
+// GetShippingSummary is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *MetricsHandler_Expecter) GetShippingSummary(responseWriter interface{}, request interface{}) *MetricsHandler_GetShippingSummary_Call {
+	return &MetricsHandler_GetShippingSummary_Call{Call: _e.mock.On("GetShippingSummary", responseWriter, request)}
+}
+
+func (_c *MetricsHandler_GetShippingSummary_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *MetricsHandler_GetShippingSummary_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsHandler_GetShippingSummary_Call) Return() *MetricsHandler_GetShippingSummary_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MetricsHandler_GetShippingSummary_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *MetricsHandler_GetShippingSummary_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetTopCustomers provides a mock function for the type MetricsHandler
 func (_mock *MetricsHandler) GetTopCustomers(responseWriter http.ResponseWriter, request *http.Request) {
 	_mock.Called(responseWriter, request)

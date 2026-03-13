@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
+	"github.com/mlgaray/ecommerce_api/internal/core/pagination"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 )
 
@@ -1061,11 +1061,11 @@ func TestOrderFiltersRequest_ToOrderFilters(t *testing.T) {
 
 	t.Run("when cursor provided then decodes LastID and LastSortValue", func(t *testing.T) {
 		// Arrange
-		cursorData := services.CursorData{
+		cursorData := pagination.CursorData{
 			ID:        42,
 			SortValue: "2026-02-10T15:00:00Z",
 		}
-		cursor, err := services.EncodeCursor(cursorData)
+		cursor, err := pagination.EncodeCursor(cursorData)
 		require.NoError(t, err)
 
 		request := &OrderFiltersRequest{

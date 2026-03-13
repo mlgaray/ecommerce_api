@@ -14,6 +14,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
+	couponuc "github.com/mlgaray/ecommerce_api/internal/application/usecases/coupon"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
@@ -527,12 +528,17 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 				fx.As(new(ports.PaginationService[*models.Product])),
 			),
 
+			// Provide coupon dependencies (for store coupon validation endpoint)
+			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
+			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
+
 			// Provide use cases
 			fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
 			fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
 			fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
 			fx.Annotate(store.NewGetStoreFeaturedProductsUseCase, fx.As(new(ports.GetStoreFeaturedProductsUseCase))),
 			fx.Annotate(store.NewGetStoreProductByIDUseCase, fx.As(new(ports.GetStoreProductByIDUseCase))),
+			fx.Annotate(couponuc.NewValidateStoreCouponUseCase, fx.As(new(ports.ValidateStoreCouponUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewStoreHandler, fx.As(new(ports.StoreHandler))),
@@ -590,10 +596,12 @@ func (ctx *TestContext) SetupCreateOrderTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
 			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
@@ -602,12 +610,13 @@ func (ctx *TestContext) SetupCreateOrderTestApp() error {
 				fx.As(new(ports.PaginationService[*models.Order])),
 			),
 
-			// Provide use cases (all 5 required by NewOrderHandler)
+			// Provide use cases (all 6 required by NewOrderHandler)
 			fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
 			fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
 			fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
 			fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
 			fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
+			fx.Annotate(order.NewRemoveOrderCouponUseCase, fx.As(new(ports.RemoveOrderCouponUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewOrderHandler, fx.As(new(ports.OrderHandler))),
@@ -684,10 +693,12 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewOrderRepository, fx.As(new(ports.OrderRepository))),
+			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
+			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
 			fx.Annotate(stubs.NewOrderEventNotifier, fx.As(new(ports.OrderEventNotifier))),
 			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
 			fx.Annotate(services.NewShopService, fx.As(new(ports.ShopService))),
@@ -696,12 +707,13 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 				fx.As(new(ports.PaginationService[*models.Order])),
 			),
 
-			// Provide use cases (all 5 required by NewOrderHandler)
+			// Provide use cases (all 6 required by NewOrderHandler)
 			fx.Annotate(order.NewCreateOrderUseCase, fx.As(new(ports.CreateOrderUseCase))),
 			fx.Annotate(order.NewGetAllOrdersByShopIDUseCase, fx.As(new(ports.GetAllOrdersByShopIDUseCase))),
 			fx.Annotate(order.NewGetOrderByIDUseCase, fx.As(new(ports.GetOrderByIDUseCase))),
 			fx.Annotate(order.NewUpdateOrderStatusUseCase, fx.As(new(ports.UpdateOrderStatusUseCase))),
 			fx.Annotate(order.NewUpdateOrderUseCase, fx.As(new(ports.UpdateOrderUseCase))),
+			fx.Annotate(order.NewRemoveOrderCouponUseCase, fx.As(new(ports.RemoveOrderCouponUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewOrderHandler, fx.As(new(ports.OrderHandler))),
@@ -789,6 +801,7 @@ func (ctx *TestContext) SetupMetricsTestApp() error {
 			fx.Annotate(metrics.NewGetRevenueTrendUseCase, fx.As(new(ports.GetRevenueTrendUseCase))),
 			fx.Annotate(metrics.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
 			fx.Annotate(metrics.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
+			fx.Annotate(metrics.NewGetShippingSummaryUseCase, fx.As(new(ports.GetShippingSummaryUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),
