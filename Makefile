@@ -170,6 +170,7 @@ install-hooks:
 setup-dev: install-hooks install-arch-lint
 	@echo "Development environment ready."
 
+
 # Combined code quality target
 code-quality: fmt lint arch-lint
 
