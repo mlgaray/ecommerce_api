@@ -23,6 +23,16 @@ func NewStoreService(shopRepository ports.ShopRepository, productRepository port
 	}
 }
 
+// CheckSlugAvailability checks if a slug is available for use.
+// Returns true if no shop uses the given slug, false otherwise.
+func (s *StoreService) CheckSlugAvailability(ctx context.Context, slug string) (bool, error) {
+	exists, err := s.shopRepository.SlugExists(ctx, slug)
+	if err != nil {
+		return false, err
+	}
+	return !exists, nil
+}
+
 // GetBySlug retrieves a store by its slug.
 // Fetches shop data from repository and maps it to Store model.
 func (s *StoreService) GetBySlug(ctx context.Context, slug string) (*models.Store, error) {

@@ -15,7 +15,7 @@ create table
 ) tablespace pg_default;
 
 CREATE INDEX IF NOT EXISTS idx_shops_user_id ON public.shops (user_id);
-CREATE INDEX IF NOT EXISTS idx_shops_slug ON public.shops (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_slug_unique ON public.shops (lower(slug)) WHERE slug IS NOT NULL;
 
 -- Enable Row Level Security (blocks REST API access without policies)
 ALTER TABLE shops ENABLE ROW LEVEL SECURITY;

@@ -47,6 +47,10 @@ func (_mock *UpdateCouponUseCase) Execute(ctx context.Context, couponID int, sho
 	}
 
 	var r0 *models.Coupon
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *models.Coupon) (*models.Coupon, error)); ok {
+		return returnFunc(ctx, couponID, shopID, coupon)
+	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *models.Coupon) *models.Coupon); ok {
 		r0 = returnFunc(ctx, couponID, shopID, coupon)
 	} else {
@@ -54,8 +58,6 @@ func (_mock *UpdateCouponUseCase) Execute(ctx context.Context, couponID int, sho
 			r0 = ret.Get(0).(*models.Coupon)
 		}
 	}
-
-	var r1 error
 	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int, *models.Coupon) error); ok {
 		r1 = returnFunc(ctx, couponID, shopID, coupon)
 	} else {
@@ -106,8 +108,8 @@ func (_c *UpdateCouponUseCase_Execute_Call) Run(run func(ctx context.Context, co
 	return _c
 }
 
-func (_c *UpdateCouponUseCase_Execute_Call) Return(coupon *models.Coupon, err error) *UpdateCouponUseCase_Execute_Call {
-	_c.Call.Return(coupon, err)
+func (_c *UpdateCouponUseCase_Execute_Call) Return(coupon1 *models.Coupon, err error) *UpdateCouponUseCase_Execute_Call {
+	_c.Call.Return(coupon1, err)
 	return _c
 }
 

@@ -474,7 +474,7 @@ func TestSignUpRequest_Validate(t *testing.T) {
 		assert.Error(t, err)
 		badRequestErr, ok := err.(*httpErrors.BadRequestError)
 		assert.True(t, ok)
-		assert.Equal(t, "shop_slug_is_required", badRequestErr.Message)
+		assert.Equal(t, "invalid_slug_format", badRequestErr.Message)
 	})
 
 	t.Run("when shop email is empty then returns bad request error", func(t *testing.T) {

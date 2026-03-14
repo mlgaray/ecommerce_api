@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	authclaims "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
+	authclaims "github.com/mlgaray/ecommerce_api/internal/core/claims"
 	websocketHub "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/websocket"
 	"github.com/mlgaray/ecommerce_api/mocks"
 

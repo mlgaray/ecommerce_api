@@ -3,8 +3,8 @@ package ports
 import (
 	"context"
 
+	authclaims "github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	authclaims "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 )
 
 type TokenService interface {

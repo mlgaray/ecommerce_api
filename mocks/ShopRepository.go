@@ -520,6 +520,72 @@ func (_c *ShopRepository_SetOperatingSchedules_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// SlugExists provides a mock function for the type ShopRepository
+func (_mock *ShopRepository) SlugExists(ctx context.Context, slug string) (bool, error) {
+	ret := _mock.Called(ctx, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SlugExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, slug)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, slug)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ShopRepository_SlugExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SlugExists'
+type ShopRepository_SlugExists_Call struct {
+	*mock.Call
+}
+
+// SlugExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - slug string
+func (_e *ShopRepository_Expecter) SlugExists(ctx interface{}, slug interface{}) *ShopRepository_SlugExists_Call {
+	return &ShopRepository_SlugExists_Call{Call: _e.mock.On("SlugExists", ctx, slug)}
+}
+
+func (_c *ShopRepository_SlugExists_Call) Run(run func(ctx context.Context, slug string)) *ShopRepository_SlugExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ShopRepository_SlugExists_Call) Return(b bool, err error) *ShopRepository_SlugExists_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *ShopRepository_SlugExists_Call) RunAndReturn(run func(ctx context.Context, slug string) (bool, error)) *ShopRepository_SlugExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type ShopRepository
 func (_mock *ShopRepository) Update(ctx context.Context, shopID int, shop *models.Shop) ([]string, error) {
 	ret := _mock.Called(ctx, shopID, shop)

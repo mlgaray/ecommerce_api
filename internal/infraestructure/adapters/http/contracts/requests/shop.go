@@ -349,9 +349,9 @@ func (r *ShopUpdateRequest) validateBasicFields() error {
 		return &httpErrors.BadRequestError{Message: "shop_name_is_required"}
 	}
 
-	// Shop slug is required
-	if strings.TrimSpace(r.Shop.Slug) == "" {
-		return &httpErrors.BadRequestError{Message: "shop_slug_is_required"}
+	// Shop slug format (required + regex + length)
+	if err := ValidateSlug(strings.TrimSpace(r.Shop.Slug)); err != nil {
+		return err
 	}
 
 	return nil

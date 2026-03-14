@@ -255,7 +255,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 		assert.Error(t, err)
 		var badReqErr *httpErrors.BadRequestError
 		assert.ErrorAs(t, err, &badReqErr)
-		assert.Equal(t, "shop_slug_is_required", badReqErr.Message)
+		assert.Equal(t, "invalid_slug_format", badReqErr.Message)
 	})
 
 	t.Run("when slug is whitespace only then returns error", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestShopUpdateRequest_Validate_BasicFields(t *testing.T) {
 		assert.Error(t, err)
 		var badReqErr *httpErrors.BadRequestError
 		assert.ErrorAs(t, err, &badReqErr)
-		assert.Equal(t, "shop_slug_is_required", badReqErr.Message)
+		assert.Equal(t, "invalid_slug_format", badReqErr.Message)
 	})
 
 	t.Run("when name and slug are valid then returns no error", func(t *testing.T) {

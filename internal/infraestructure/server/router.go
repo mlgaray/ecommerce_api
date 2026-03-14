@@ -175,6 +175,8 @@ func (r *router) storeRoutes() {
 	// Public routes (no auth required) - Customer-facing store endpoints
 	sub := r.router.PathPrefix("/stores").Subrouter()
 	// Note: More specific routes must be registered before less specific ones
+	// GET /stores/slugs/{slug}/check-availability - Check slug availability (public)
+	sub.HandleFunc("/slugs/{slug}/check-availability", r.storeHandler.CheckSlugAvailability).Methods(http.MethodGet)
 	// GET /stores/{slug}/products/featured - Get store featured products (public)
 	sub.HandleFunc("/{slug}/products/featured", r.storeHandler.GetFeaturedProducts).Methods(http.MethodGet)
 	// GET /stores/{slug}/products/{productId} - Get store product by ID (public)

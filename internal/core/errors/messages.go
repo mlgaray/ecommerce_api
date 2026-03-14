@@ -12,7 +12,9 @@ const (
 	InvalidPrimaryColorFormat = "invalid_primary_color_format"
 
 	// Store related error messages
-	StoreNotFound = "store_not_found"
+	StoreNotFound     = "store_not_found"
+	InvalidSlugFormat = "invalid_slug_format"
+	SlugAlreadyExists = "slug_already_exists"
 
 	// Product related error messages
 	ProductNotFound                               = "product_not_found"

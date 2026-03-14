@@ -38,6 +38,72 @@ func (_m *StoreService) EXPECT() *StoreService_Expecter {
 	return &StoreService_Expecter{mock: &_m.Mock}
 }
 
+// CheckSlugAvailability provides a mock function for the type StoreService
+func (_mock *StoreService) CheckSlugAvailability(ctx context.Context, slug string) (bool, error) {
+	ret := _mock.Called(ctx, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckSlugAvailability")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, slug)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, slug)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StoreService_CheckSlugAvailability_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckSlugAvailability'
+type StoreService_CheckSlugAvailability_Call struct {
+	*mock.Call
+}
+
+// CheckSlugAvailability is a helper method to define mock.On call
+//   - ctx context.Context
+//   - slug string
+func (_e *StoreService_Expecter) CheckSlugAvailability(ctx interface{}, slug interface{}) *StoreService_CheckSlugAvailability_Call {
+	return &StoreService_CheckSlugAvailability_Call{Call: _e.mock.On("CheckSlugAvailability", ctx, slug)}
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) Run(run func(ctx context.Context, slug string)) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) Return(b bool, err error) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) RunAndReturn(run func(ctx context.Context, slug string) (bool, error)) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBySlug provides a mock function for the type StoreService
 func (_mock *StoreService) GetBySlug(ctx context.Context, slug string) (*models.Store, error) {
 	ret := _mock.Called(ctx, slug)

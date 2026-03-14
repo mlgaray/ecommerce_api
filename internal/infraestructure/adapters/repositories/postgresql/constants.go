@@ -33,6 +33,7 @@ const (
 // Database constraint names
 const (
 	ConstraintCategoryNameShopIDUnique = "categories_name_shop_id_unique"
+	ConstraintShopSlugUnique           = "idx_shops_slug_unique"
 )
 
 // JSON values

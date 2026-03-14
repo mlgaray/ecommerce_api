@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
@@ -24,6 +25,7 @@ const (
 	GetStoreFeaturedProductsFunctionField = "get_featured_products"
 	GetStoreProductByIDFunctionField      = "get_product_by_id"
 	ValidateCouponFunctionField           = "validate_coupon"
+	CheckSlugAvailabilityFunctionField    = "check_slug_availability"
 )
 
 type StoreHandler struct {
@@ -33,6 +35,7 @@ type StoreHandler struct {
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase
 	getStoreProductByID      ports.GetStoreProductByIDUseCase
 	validateStoreCoupon      ports.ValidateStoreCouponUseCase
+	checkSlugAvailability    ports.CheckSlugAvailabilityUseCase
 }
 
 func NewStoreHandler(
@@ -42,6 +45,7 @@ func NewStoreHandler(
 	getStoreFeaturedProducts ports.GetStoreFeaturedProductsUseCase,
 	getStoreProductByID ports.GetStoreProductByIDUseCase,
 	validateStoreCoupon ports.ValidateStoreCouponUseCase,
+	checkSlugAvailability ports.CheckSlugAvailabilityUseCase,
 ) ports.StoreHandler {
 	return &StoreHandler{
 		getStoreBySlug:           getStoreBySlug,
@@ -50,7 +54,51 @@ func NewStoreHandler(
 		getStoreFeaturedProducts: getStoreFeaturedProducts,
 		getStoreProductByID:      getStoreProductByID,
 		validateStoreCoupon:      validateStoreCoupon,
+		checkSlugAvailability:    checkSlugAvailability,
 	}
+}
+
+// CheckSlugAvailability handles GET /stores/slugs/{slug}/check-availability requests.
+// Public endpoint — used during registration to check if a slug is available.
+func (h *StoreHandler) CheckSlugAvailability(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	slug, err := h.parseAndValidateSlug(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	available, err := h.checkSlugAvailability.Execute(ctx, slug)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     StoreHandlerField,
+			"function": CheckSlugAvailabilityFunctionField,
+			"slug":     slug,
+			"error":    err.Error(),
+		}).Error("Error checking slug availability")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(responses.CheckSlugAvailabilityResponse{
+		Available: available,
+	})
+}
+
+// parseAndValidateSlug extracts the slug from the URL and validates its format.
+// Uses the shared slug validator from requests package.
+func (h *StoreHandler) parseAndValidateSlug(r *http.Request) (string, error) {
+	vars := mux.Vars(r)
+	slug := strings.TrimSpace(vars["slug"])
+
+	if err := requests.ValidateSlug(slug); err != nil {
+		return "", err
+	}
+
+	return slug, nil
 }
 
 func (h *StoreHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +140,7 @@ func (h *StoreHandler) parseSlug(r *http.Request) (string, error) {
 	// Validate slug is not empty
 	slug = strings.TrimSpace(slug)
 	if slug == "" {
-		return "", &httpErrors.BadRequestError{Message: "invalid_slug_format"}
+		return "", &httpErrors.BadRequestError{Message: domainErrors.InvalidSlugFormat}
 	}
 
 	return slug, nil

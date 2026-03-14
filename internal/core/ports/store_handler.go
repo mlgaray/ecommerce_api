@@ -5,6 +5,9 @@ import "net/http"
 // StoreHandler handles HTTP requests for public store endpoints.
 // These endpoints are accessible without authentication.
 type StoreHandler interface {
+	// CheckSlugAvailability handles GET /stores/slugs/{slug}/check-availability
+	CheckSlugAvailability(http.ResponseWriter, *http.Request)
+
 	// GetBySlug handles GET /stores/{slug}
 	GetBySlug(http.ResponseWriter, *http.Request)
 

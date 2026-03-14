@@ -120,6 +120,7 @@ var Module = fx.Options(
 		// Service depends on ShopRepository (reuses existing repository)
 		fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 		// Use Cases depend on Services
+		fx.Annotate(store.NewCheckSlugAvailabilityUseCase, fx.As(new(ports.CheckSlugAvailabilityUseCase))),
 		fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
 		fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
 		fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),

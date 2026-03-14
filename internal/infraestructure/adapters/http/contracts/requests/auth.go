@@ -130,9 +130,9 @@ func (r *SignUpRequest) validateShop() error {
 		return &httpErrors.BadRequestError{Message: "shop_name_is_required"}
 	}
 
-	// HTTP validation: shop slug required
-	if strings.TrimSpace(r.Shop.Slug) == "" {
-		return &httpErrors.BadRequestError{Message: "shop_slug_is_required"}
+	// HTTP validation: shop slug format (required + regex + length)
+	if err := ValidateSlug(strings.TrimSpace(r.Shop.Slug)); err != nil {
+		return err
 	}
 
 	// HTTP validation: shop email required

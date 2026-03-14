@@ -267,6 +267,77 @@ func TestStoreService_GetBySlug(t *testing.T) {
 }
 
 // =============================================================================
+// CheckSlugAvailability Tests
+// =============================================================================
+
+func TestStoreService_CheckSlugAvailability(t *testing.T) {
+	t.Run("when slug does not exist then returns true (available)", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "new-store"
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(false, nil)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.True(t, available)
+	})
+
+	t.Run("when slug exists then returns false (not available)", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "existing-store"
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(true, nil)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.False(t, available)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "some-store"
+		expectedError := stdErrors.New("database error")
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(false, expectedError)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.Error(t, err)
+		assert.False(t, available)
+		assert.Equal(t, expectedError, err)
+	})
+}
+
+// =============================================================================
 // ValidateOrderItems Tests
 // =============================================================================
 

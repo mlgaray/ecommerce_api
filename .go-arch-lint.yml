@@ -1,0 +1,208 @@
+# Architecture Linter Configuration
+# Enforces Hexagonal Architecture dependency rules
+# Docs: https://github.com/fe3dback/go-arch-lint
+version: 3
+workdir: internal
+
+allow:
+  depOnAnyVendor: false
+  deepScan: true
+
+# Exclude test files and generated mocks from analysis
+excludeFiles:
+  - "_test\\.go$"
+
+# ============================================================
+# COMPONENTS - Map Go packages to architectural components
+# ============================================================
+components:
+  # --- Core Layer (no external dependencies) ---
+  entities:
+    in: core/entities
+  domain_errors:
+    in: core/errors
+  models:
+    in: core/models
+  pagination:
+    in: core/pagination
+  ports:
+    in: core/ports
+  claims:
+    in: core/claims
+
+  # --- Application Layer (depends only on Core) ---
+  services:
+    in: application/services
+  usecases:
+    in: application/usecases/**
+
+  # --- Infrastructure Layer (depends on Application and Core) ---
+  # HTTP adapters
+  http_handlers:
+    in: infraestructure/adapters/http
+  http_requests:
+    in: infraestructure/adapters/http/contracts/requests
+  http_responses:
+    in: infraestructure/adapters/http/contracts/responses
+  http_errors:
+    in: infraestructure/adapters/http/errors
+  http_middleware:
+    in: infraestructure/adapters/http/middleware
+
+  # Data & Auth adapters
+  repositories:
+    in: infraestructure/adapters/repositories/**
+  auth_jwt:
+    in: infraestructure/adapters/auth/jwt
+
+  # Other adapters
+  assets:
+    in: infraestructure/adapters/assets
+  logs:
+    in: infraestructure/adapters/logs
+  websocket:
+    in: infraestructure/adapters/websocket
+
+  # Server / DI container (can depend on everything)
+  server:
+    in: infraestructure/server
+
+# ============================================================
+# VENDORS - Control which external libraries each layer can use
+# ============================================================
+vendors:
+  gorilla_mux:
+    in: github.com/gorilla/mux
+  gorilla_websocket:
+    in: github.com/gorilla/websocket
+  lib_pq:
+    in: github.com/lib/pq
+  jwt:
+    in: github.com/golang-jwt/jwt/**
+  logrus:
+    in: github.com/sirupsen/logrus
+  lumberjack:
+    in: gopkg.in/natefinish/lumberjack.v2
+  uber_fx:
+    in: go.uber.org/fx
+  testify:
+    in: github.com/stretchr/testify/**
+  prometheus:
+    in: github.com/prometheus/**
+  cloudinary:
+    in: github.com/cloudinary/cloudinary-go/**
+  uuid:
+    in: github.com/google/uuid
+  json_iterator:
+    in: github.com/json-iterator/go
+
+# ============================================================
+# COMMON - Available to all components without explicit rules
+# ============================================================
+commonComponents:
+  - entities
+  - domain_errors
+  - models
+  - pagination
+  - claims
+  # TODO: Create a Logger port in core/ports and inject the implementation.
+  # Currently logs is imported across ALL layers (handlers, repositories,
+  # services, usecases, middleware, assets, websocket). Making it a
+  # commonComponent is a temporary measure until a proper Logger port is created.
+  - logs
+
+commonVendors:
+  - testify
+  - uuid
+
+# ============================================================
+# DEPENDENCY RULES - Enforce Hexagonal Architecture
+# ============================================================
+deps:
+  # --- Core Layer: NO dependencies on app or infra ---
+  # entities, domain_errors, models, pagination: leaf components (no deps needed)
+  # ports: claims is now in core (commonComponent), no violation
+  # --- Application Layer: depends only on Core (via commonComponents + ports) ---
+  services:
+    mayDependOn:
+      - ports
+
+  usecases:
+    mayDependOn:
+      - ports
+      - services
+
+  # --- Infrastructure Layer: can depend on Application and Core ---
+  http_handlers:
+    mayDependOn:
+      - ports
+      - services
+      - usecases
+      - http_requests
+      - http_responses
+      - http_errors
+      - http_middleware
+      - claims
+      - websocket
+    canUse:
+      - gorilla_mux
+      - gorilla_websocket
+
+  http_requests:
+    mayDependOn:
+      - ports
+      - http_errors
+    canUse:
+      - gorilla_mux
+
+  # http_responses: leaf component (no deps needed)
+  # http_errors: leaf component (no deps needed, logs via commonComponents)
+
+  http_middleware:
+    mayDependOn:
+      - ports
+      - claims
+      - assets
+      - http_errors
+    canUse:
+      - gorilla_mux
+      - logrus
+      - prometheus
+      - cloudinary
+
+  repositories:
+    mayDependOn:
+      - ports
+    canUse:
+      - lib_pq
+      - json_iterator
+
+  # claims: now in core as commonComponent (no deps entry needed)
+
+  auth_jwt:
+    mayDependOn:
+      - ports
+      - claims
+    canUse:
+      - jwt
+
+  assets:
+    canUse:
+      - cloudinary
+
+  logs:
+    canUse:
+      - logrus
+      - lumberjack
+
+  websocket:
+    mayDependOn:
+      - ports
+      - http_responses
+    canUse:
+      - gorilla_websocket
+
+  # Server / DI container wires everything together
+  server:
+    anyProjectDeps: true
+    anyVendorDeps: true

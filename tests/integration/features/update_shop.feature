@@ -44,7 +44,7 @@ Feature: Update Shop
     And I have shop update data without slug
     When I send an update shop request for shop 1
     Then the response status should be 400
-    And the user should receive an error message "shop_slug_is_required"
+    And the user should receive an error message "invalid_slug_format"
 
   Scenario: Update shop with invalid image type returns 400
     Given a shop with ID 1 exists for update

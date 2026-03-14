@@ -152,10 +152,28 @@ lint-fix:
 	@echo "Running golangci-lint with auto-fix..."
 	@golangci-lint run --fix
 
-# Combined code quality target
-code-quality: fmt lint
+# Architecture linting (Hexagonal Architecture dependency validation)
+install-arch-lint:
+	@echo "Installing go-arch-lint..."
+	@go install github.com/fe3dback/go-arch-lint@latest
 
-.PHONY: lint-fix fmt lint code-quality
+arch-lint:
+	@echo "Running architecture linter..."
+	@go-arch-lint check --project-path .
+
+# Pre-commit hooks
+install-hooks:
+	@echo "Installing pre-commit hooks..."
+	@pre-commit install
+
+# Full developer setup
+setup-dev: install-hooks install-arch-lint
+	@echo "Development environment ready."
+
+# Combined code quality target
+code-quality: fmt lint arch-lint
+
+.PHONY: lint-fix fmt lint code-quality install-arch-lint arch-lint install-hooks setup-dev
 
 # Database drop: Drop everything (seeds, functions, tables)
 # Order matters: seeds -> functions -> tables (respect dependencies)

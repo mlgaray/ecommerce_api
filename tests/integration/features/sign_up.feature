@@ -45,7 +45,7 @@ Feature: User Sign Up
     Given the user has registration data with empty shop slug
     When the user sends a sign up request
     Then the response status should be 400
-    And the user should receive an error message "shop_slug_is_required"
+    And the user should receive an error message "invalid_slug_format"
 
 #  Scenario: Sign up with weak password
 #    Given I have registration data with weak password
