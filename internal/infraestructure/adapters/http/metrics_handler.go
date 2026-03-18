@@ -22,6 +22,7 @@ const (
 	GetTopProductsFunctionField     = "get_top_products"
 	GetTopCustomersFunctionField    = "get_top_customers"
 	GetShippingSummaryFunctionField = "get_shipping_summary"
+	GetVisitsTrendFunctionField     = "get_visits_trend"
 	ParseMetricsShopIDSubFuncField  = "parse_shop_id"
 )
 
@@ -31,6 +32,7 @@ type MetricsHandler struct {
 	getTopProductsUseCase     ports.GetTopProductsUseCase
 	getTopCustomersUseCase    ports.GetTopCustomersUseCase
 	getShippingSummaryUseCase ports.GetShippingSummaryUseCase
+	getVisitsTrendUseCase     ports.GetVisitsTrendUseCase
 }
 
 func NewMetricsHandler(
@@ -39,6 +41,7 @@ func NewMetricsHandler(
 	getTopProductsUseCase ports.GetTopProductsUseCase,
 	getTopCustomersUseCase ports.GetTopCustomersUseCase,
 	getShippingSummaryUseCase ports.GetShippingSummaryUseCase,
+	getVisitsTrendUseCase ports.GetVisitsTrendUseCase,
 ) ports.MetricsHandler {
 	return &MetricsHandler{
 		getDashboardUseCase:       getDashboardUseCase,
@@ -46,6 +49,7 @@ func NewMetricsHandler(
 		getTopProductsUseCase:     getTopProductsUseCase,
 		getTopCustomersUseCase:    getTopCustomersUseCase,
 		getShippingSummaryUseCase: getShippingSummaryUseCase,
+		getVisitsTrendUseCase:     getVisitsTrendUseCase,
 	}
 }
 
@@ -338,6 +342,68 @@ func (h *MetricsHandler) GetShippingSummary(w http.ResponseWriter, r *http.Reque
 		logs.WithFields(map[string]interface{}{
 			"file":     MetricsHandlerField,
 			"function": GetShippingSummaryFunctionField,
+			"sub_func": "json.Encode",
+			"error":    err.Error(),
+		}).Error("Error encoding response")
+	}
+}
+
+// GetVisitsTrend handles GET /shops/{shop_id}/metrics/visits/trend requests.
+func (h *MetricsHandler) GetVisitsTrend(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	shopID, err := h.parseShopID(r)
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	filtersRequest, err := requests.NewMetricsFiltersRequest(r.URL.Query())
+	if err != nil {
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	if err := filtersRequest.Validate(); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsHandlerField,
+			"function": GetVisitsTrendFunctionField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Warn("Invalid filter parameters")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	filters := filtersRequest.ToMetricsFilters()
+
+	trend, err := h.getVisitsTrendUseCase.Execute(ctx, shopID, filters)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsHandlerField,
+			"function": GetVisitsTrendFunctionField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Error retrieving visits trend")
+		httpErrors.HandleError(w, err)
+		return
+	}
+
+	logs.WithFields(map[string]interface{}{
+		"file":        MetricsHandlerField,
+		"function":    GetVisitsTrendFunctionField,
+		"shop_id":     shopID,
+		"data_points": len(trend),
+	}).Debug("Visits trend retrieved successfully")
+
+	response := responses.NewVisitsTrendResponse(trend)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsHandlerField,
+			"function": GetVisitsTrendFunctionField,
 			"sub_func": "json.Encode",
 			"error":    err.Error(),
 		}).Error("Error encoding response")

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	domainErrors "github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
@@ -63,6 +64,9 @@ func TestGetStoreBySlugUseCase_Execute(t *testing.T) {
 		serviceMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedStore, nil)
+		serviceMock.EXPECT().
+			RecordVisit(mock.Anything, expectedStore.ID).
+			Return(nil).Maybe()
 
 		useCase := NewGetStoreBySlugUseCase(serviceMock)
 
@@ -144,6 +148,9 @@ func TestGetStoreBySlugUseCase_Execute(t *testing.T) {
 		serviceMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedStore, nil)
+		serviceMock.EXPECT().
+			RecordVisit(mock.Anything, expectedStore.ID).
+			Return(nil).Maybe()
 
 		useCase := NewGetStoreBySlugUseCase(serviceMock)
 
@@ -171,6 +178,9 @@ func TestGetStoreBySlugUseCase_Execute(t *testing.T) {
 		serviceMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedStore, nil)
+		serviceMock.EXPECT().
+			RecordVisit(mock.Anything, expectedStore.ID).
+			Return(nil).Maybe()
 
 		useCase := NewGetStoreBySlugUseCase(serviceMock)
 
@@ -198,6 +208,9 @@ func TestGetStoreBySlugUseCase_Execute(t *testing.T) {
 		serviceMock.EXPECT().
 			GetBySlug(ctx, slug).
 			Return(expectedStore, nil)
+		serviceMock.EXPECT().
+			RecordVisit(mock.Anything, expectedStore.ID).
+			Return(nil).Maybe()
 
 		useCase := NewGetStoreBySlugUseCase(serviceMock)
 

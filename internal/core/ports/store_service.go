@@ -27,4 +27,7 @@ type StoreService interface {
 	// ValidateDeliveryMethod validates that the delivery method is active and shipping cost matches.
 	// Returns ValidationError if method is not found, inactive, or price mismatch.
 	ValidateDeliveryMethod(store *models.Store, deliveryMethod *models.DeliveryMethod, shippingCost float64) error
+
+	// RecordVisit records a store visit for metrics tracking.
+	RecordVisit(ctx context.Context, shopID int) error
 }

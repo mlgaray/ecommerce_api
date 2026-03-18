@@ -14,55 +14,60 @@ import (
 )
 
 var (
-	// HTTP Request metrics
+	// ecommerce_http_requests_total — Total HTTP requests
+	// Alert: error rate (5xx) > 1% for 5min → Critical
 	httpRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_requests_total",
+			Name: "ecommerce_http_requests_total",
 			Help: "Total number of HTTP requests",
 		},
-		[]string{"method", "endpoint", "status_code"},
+		[]string{"method", "route", "status_code"},
 	)
 
+	// ecommerce_http_request_duration_seconds — Request latency histogram
+	// Alert: P99 > 2s for 3min → Warning
 	httpRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
+			Name:    "ecommerce_http_request_duration_seconds",
 			Help:    "HTTP request duration in seconds",
-			Buckets: prometheus.DefBuckets,
+			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 		},
-		[]string{"method", "endpoint", "status_code"},
+		[]string{"method", "route", "status_code"},
 	)
 
+	// ecommerce_http_request_size_bytes — Request payload size
 	httpRequestSize = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_size_bytes",
+			Name:    "ecommerce_http_request_size_bytes",
 			Help:    "HTTP request size in bytes",
 			Buckets: []float64{1, 10, 100, 1000, 10000, 100000, 1000000},
 		},
-		[]string{"method", "endpoint"},
+		[]string{"method", "route"},
 	)
 
+	// ecommerce_http_response_size_bytes — Response payload size
 	httpResponseSize = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_response_size_bytes",
+			Name:    "ecommerce_http_response_size_bytes",
 			Help:    "HTTP response size in bytes",
 			Buckets: []float64{1, 10, 100, 1000, 10000, 100000, 1000000},
 		},
-		[]string{"method", "endpoint", "status_code"},
+		[]string{"method", "route", "status_code"},
 	)
 
-	// Concurrent requests
+	// ecommerce_http_requests_in_flight — Saturation signal
 	httpRequestsInFlight = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "http_requests_in_flight",
+		Name: "ecommerce_http_requests_in_flight",
 		Help: "Number of HTTP requests currently being processed",
 	})
 
-	// Error rate by status code family
+	// ecommerce_http_requests_by_status_family_total — Status distribution
 	httpRequestsByStatusFamily = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_requests_by_status_family_total",
+			Name: "ecommerce_http_requests_by_status_family_total",
 			Help: "Total HTTP requests by status code family (2xx, 3xx, 4xx, 5xx)",
 		},
-		[]string{"status_family", "endpoint"},
+		[]string{"status_family", "route"},
 	)
 )
 
@@ -106,7 +111,7 @@ func getStatusFamily(statusCode int) string {
 	}
 }
 
-func getEndpoint(r *http.Request) string {
+func getRoute(r *http.Request) string {
 	if route := mux.CurrentRoute(r); route != nil {
 		if template, err := route.GetPathTemplate(); err == nil {
 			return template
@@ -118,10 +123,10 @@ func getEndpoint(r *http.Request) string {
 func PrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		endpoint := getEndpoint(r)
+		route := getRoute(r)
 
 		// Skip in-flight counting for metrics endpoint to avoid scraping noise
-		if endpoint != "/metrics" {
+		if route != "/metrics" {
 			httpRequestsInFlight.Inc()
 			defer httpRequestsInFlight.Dec()
 		}
@@ -141,7 +146,7 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 
 		method := r.Method
 
-		httpRequestSize.WithLabelValues(method, endpoint).Observe(requestSize)
+		httpRequestSize.WithLabelValues(method, route).Observe(requestSize)
 
 		// Process request
 		next.ServeHTTP(prw, r)
@@ -152,9 +157,9 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 		statusFamily := getStatusFamily(prw.statusCode)
 
 		// Record metrics
-		httpRequestsTotal.WithLabelValues(method, endpoint, statusCode).Inc()
-		httpRequestDuration.WithLabelValues(method, endpoint, statusCode).Observe(duration)
-		httpResponseSize.WithLabelValues(method, endpoint, statusCode).Observe(float64(prw.size))
-		httpRequestsByStatusFamily.WithLabelValues(statusFamily, endpoint).Inc()
+		httpRequestsTotal.WithLabelValues(method, route, statusCode).Inc()
+		httpRequestDuration.WithLabelValues(method, route, statusCode).Observe(duration)
+		httpResponseSize.WithLabelValues(method, route, statusCode).Observe(float64(prw.size))
+		httpRequestsByStatusFamily.WithLabelValues(statusFamily, route).Inc()
 	})
 }

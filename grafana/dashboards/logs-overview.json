@@ -1,33 +1,50 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
+  "id": null,
+  "uid": "ecommerce-logs-overview",
+  "title": "Logs Overview",
+  "tags": ["logs", "ecommerce-api"],
+  "schemaVersion": 41,
+  "version": 1,
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 6,
-  "links": [],
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "panels": [
     {
+      "id": 1,
+      "title": "Log Volume (logs/sec)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "datasource": {
         "type": "loki",
-        "uid": "bey716z3vqjggd"
+        "uid": "loki"
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "rate({job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" [1m])",
+          "legendFormat": "Log Rate",
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "logs/sec",
           "color": {
             "mode": "palette-classic"
           },
@@ -38,7 +55,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -54,7 +70,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -64,31 +80,18 @@
               "mode": "off"
             }
           },
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          },
-          "unit": "logs/sec"
+          }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -100,26 +103,33 @@
           "mode": "single",
           "sort": "none"
         }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Logs by Level",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
       },
       "targets": [
         {
           "datasource": {
             "type": "loki",
-            "uid": "bey716z3vqjggd"
+            "uid": "loki"
           },
-          "expr": "rate({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\"[1m])",
-          "legendFormat": "Log Rate",
+          "expr": "sum by (level) (rate({job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" [1m]))",
+          "legendFormat": "{{level}}",
           "refId": "A"
         }
       ],
-      "title": "Log Volume (logs/sec)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "bey716z3vqjggd"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -132,7 +142,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -148,7 +157,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -158,21 +167,15 @@
               "mode": "off"
             }
           },
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          },
-          "unit": "logs/sec"
+          }
         },
         "overrides": [
           {
@@ -222,13 +225,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 2,
       "options": {
         "legend": {
           "calcs": [],
@@ -240,131 +236,132 @@
           "mode": "single",
           "sort": "none"
         }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "bey716z3vqjggd"
-          },
-          "expr": "sum by (level) (rate({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt [1m]))",
-          "legendFormat": "{{level}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Logs by Level",
-      "type": "timeseries"
+      }
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "bey716z3vqjggd"
-      },
+      "id": 3,
+      "title": "Recent Logs",
+      "type": "logs",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
         "y": 8
       },
-      "id": 3,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
       },
       "targets": [
         {
           "datasource": {
             "type": "loki",
-            "uid": "bey716z3vqjggd"
+            "uid": "loki"
           },
-          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt",
+          "expr": "{job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\"",
           "refId": "A"
         }
       ],
-      "title": "Recent Logs",
-      "type": "logs"
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "wrapLogMessage": false
+      }
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "bey716z3vqjggd"
-      },
+      "id": 4,
+      "title": "Error Logs Only",
+      "type": "logs",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 16
       },
-      "id": 4,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
       },
       "targets": [
         {
           "datasource": {
             "type": "loki",
-            "uid": "bey716z3vqjggd"
+            "uid": "loki"
           },
-          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | level=\"error\"",
+          "expr": "{job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | level=\"error\"",
           "refId": "A"
         }
       ],
-      "title": "Error Logs Only",
-      "type": "logs"
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "wrapLogMessage": false
+      }
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "bey716z3vqjggd"
-      },
+      "id": 5,
+      "title": "HTTP Request Logs",
+      "type": "logs",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
         "y": 16
       },
-      "id": 5,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
       },
       "targets": [
         {
           "datasource": {
             "type": "loki",
-            "uid": "bey716z3vqjggd"
+            "uid": "loki"
           },
-          "expr": "{job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | event=~\"request_.*\"",
+          "expr": "{job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | event=~\"http_request_.*\"",
           "refId": "A"
         }
       ],
-      "title": "HTTP Request Logs",
-      "type": "logs"
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "wrapLogMessage": false
+      }
     },
     {
+      "id": 6,
+      "title": "Log Count by Level (24h)",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
       "datasource": {
         "type": "loki",
-        "uid": "bey716z3vqjggd"
+        "uid": "loki"
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (level) (count_over_time({job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" [24h])))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -374,59 +371,34 @@
             },
             "inspect": false
           },
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 24
-      },
-      "id": 6,
       "options": {
+        "showHeader": true,
         "cellHeight": "sm",
         "footer": {
-          "countRows": false,
-          "fields": "",
+          "show": false,
           "reducer": ["sum"],
-          "show": false
+          "countRows": false,
+          "fields": ""
         },
-        "showHeader": true,
         "sortBy": [
           {
-            "desc": true,
-            "displayName": "Count"
+            "displayName": "Count",
+            "desc": true
           }
         ]
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "bey716z3vqjggd"
-          },
-          "expr": "topk(10, sum by (level) (count_over_time({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt [24h])))",
-          "format": "table",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Log Count by Level (24h)",
       "transformations": [
         {
           "id": "organize",
@@ -441,14 +413,33 @@
             }
           }
         }
-      ],
-      "type": "table"
+      ]
     },
     {
+      "id": 7,
+      "title": "Top Operations (24h)",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
       "datasource": {
         "type": "loki",
-        "uid": "bey716z3vqjggd"
+        "uid": "loki"
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(10, sum by (operation) (count_over_time({job=\"containerlogs\"} | json | __error__=\"\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | operation!=\"\" [24h])))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -458,59 +449,34 @@
             },
             "inspect": false
           },
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 24
-      },
-      "id": 7,
       "options": {
+        "showHeader": true,
         "cellHeight": "sm",
         "footer": {
-          "countRows": false,
-          "fields": "",
+          "show": false,
           "reducer": ["sum"],
-          "show": false
+          "countRows": false,
+          "fields": ""
         },
-        "showHeader": true,
         "sortBy": [
           {
-            "desc": true,
-            "displayName": "Count"
+            "displayName": "Count",
+            "desc": true
           }
         ]
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "bey716z3vqjggd"
-          },
-          "expr": "topk(10, sum by (operation) (count_over_time({job=\"containerlogs\"} |= \"time=\" != \"metrics\" != \"executing query\" != \"component=querier\" != \"error processing request\" != \"caller=retry.go\" != \"org_id=fake\" != \"downloaded file\" != \"checkpoint\" != \"component=tsdb\" != \"table-name=\" != \"compactor\" != \"WAL checkpoint\" | logfmt | operation!=\"\" [24h])))",
-          "format": "table",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Top Operations (24h)",
       "transformations": [
         {
           "id": "organize",
@@ -525,23 +491,27 @@
             }
           }
         }
-      ],
-      "type": "table"
+      ]
     }
   ],
-  "preload": false,
-  "schemaVersion": 41,
-  "tags": ["logs", "ecommerce-api"],
   "templating": {
     "list": []
   },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Ecommerce API - Logs Dashboard",
-  "uid": "ecommerce-api-logs",
-  "version": 1
+  "links": []
 }

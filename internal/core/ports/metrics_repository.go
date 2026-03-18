@@ -46,4 +46,10 @@ type MetricsRepository interface {
 
 	// GetShippingSummary returns aggregated shipping metrics for completed orders with shipping in a date range.
 	GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error)
+
+	// GetVisitsSummaryBatch returns visit counts for multiple date ranges in a single query.
+	GetVisitsSummaryBatch(ctx context.Context, shopID int, periods []models.RevenuePeriod) ([]int, error)
+
+	// GetVisitsTrend returns daily visit counts within a date range.
+	GetVisitsTrend(ctx context.Context, shopID int, from, to time.Time, tz string) ([]models.VisitsTrendPoint, error)
 }

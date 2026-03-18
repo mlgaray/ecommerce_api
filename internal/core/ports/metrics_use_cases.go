@@ -30,3 +30,8 @@ type GetTopCustomersUseCase interface {
 type GetShippingSummaryUseCase interface {
 	Execute(ctx context.Context, shopID int, filters models.MetricsFilters) (models.ShippingSummary, error)
 }
+
+// GetVisitsTrendUseCase orchestrates the visits trend retrieval.
+type GetVisitsTrendUseCase interface {
+	Execute(ctx context.Context, shopID int, filters models.MetricsFilters) ([]models.VisitsTrendPoint, error)
+}

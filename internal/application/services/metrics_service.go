@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -67,6 +68,10 @@ func (s *MetricsService) GetDashboard(ctx context.Context, shopID int, now time.
 		// Customer overview (1 query)
 		customers    models.CustomerOverview
 		customersErr error
+
+		// Visits batch (1 query)
+		visitCounts []int
+		visitsErr   error
 	)
 
 	// Execute all queries in parallel (7 goroutines instead of 12)
@@ -91,14 +96,29 @@ func (s *MetricsService) GetDashboard(ctx context.Context, shopID int, now time.
 	wg.Go(func() {
 		customers, customersErr = s.metricsRepository.GetCustomerOverview(ctx, shopID, monthFrom, monthTo)
 	})
+	wg.Go(func() {
+		visitCounts, visitsErr = s.metricsRepository.GetVisitsSummaryBatch(ctx, shopID, periods)
+	})
 
 	wg.Wait()
 
 	// Check for errors (return first encountered)
-	for _, err := range []error{revenueErr, statusErr, avgCompErr, topProdErr, payDistErr, delDistErr, customersErr} {
+	for _, err := range []error{revenueErr, statusErr, avgCompErr, topProdErr, payDistErr, delDistErr, customersErr, visitsErr} {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Guard against unexpected slice length from repository
+	if len(visitCounts) < len(periods) {
+		return nil, fmt.Errorf("visits summary batch returned %d counts, expected %d", len(visitCounts), len(periods))
+	}
+
+	// Build visits summary from batch counts (same period indices as revenue)
+	visits := models.VisitsSummary{
+		Today:     buildVisitsComparison(visitCounts[0], visitCounts[1]),
+		ThisWeek:  buildVisitsComparison(visitCounts[2], visitCounts[3]),
+		ThisMonth: buildVisitsComparison(visitCounts[4], visitCounts[5]),
 	}
 
 	// Build dashboard
@@ -113,6 +133,7 @@ func (s *MetricsService) GetDashboard(ctx context.Context, shopID int, now time.
 		PaymentDistribution:  calculatePercentages(paymentDist),
 		DeliveryDistribution: calculatePercentages(deliveryDist),
 		Customers:            customers,
+		Visits:               visits,
 	}
 
 	if dashboard.TopProducts == nil {
@@ -167,6 +188,18 @@ func (s *MetricsService) GetTopCustomers(ctx context.Context, shopID int, from, 
 // GetShippingSummary returns aggregated shipping metrics for a date range.
 func (s *MetricsService) GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error) {
 	return s.metricsRepository.GetShippingSummary(ctx, shopID, from, to)
+}
+
+// GetVisitsTrend returns a time series of daily visit counts for charting.
+func (s *MetricsService) GetVisitsTrend(ctx context.Context, shopID int, from, to time.Time, tz string) ([]models.VisitsTrendPoint, error) {
+	trend, err := s.metricsRepository.GetVisitsTrend(ctx, shopID, from, to, tz)
+	if err != nil {
+		return nil, err
+	}
+	if trend == nil {
+		return []models.VisitsTrendPoint{}, nil
+	}
+	return trend, nil
 }
 
 // --- Period calculation helpers (pure functions) ---
@@ -247,6 +280,15 @@ func buildComparison(current, previous models.RevenueSummary) models.RevenuePeri
 		RevenueChange: percentChange(current.TotalRevenue, previous.TotalRevenue),
 		OrderChange:   percentChange(float64(current.OrderCount), float64(previous.OrderCount)),
 		AOVChange:     percentChange(current.AOV, previous.AOV),
+	}
+}
+
+// buildVisitsComparison builds a VisitsPeriodComparison from current and previous visit counts.
+func buildVisitsComparison(current, previous int) models.VisitsPeriodComparison {
+	return models.VisitsPeriodComparison{
+		Current:  current,
+		Previous: previous,
+		Change:   percentChange(float64(current), float64(previous)),
 	}
 }
 

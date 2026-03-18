@@ -235,6 +235,63 @@ func (_c *StoreService_ValidateDeliveryMethod_Call) RunAndReturn(run func(store 
 	return _c
 }
 
+// RecordVisit provides a mock function for the type StoreService
+func (_mock *StoreService) RecordVisit(ctx context.Context, shopID int) error {
+	ret := _mock.Called(ctx, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecordVisit")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = returnFunc(ctx, shopID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// StoreService_RecordVisit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecordVisit'
+type StoreService_RecordVisit_Call struct {
+	*mock.Call
+}
+
+// RecordVisit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+func (_e *StoreService_Expecter) RecordVisit(ctx interface{}, shopID interface{}) *StoreService_RecordVisit_Call {
+	return &StoreService_RecordVisit_Call{Call: _e.mock.On("RecordVisit", ctx, shopID)}
+}
+
+func (_c *StoreService_RecordVisit_Call) Run(run func(ctx context.Context, shopID int)) *StoreService_RecordVisit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_RecordVisit_Call) Return(err error) *StoreService_RecordVisit_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *StoreService_RecordVisit_Call) RunAndReturn(run func(ctx context.Context, shopID int) error) *StoreService_RecordVisit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ValidateOrderItems provides a mock function for the type StoreService
 func (_mock *StoreService) ValidateOrderItems(ctx context.Context, items []*models.OrderItem, storeID int) error {
 	ret := _mock.Called(ctx, items, storeID)

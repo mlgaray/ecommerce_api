@@ -15,7 +15,7 @@ BEGIN
     FROM order_items oi
     JOIN orders o ON o.id = oi.order_id
     JOIN shops s ON s.id = o.store_id
-    WHERE s.email = 'mcdonalds@mc.com' AND o.order_number = '0001'
+    WHERE s.email = 'mcdonalds@mc.com' AND o.order_number = 'ORD-260101-0000001'
     LIMIT 1;
 
     -- Get variant IDs

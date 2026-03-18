@@ -169,6 +169,7 @@ func (r *router) shopMetricsRoutes() {
 	protected.HandleFunc("/{shop_id}/metrics/products/top", r.metricsHandler.GetTopProducts).Methods(http.MethodGet)
 	protected.HandleFunc("/{shop_id}/metrics/customers/top", r.metricsHandler.GetTopCustomers).Methods(http.MethodGet)
 	protected.HandleFunc("/{shop_id}/metrics/shipping/summary", r.metricsHandler.GetShippingSummary).Methods(http.MethodGet)
+	protected.HandleFunc("/{shop_id}/metrics/visits/trend", r.metricsHandler.GetVisitsTrend).Methods(http.MethodGet)
 }
 
 func (r *router) storeRoutes() {

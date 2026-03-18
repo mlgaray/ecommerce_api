@@ -84,6 +84,26 @@ type RevenueTrendPoint struct {
 	OrderCount int     `json:"order_count"`
 }
 
+// VisitsPeriodComparison compares current visit count vs previous period.
+type VisitsPeriodComparison struct {
+	Current  int     `json:"current"`
+	Previous int     `json:"previous"`
+	Change   float64 `json:"change"`
+}
+
+// VisitsSummary contains visit comparisons for today, this week, and this month.
+type VisitsSummary struct {
+	Today     VisitsPeriodComparison `json:"today"`
+	ThisWeek  VisitsPeriodComparison `json:"this_week"`
+	ThisMonth VisitsPeriodComparison `json:"this_month"`
+}
+
+// VisitsTrendPoint represents a single data point in a visits time series.
+type VisitsTrendPoint struct {
+	Date       string `json:"date"`
+	VisitCount int    `json:"visit_count"`
+}
+
 // DashboardMetrics is the complete dashboard response.
 type DashboardMetrics struct {
 	Revenue              RevenueMetrics       `json:"revenue"`
@@ -92,6 +112,7 @@ type DashboardMetrics struct {
 	PaymentDistribution  []MethodDistribution `json:"payment_distribution"`
 	DeliveryDistribution []MethodDistribution `json:"delivery_distribution"`
 	Customers            CustomerOverview     `json:"customers"`
+	Visits               VisitsSummary        `json:"visits"`
 }
 
 // ShippingSummary contains aggregated shipping metrics for a date range.

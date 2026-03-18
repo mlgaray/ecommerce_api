@@ -2,6 +2,19 @@
 
 This project uses **structured logging** with consistent field naming across all layers.
 
+## Log Format
+
+| Environment | Format | Reason |
+|-------------|--------|--------|
+| `development` | Text (logrus default) | Human-readable in terminal |
+| `dev`, `test`, `production` | JSON | Machine-parseable for Promtail/Loki |
+
+JSON logs include default fields injected via hook: `service: "ecommerce-api"`, `environment: <from env>`.
+
+Field mapping: `time` → `timestamp`, `msg` → `message`.
+
+See [Observability](./OBSERVABILITY.md) for the full metrics and logging pipeline (Prometheus, Grafana, Loki, Promtail).
+
 ## Log Structure
 
 All logs follow this format:
