@@ -23,6 +23,10 @@ type ShopRepository interface {
 	// Returns RecordNotFoundError if shop doesn't exist.
 	GetBySlug(ctx context.Context, slug string) (*models.Shop, error)
 
+	// SlugExists checks if a shop with the given slug exists.
+	// Lightweight query with no JOINs — used for slug availability checks.
+	SlugExists(ctx context.Context, slug string) (bool, error)
+
 	// GetShopsByUserID returns all shops owned by a user.
 	// Used during authentication to include shop IDs in JWT token.
 	GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error)

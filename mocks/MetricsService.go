@@ -460,3 +460,89 @@ func (_c *MetricsService_GetTopProducts_Call) RunAndReturn(run func(ctx context.
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetVisitsTrend provides a mock function for the type MetricsService
+func (_mock *MetricsService) GetVisitsTrend(ctx context.Context, shopID int, from time.Time, to time.Time, tz string) ([]models.VisitsTrendPoint, error) {
+	ret := _mock.Called(ctx, shopID, from, to, tz)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVisitsTrend")
+	}
+
+	var r0 []models.VisitsTrendPoint
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time, string) ([]models.VisitsTrendPoint, error)); ok {
+		return returnFunc(ctx, shopID, from, to, tz)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time, string) []models.VisitsTrendPoint); ok {
+		r0 = returnFunc(ctx, shopID, from, to, tz)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VisitsTrendPoint)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, time.Time, time.Time, string) error); ok {
+		r1 = returnFunc(ctx, shopID, from, to, tz)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MetricsService_GetVisitsTrend_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVisitsTrend'
+type MetricsService_GetVisitsTrend_Call struct {
+	*mock.Call
+}
+
+// GetVisitsTrend is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - from time.Time
+//   - to time.Time
+//   - tz string
+func (_e *MetricsService_Expecter) GetVisitsTrend(ctx interface{}, shopID interface{}, from interface{}, to interface{}, tz interface{}) *MetricsService_GetVisitsTrend_Call {
+	return &MetricsService_GetVisitsTrend_Call{Call: _e.mock.On("GetVisitsTrend", ctx, shopID, from, to, tz)}
+}
+
+func (_c *MetricsService_GetVisitsTrend_Call) Run(run func(ctx context.Context, shopID int, from time.Time, to time.Time, tz string)) *MetricsService_GetVisitsTrend_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsService_GetVisitsTrend_Call) Return(trend []models.VisitsTrendPoint, err error) *MetricsService_GetVisitsTrend_Call {
+	_c.Call.Return(trend, err)
+	return _c
+}
+
+func (_c *MetricsService_GetVisitsTrend_Call) RunAndReturn(run func(ctx context.Context, shopID int, from time.Time, to time.Time, tz string) ([]models.VisitsTrendPoint, error)) *MetricsService_GetVisitsTrend_Call {
+	_c.Call.Return(run)
+	return _c
+}

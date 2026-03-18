@@ -25,4 +25,7 @@ type MetricsService interface {
 
 	// GetShippingSummary returns aggregated shipping metrics for a date range.
 	GetShippingSummary(ctx context.Context, shopID int, from, to time.Time) (models.ShippingSummary, error)
+
+	// GetVisitsTrend returns a time series of daily visit counts for charting.
+	GetVisitsTrend(ctx context.Context, shopID int, from, to time.Time, tz string) ([]models.VisitsTrendPoint, error)
 }

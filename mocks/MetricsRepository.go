@@ -930,3 +930,163 @@ func (_c *MetricsRepository_GetTopProducts_Call) RunAndReturn(run func(ctx conte
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetVisitsSummaryBatch provides a mock function for the type MetricsRepository
+func (_mock *MetricsRepository) GetVisitsSummaryBatch(ctx context.Context, shopID int, periods []models.RevenuePeriod) ([]int, error) {
+	ret := _mock.Called(ctx, shopID, periods)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVisitsSummaryBatch")
+	}
+
+	var r0 []int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, []models.RevenuePeriod) ([]int, error)); ok {
+		return returnFunc(ctx, shopID, periods)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, []models.RevenuePeriod) []int); ok {
+		r0 = returnFunc(ctx, shopID, periods)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, []models.RevenuePeriod) error); ok {
+		r1 = returnFunc(ctx, shopID, periods)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MetricsRepository_GetVisitsSummaryBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVisitsSummaryBatch'
+type MetricsRepository_GetVisitsSummaryBatch_Call struct {
+	*mock.Call
+}
+
+// GetVisitsSummaryBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - periods []models.RevenuePeriod
+func (_e *MetricsRepository_Expecter) GetVisitsSummaryBatch(ctx interface{}, shopID interface{}, periods interface{}) *MetricsRepository_GetVisitsSummaryBatch_Call {
+	return &MetricsRepository_GetVisitsSummaryBatch_Call{Call: _e.mock.On("GetVisitsSummaryBatch", ctx, shopID, periods)}
+}
+
+func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) Run(run func(ctx context.Context, shopID int, periods []models.RevenuePeriod)) *MetricsRepository_GetVisitsSummaryBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 []models.RevenuePeriod
+		if args[2] != nil {
+			arg2 = args[2].([]models.RevenuePeriod)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) Return(counts []int, err error) *MetricsRepository_GetVisitsSummaryBatch_Call {
+	_c.Call.Return(counts, err)
+	return _c
+}
+
+func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) RunAndReturn(run func(ctx context.Context, shopID int, periods []models.RevenuePeriod) ([]int, error)) *MetricsRepository_GetVisitsSummaryBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetVisitsTrend provides a mock function for the type MetricsRepository
+func (_mock *MetricsRepository) GetVisitsTrend(ctx context.Context, shopID int, from time.Time, to time.Time, tz string) ([]models.VisitsTrendPoint, error) {
+	ret := _mock.Called(ctx, shopID, from, to, tz)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVisitsTrend")
+	}
+
+	var r0 []models.VisitsTrendPoint
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time, string) ([]models.VisitsTrendPoint, error)); ok {
+		return returnFunc(ctx, shopID, from, to, tz)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, time.Time, time.Time, string) []models.VisitsTrendPoint); ok {
+		r0 = returnFunc(ctx, shopID, from, to, tz)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VisitsTrendPoint)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, time.Time, time.Time, string) error); ok {
+		r1 = returnFunc(ctx, shopID, from, to, tz)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MetricsRepository_GetVisitsTrend_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVisitsTrend'
+type MetricsRepository_GetVisitsTrend_Call struct {
+	*mock.Call
+}
+
+// GetVisitsTrend is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+//   - from time.Time
+//   - to time.Time
+//   - tz string
+func (_e *MetricsRepository_Expecter) GetVisitsTrend(ctx interface{}, shopID interface{}, from interface{}, to interface{}, tz interface{}) *MetricsRepository_GetVisitsTrend_Call {
+	return &MetricsRepository_GetVisitsTrend_Call{Call: _e.mock.On("GetVisitsTrend", ctx, shopID, from, to, tz)}
+}
+
+func (_c *MetricsRepository_GetVisitsTrend_Call) Run(run func(ctx context.Context, shopID int, from time.Time, to time.Time, tz string)) *MetricsRepository_GetVisitsTrend_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsRepository_GetVisitsTrend_Call) Return(trend []models.VisitsTrendPoint, err error) *MetricsRepository_GetVisitsTrend_Call {
+	_c.Call.Return(trend, err)
+	return _c
+}
+
+func (_c *MetricsRepository_GetVisitsTrend_Call) RunAndReturn(run func(ctx context.Context, shopID int, from time.Time, to time.Time, tz string) ([]models.VisitsTrendPoint, error)) *MetricsRepository_GetVisitsTrend_Call {
+	_c.Call.Return(run)
+	return _c
+}

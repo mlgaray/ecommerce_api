@@ -9,9 +9,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	authclaims "github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	authclaims "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 )
 
 var secretKey = "secret"
@@ -59,7 +59,7 @@ func (j *TokenService) ValidateAndParseClaims(tokenString string) (*authclaims.T
 		return nil, err
 	}
 
-	return authclaims.NewTokenClaims(mapClaims)
+	return j.parseTokenClaims(mapClaims)
 }
 
 func (j *TokenService) parseAndValidateToken(tokenString string) (*jwt.Token, error) {
@@ -90,6 +90,48 @@ func (j *TokenService) extractMapClaims(token *jwt.Token) (map[string]interface{
 		return nil, &errors.AuthenticationError{Message: errors.CouldNotParseToken}
 	}
 	return claims, nil
+}
+
+// parseTokenClaims converts raw JWT MapClaims into a typed TokenClaims struct.
+// This parsing logic lives in the adapter because it knows the JWT token format
+// (e.g., "user" is a JSON-encoded string, "shop_ids" is []interface{} with float64 values).
+func (j *TokenService) parseTokenClaims(mapClaims map[string]interface{}) (*authclaims.TokenClaims, error) {
+	user, err := j.parseUserFromClaims(mapClaims)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authclaims.TokenClaims{
+		UserID:  user.ID,
+		Email:   user.Email,
+		ShopIDs: j.parseShopIDsFromClaims(mapClaims),
+	}, nil
+}
+
+func (j *TokenService) parseUserFromClaims(claims map[string]interface{}) (*models.User, error) {
+	userJSON, ok := claims["user"].(string)
+	if !ok {
+		return nil, &errors.AuthenticationError{Message: errors.TokenInvalid}
+	}
+
+	var user models.User
+	if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
+		return nil, &errors.AuthenticationError{Message: errors.TokenInvalid}
+	}
+
+	return &user, nil
+}
+
+func (j *TokenService) parseShopIDsFromClaims(claims map[string]interface{}) []int {
+	var shopIDs []int
+	if rawShopIDs, ok := claims["shop_ids"].([]interface{}); ok {
+		for _, id := range rawShopIDs {
+			if floatID, ok := id.(float64); ok {
+				shopIDs = append(shopIDs, int(floatID))
+			}
+		}
+	}
+	return shopIDs
 }
 
 func NewTokenService() *TokenService {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
 	httpErrors "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"

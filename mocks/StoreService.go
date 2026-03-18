@@ -38,6 +38,72 @@ func (_m *StoreService) EXPECT() *StoreService_Expecter {
 	return &StoreService_Expecter{mock: &_m.Mock}
 }
 
+// CheckSlugAvailability provides a mock function for the type StoreService
+func (_mock *StoreService) CheckSlugAvailability(ctx context.Context, slug string) (bool, error) {
+	ret := _mock.Called(ctx, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckSlugAvailability")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, slug)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, slug)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StoreService_CheckSlugAvailability_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckSlugAvailability'
+type StoreService_CheckSlugAvailability_Call struct {
+	*mock.Call
+}
+
+// CheckSlugAvailability is a helper method to define mock.On call
+//   - ctx context.Context
+//   - slug string
+func (_e *StoreService_Expecter) CheckSlugAvailability(ctx interface{}, slug interface{}) *StoreService_CheckSlugAvailability_Call {
+	return &StoreService_CheckSlugAvailability_Call{Call: _e.mock.On("CheckSlugAvailability", ctx, slug)}
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) Run(run func(ctx context.Context, slug string)) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) Return(b bool, err error) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *StoreService_CheckSlugAvailability_Call) RunAndReturn(run func(ctx context.Context, slug string) (bool, error)) *StoreService_CheckSlugAvailability_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBySlug provides a mock function for the type StoreService
 func (_mock *StoreService) GetBySlug(ctx context.Context, slug string) (*models.Store, error) {
 	ret := _mock.Called(ctx, slug)
@@ -165,6 +231,63 @@ func (_c *StoreService_ValidateDeliveryMethod_Call) Return(err error) *StoreServ
 }
 
 func (_c *StoreService_ValidateDeliveryMethod_Call) RunAndReturn(run func(store *models.Store, deliveryMethod *models.DeliveryMethod, shippingCost float64) error) *StoreService_ValidateDeliveryMethod_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RecordVisit provides a mock function for the type StoreService
+func (_mock *StoreService) RecordVisit(ctx context.Context, shopID int) error {
+	ret := _mock.Called(ctx, shopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecordVisit")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = returnFunc(ctx, shopID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// StoreService_RecordVisit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecordVisit'
+type StoreService_RecordVisit_Call struct {
+	*mock.Call
+}
+
+// RecordVisit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shopID int
+func (_e *StoreService_Expecter) RecordVisit(ctx interface{}, shopID interface{}) *StoreService_RecordVisit_Call {
+	return &StoreService_RecordVisit_Call{Call: _e.mock.On("RecordVisit", ctx, shopID)}
+}
+
+func (_c *StoreService_RecordVisit_Call) Run(run func(ctx context.Context, shopID int)) *StoreService_RecordVisit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreService_RecordVisit_Call) Return(err error) *StoreService_RecordVisit_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *StoreService_RecordVisit_Call) RunAndReturn(run func(ctx context.Context, shopID int) error) *StoreService_RecordVisit_Call {
 	_c.Call.Return(run)
 	return _c
 }

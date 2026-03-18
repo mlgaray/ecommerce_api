@@ -93,14 +93,14 @@ migrate-up-seeds:
 .PHONY: migrate-up-seeds
 
 migrate-down-seeds:
-	@echo "Running seeds migrations..."
+	@echo "R unning seeds migrations..."
 	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose down
 
 .PHONY: migrate-down-seeds
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 20
 
 .PHONY: migrate-force-seeds
 
@@ -152,10 +152,29 @@ lint-fix:
 	@echo "Running golangci-lint with auto-fix..."
 	@golangci-lint run --fix
 
-# Combined code quality target
-code-quality: fmt lint
+# Architecture linting (Hexagonal Architecture dependency validation)
+install-arch-lint:
+	@echo "Installing go-arch-lint..."
+	@go install github.com/fe3dback/go-arch-lint@latest
 
-.PHONY: lint-fix fmt lint code-quality
+arch-lint:
+	@echo "Running architecture linter..."
+	@go-arch-lint check --project-path .
+
+# Pre-commit hooks
+install-hooks:
+	@echo "Installing pre-commit hooks..."
+	@pre-commit install
+
+# Full developer setup
+setup-dev: install-hooks install-arch-lint
+	@echo "Development environment ready."
+
+
+# Combined code quality target
+code-quality: fmt lint arch-lint
+
+.PHONY: lint-fix fmt lint code-quality install-arch-lint arch-lint install-hooks setup-dev
 
 # Database drop: Drop everything (seeds, functions, tables)
 # Order matters: seeds -> functions -> tables (respect dependencies)

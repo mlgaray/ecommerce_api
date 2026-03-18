@@ -61,3 +61,8 @@ func StoreResponseFromModel(store *models.Store) *StoreResponse {
 type GetStoreResponse struct {
 	Store *StoreResponse `json:"store"`
 }
+
+// CheckSlugAvailabilityResponse represents the response for a slug availability check.
+type CheckSlugAvailabilityResponse struct {
+	Available bool `json:"available"`
+}

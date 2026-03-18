@@ -509,6 +509,7 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(postgresql.NewStoreVisitRepository, fx.As(new(ports.StoreVisitRepository))),
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 
 			// Provide category dependencies (for store categories endpoint)
@@ -533,6 +534,7 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
 
 			// Provide use cases
+			fx.Annotate(store.NewCheckSlugAvailabilityUseCase, fx.As(new(ports.CheckSlugAvailabilityUseCase))),
 			fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
 			fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
 			fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
@@ -549,6 +551,7 @@ func (ctx *TestContext) SetupStoreTestApp() error {
 
 			// Public routes (no auth required) - Customer-facing store endpoints
 			// Note: More specific routes must be registered before less specific ones
+			router.HandleFunc("/stores/slugs/{slug}/check-availability", handler.CheckSlugAvailability).Methods("GET")
 			router.HandleFunc("/stores/{slug}/products/featured", handler.GetFeaturedProducts).Methods("GET")
 			router.HandleFunc("/stores/{slug}/products/{productId}", handler.GetProductByID).Methods("GET")
 			router.HandleFunc("/stores/{slug}/products", handler.GetProducts).Methods("GET")
@@ -599,6 +602,7 @@ func (ctx *TestContext) SetupCreateOrderTestApp() error {
 			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
+			fx.Annotate(postgresql.NewStoreVisitRepository, fx.As(new(ports.StoreVisitRepository))),
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
 			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
@@ -696,6 +700,7 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 			fx.Annotate(postgresql.NewCouponRepository, fx.As(new(ports.CouponRepository))),
 
 			// Provide services
+			fx.Annotate(postgresql.NewStoreVisitRepository, fx.As(new(ports.StoreVisitRepository))),
 			fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 			fx.Annotate(services.NewOrderService, fx.As(new(ports.OrderService))),
 			fx.Annotate(services.NewCouponService, fx.As(new(ports.CouponService))),
@@ -802,6 +807,7 @@ func (ctx *TestContext) SetupMetricsTestApp() error {
 			fx.Annotate(metrics.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
 			fx.Annotate(metrics.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
 			fx.Annotate(metrics.NewGetShippingSummaryUseCase, fx.As(new(ports.GetShippingSummaryUseCase))),
+			fx.Annotate(metrics.NewGetVisitsTrendUseCase, fx.As(new(ports.GetVisitsTrendUseCase))),
 
 			// Provide handler
 			fx.Annotate(authhttp.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),

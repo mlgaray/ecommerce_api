@@ -1,0 +1,23 @@
+# Pre-commit hooks for Go project quality gates
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+repos:
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-imports
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.64.8
+    hooks:
+      - id: golangci-lint
+
+  - repo: local
+    hooks:
+      - id: go-arch-lint
+        name: go-arch-lint
+        entry: go-arch-lint check --project-path .
+        language: system
+        pass_filenames: false
+        types: [go]

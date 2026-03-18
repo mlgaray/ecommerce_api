@@ -18,6 +18,7 @@ scrape_configs:
           __path__: /var/lib/docker/containers/*/*log
 
     pipeline_stages:
+      # Extract the log line from Docker's JSON wrapper
       - json:
           expressions:
             output: log
@@ -36,5 +37,17 @@ scrape_configs:
       - labels:
           stream:
           container_name:
+
+      # Parse structured JSON logs from the app container
+      # Extracts level and service for Loki labels; other fields remain in log body
+      - json:
+          expressions:
+            level: level
+            service: service
+          source: output
+      - labels:
+          level:
+          service:
+
       - output:
-          source: output 
+          source: output

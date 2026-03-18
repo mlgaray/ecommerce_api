@@ -7,8 +7,8 @@ package mocks
 import (
 	"context"
 
+	"github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	mock "github.com/stretchr/testify/mock"
 )
 

@@ -11,6 +11,9 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )
 
+// batchColumnSeparator is the SQL column separator used in batch FILTER queries.
+const batchColumnSeparator = ",\n\t\t       "
+
 // Metrics repository log field constants
 const (
 	MetricsRepositoryField           = "metrics_repository"
@@ -24,6 +27,8 @@ const (
 	MetricsDeliveryDistFuncField     = "get_delivery_method_distribution"
 	MetricsRevenueTrendFuncField     = "get_revenue_trend"
 	MetricsShippingSummaryFuncField  = "get_shipping_summary"
+	MetricsVisitsSummaryFuncField    = "get_visits_summary_batch"
+	MetricsVisitsTrendFuncField      = "get_visits_trend"
 )
 
 type MetricsSQLRepository struct {
@@ -84,7 +89,7 @@ func (r *MetricsSQLRepository) GetRevenueSummaryBatch(ctx context.Context, shopI
 
 	for i, p := range periods {
 		if i > 0 {
-			selectCols += ",\n\t\t       "
+			selectCols += batchColumnSeparator
 		}
 		selectCols += fmt.Sprintf(
 			"COALESCE(SUM(subtotal - discount) FILTER (WHERE created_at >= $%d AND created_at < $%d), 0),\n\t\t       COUNT(*) FILTER (WHERE created_at >= $%d AND created_at < $%d)",
@@ -519,4 +524,118 @@ func (r *MetricsSQLRepository) GetShippingSummary(ctx context.Context, shopID in
 	}
 
 	return summary, nil
+}
+
+// GetVisitsSummaryBatch returns visit counts for multiple periods in a single query
+// using PostgreSQL FILTER clauses for efficient single-pass aggregation.
+func (r *MetricsSQLRepository) GetVisitsSummaryBatch(ctx context.Context, shopID int, periods []models.RevenuePeriod) ([]int, error) {
+	if len(periods) == 0 {
+		return []int{}, nil
+	}
+
+	// Build query dynamically: 1 column (count) per period
+	// Parameters: $1=shopID, then $2/$3 for period 0, $4/$5 for period 1, etc.
+	var selectCols string
+	args := []interface{}{shopID}
+	paramIdx := 2
+
+	minFrom := periods[0].From
+	maxTo := periods[0].To
+
+	for i, p := range periods {
+		if i > 0 {
+			selectCols += batchColumnSeparator
+		}
+		selectCols += fmt.Sprintf(
+			"COUNT(*) FILTER (WHERE visited_at >= $%d AND visited_at < $%d)",
+			paramIdx, paramIdx+1,
+		)
+		args = append(args, p.From, p.To)
+		paramIdx += 2
+
+		if p.From.Before(minFrom) {
+			minFrom = p.From
+		}
+		if p.To.After(maxTo) {
+			maxTo = p.To
+		}
+	}
+
+	// Global bounds for efficient index scan
+	boundsFromIdx := paramIdx
+	boundsToIdx := paramIdx + 1
+	args = append(args, minFrom, maxTo)
+
+	//nolint:gosec // G201: only interpolates column expressions and parameter indices ($N), not user input
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM store_visits
+		WHERE shop_id = $1
+		  AND visited_at >= $%d
+		  AND visited_at < $%d`, selectCols, boundsFromIdx, boundsToIdx)
+
+	row := r.db.QueryRowContext(ctx, query, args...)
+
+	// Scan all columns: 1 per period (count)
+	counts := make([]int, len(periods))
+	scanDest := make([]interface{}, len(periods))
+	for i := range periods {
+		scanDest[i] = &counts[i]
+	}
+
+	if err := row.Scan(scanDest...); err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsRepositoryField,
+			"function": MetricsVisitsSummaryFuncField,
+			"shop_id":  shopID,
+			"periods":  len(periods),
+			"error":    err.Error(),
+		}).Error("Error querying visits summary batch")
+		return nil, fmt.Errorf("error querying visits summary batch: %w", err)
+	}
+
+	return counts, nil
+}
+
+// GetVisitsTrend returns daily visit counts within a date range.
+func (r *MetricsSQLRepository) GetVisitsTrend(ctx context.Context, shopID int, from, to time.Time, tz string) ([]models.VisitsTrendPoint, error) {
+	query := `
+		SELECT
+			date_trunc('day', visited_at AT TIME ZONE $4)::date AS day,
+			COUNT(*) AS visit_count
+		FROM store_visits
+		WHERE shop_id = $1
+		  AND visited_at >= $2
+		  AND visited_at < $3
+		GROUP BY day
+		ORDER BY day ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, shopID, from, to, tz)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     MetricsRepositoryField,
+			"function": MetricsVisitsTrendFuncField,
+			"shop_id":  shopID,
+			"error":    err.Error(),
+		}).Error("Error querying visits trend")
+		return nil, fmt.Errorf("error querying visits trend: %w", err)
+	}
+	defer rows.Close()
+
+	var trend []models.VisitsTrendPoint
+	for rows.Next() {
+		var p models.VisitsTrendPoint
+		var day time.Time
+		if err := rows.Scan(&day, &p.VisitCount); err != nil {
+			return nil, fmt.Errorf("error scanning visits trend point: %w", err)
+		}
+		p.Date = day.Format("2006-01-02")
+		trend = append(trend, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating visits trend: %w", err)
+	}
+
+	return trend, nil
 }

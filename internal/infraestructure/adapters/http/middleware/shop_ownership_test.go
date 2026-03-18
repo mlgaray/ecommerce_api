@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
+	"github.com/mlgaray/ecommerce_api/internal/core/claims"
 )
 
 // passthrough handler that returns 200 OK

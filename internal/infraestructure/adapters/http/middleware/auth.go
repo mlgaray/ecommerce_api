@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
-	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/claims"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/errors"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
 )

@@ -51,7 +51,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -83,7 +83,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -109,7 +109,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -138,7 +138,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -167,7 +167,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -196,7 +196,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -225,7 +225,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -254,7 +254,7 @@ func TestStoreService_GetBySlug(t *testing.T) {
 
 		productRepoMock := mocks.NewProductRepository(t)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		result, err := service.GetBySlug(ctx, slug)
@@ -263,6 +263,77 @@ func TestStoreService_GetBySlug(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Empty(t, result.OperatingSchedules)
+	})
+}
+
+// =============================================================================
+// CheckSlugAvailability Tests
+// =============================================================================
+
+func TestStoreService_CheckSlugAvailability(t *testing.T) {
+	t.Run("when slug does not exist then returns true (available)", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "new-store"
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(false, nil)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.True(t, available)
+	})
+
+	t.Run("when slug exists then returns false (not available)", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "existing-store"
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(true, nil)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.False(t, available)
+	})
+
+	t.Run("when repository returns error then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		slug := "some-store"
+		expectedError := stdErrors.New("database error")
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		shopRepoMock.EXPECT().
+			SlugExists(ctx, slug).
+			Return(false, expectedError)
+
+		productRepoMock := mocks.NewProductRepository(t)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
+
+		// Act
+		available, err := service.CheckSlugAvailability(ctx, slug)
+
+		// Assert
+		assert.Error(t, err)
+		assert.False(t, available)
+		assert.Equal(t, expectedError, err)
 	})
 }
 
@@ -279,7 +350,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -305,7 +376,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{999}, storeID).
 			Return(map[int]*models.Product{}, nil) // Empty map = product not found
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -339,7 +410,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -374,7 +445,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -409,7 +480,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -473,7 +544,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -537,7 +608,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -594,7 +665,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -667,7 +738,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -699,7 +770,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -734,7 +805,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -751,7 +822,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -778,7 +849,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(nil, expectedError)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -825,7 +896,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -860,7 +931,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1}, storeID).
 			Return(map[int]*models.Product{1: dbProduct}, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -889,7 +960,7 @@ func TestStoreService_ValidateOrderItems(t *testing.T) {
 			GetByIDsAndShopID(ctx, []int{1, 2}, storeID).
 			Return(productsMap, nil)
 
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateOrderItems(ctx, items, storeID)
@@ -914,7 +985,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, nil, 0)
@@ -933,7 +1004,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -956,7 +1027,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -979,7 +1050,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -1002,7 +1073,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -1022,7 +1093,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 500)
@@ -1049,7 +1120,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 500)
@@ -1073,7 +1144,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 999)
@@ -1107,7 +1178,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 500)
@@ -1132,7 +1203,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 300)
@@ -1165,7 +1236,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 300)
@@ -1198,7 +1269,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 999)
@@ -1221,7 +1292,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -1241,7 +1312,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 500)
@@ -1262,7 +1333,7 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 
 		shopRepoMock := mocks.NewShopRepository(t)
 		productRepoMock := mocks.NewProductRepository(t)
-		service := NewStoreService(shopRepoMock, productRepoMock)
+		service := NewStoreService(shopRepoMock, productRepoMock, nil)
 
 		// Act
 		err := service.ValidateDeliveryMethod(store, deliveryMethod, 0)
@@ -1272,5 +1343,51 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 		var validationErr *errors.ValidationError
 		assert.True(t, stdErrors.As(err, &validationErr))
 		assert.Equal(t, errors.DeliveryMethodNotFound, validationErr.Message)
+	})
+}
+
+// =============================================================================
+// RecordVisit Tests
+// =============================================================================
+
+func TestStoreService_RecordVisit(t *testing.T) {
+	t.Run("when repository succeeds then returns nil", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		storeVisitRepoMock := mocks.NewStoreVisitRepository(t)
+		storeVisitRepoMock.EXPECT().RecordVisit(ctx, shopID).Return(nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock, storeVisitRepoMock)
+
+		// Act
+		err := service.RecordVisit(ctx, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when repository errors then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		expectedError := stdErrors.New("database error")
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		storeVisitRepoMock := mocks.NewStoreVisitRepository(t)
+		storeVisitRepoMock.EXPECT().RecordVisit(ctx, shopID).Return(expectedError)
+
+		service := NewStoreService(shopRepoMock, productRepoMock, storeVisitRepoMock)
+
+		// Act
+		err := service.RecordVisit(ctx, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
 	})
 }

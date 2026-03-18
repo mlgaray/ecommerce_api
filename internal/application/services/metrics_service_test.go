@@ -453,6 +453,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return([]models.MethodDistribution{{Name: "Cash", OrderCount: 10}}, nil)
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return([]models.MethodDistribution{{Name: "Delivery", OrderCount: 5}}, nil)
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{TotalUnique: 50}, nil)
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.AnythingOfType("[]models.RevenuePeriod")).Return([]int{10, 8, 50, 40, 200, 180}, nil)
 
 		service := NewMetricsService(repoMock)
 
@@ -468,6 +469,8 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		assert.Len(t, dashboard.PaymentDistribution, 1)
 		assert.Len(t, dashboard.DeliveryDistribution, 1)
 		assert.Equal(t, 50, dashboard.Customers.TotalUnique)
+		assert.Equal(t, 10, dashboard.Visits.Today.Current)
+		assert.Equal(t, 8, dashboard.Visits.Today.Previous)
 	})
 
 	t.Run("when revenueBatch errors then propagates error", func(t *testing.T) {
@@ -485,6 +488,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil).Maybe()
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.Anything).Return(nil, nil).Maybe()
 
 		service := NewMetricsService(repoMock)
 
@@ -512,6 +516,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil).Maybe()
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.Anything).Return(nil, nil).Maybe()
 
 		service := NewMetricsService(repoMock)
 
@@ -537,6 +542,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil)
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.AnythingOfType("[]models.RevenuePeriod")).Return([]int{0, 0, 0, 0, 0, 0}, nil)
 
 		service := NewMetricsService(repoMock)
 
@@ -689,6 +695,145 @@ func TestMetricsService_GetTopProducts(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Nil(t, result)
+	})
+}
+
+// =============================================================================
+// Service Methods - GetVisitsTrend
+// =============================================================================
+
+func TestMetricsService_GetVisitsTrend(t *testing.T) {
+	t.Run("when repo returns data then returns data", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		from := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
+		expected := []models.VisitsTrendPoint{{Date: "2024-06-01", VisitCount: 42}}
+
+		repoMock := mocks.NewMetricsRepository(t)
+		repoMock.EXPECT().GetVisitsTrend(ctx, shopID, from, to, "UTC").Return(expected, nil)
+
+		service := NewMetricsService(repoMock)
+
+		// Act
+		result, err := service.GetVisitsTrend(ctx, shopID, from, to, "UTC")
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("when repo returns nil then returns empty slice", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		from := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
+
+		repoMock := mocks.NewMetricsRepository(t)
+		repoMock.EXPECT().GetVisitsTrend(ctx, shopID, from, to, "UTC").Return(nil, nil)
+
+		service := NewMetricsService(repoMock)
+
+		// Act
+		result, err := service.GetVisitsTrend(ctx, shopID, from, to, "UTC")
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Empty(t, result)
+	})
+
+	t.Run("when repo errors then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		from := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
+		expectedErr := errors.New("db error")
+
+		repoMock := mocks.NewMetricsRepository(t)
+		repoMock.EXPECT().GetVisitsTrend(ctx, shopID, from, to, "UTC").Return(nil, expectedErr)
+
+		service := NewMetricsService(repoMock)
+
+		// Act
+		result, err := service.GetVisitsTrend(ctx, shopID, from, to, "UTC")
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+}
+
+// =============================================================================
+// Business Helpers - buildVisitsComparison
+// =============================================================================
+
+func TestBuildVisitsComparison(t *testing.T) {
+	t.Run("when current greater than previous then positive change", func(t *testing.T) {
+		// Act
+		result := buildVisitsComparison(200, 100)
+
+		// Assert
+		assert.Equal(t, 200, result.Current)
+		assert.Equal(t, 100, result.Previous)
+		assert.Equal(t, 100.0, result.Change)
+	})
+
+	t.Run("when previous is zero and current positive then change is 100", func(t *testing.T) {
+		// Act
+		result := buildVisitsComparison(50, 0)
+
+		// Assert
+		assert.Equal(t, 50, result.Current)
+		assert.Equal(t, 0, result.Previous)
+		assert.Equal(t, 100.0, result.Change)
+	})
+
+	t.Run("when both are zero then change is 0", func(t *testing.T) {
+		// Act
+		result := buildVisitsComparison(0, 0)
+
+		// Assert
+		assert.Equal(t, 0, result.Current)
+		assert.Equal(t, 0, result.Previous)
+		assert.Equal(t, 0.0, result.Change)
+	})
+}
+
+// =============================================================================
+// Service Methods - GetDashboard (visits batch guard)
+// =============================================================================
+
+func TestMetricsService_GetDashboard_VisitsBatchGuard(t *testing.T) {
+	t.Run("when visits batch returns fewer elements than periods then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		now := time.Date(2024, 6, 15, 14, 0, 0, 0, time.UTC)
+
+		repoMock := mocks.NewMetricsRepository(t)
+		repoMock.EXPECT().GetRevenueSummaryBatch(ctx, shopID, mock.Anything).Return(newMockRevenueSummaries(), nil)
+		repoMock.EXPECT().GetOrderStatusDistribution(ctx, shopID, mock.Anything, mock.Anything).Return([]models.OrderStatusDistribution{}, nil)
+		repoMock.EXPECT().GetAvgCompletionTime(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
+		repoMock.EXPECT().GetTopProducts(ctx, shopID, mock.Anything, mock.Anything, "quantity", 5).Return(nil, nil)
+		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
+		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
+		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil)
+		// Return only 3 counts instead of the expected 6 (one per period)
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.Anything).Return([]int{10, 8, 50}, nil)
+
+		service := NewMetricsService(repoMock)
+
+		// Act
+		dashboard, err := service.GetDashboard(ctx, shopID, now, "UTC")
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, dashboard)
+		assert.Contains(t, err.Error(), "visits summary batch returned")
 	})
 }
 

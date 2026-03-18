@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/logs"
+	appMetrics "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/repositories/postgresql"
 	websocketAdapter "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/websocket"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/server"
@@ -43,7 +45,11 @@ var Module = fx.Options(
 		fx.Annotate(http.NewAuthHandler, fx.As(new(ports.AuthHandler))),
 		fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),
 
-		// HEALTH
+		// DATABASE — singleton *sql.DB exposed via DataBaseConnection.Connect()
+		fx.Annotate(postgresql.NewDataBaseConnection, fx.As(new(postgresql.DataBaseConnection))),
+		func(conn postgresql.DataBaseConnection) *sql.DB { return conn.Connect() },
+
+		// HEALTH — depends on *sql.DB for DB ping
 		fx.Annotate(http.NewHealthHandler, fx.As(new(ports.HealthHandler))),
 
 		// USER
@@ -116,10 +122,14 @@ var Module = fx.Options(
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewShopHandler, fx.As(new(ports.ShopHandler))),
 
+		// STORE VISIT
+		fx.Annotate(postgresql.NewStoreVisitRepository, fx.As(new(ports.StoreVisitRepository))),
+
 		// STORE (public storefront endpoints)
-		// Service depends on ShopRepository (reuses existing repository)
+		// Service depends on ShopRepository, ProductRepository, StoreVisitRepository
 		fx.Annotate(services.NewStoreService, fx.As(new(ports.StoreService))),
 		// Use Cases depend on Services
+		fx.Annotate(store.NewCheckSlugAvailabilityUseCase, fx.As(new(ports.CheckSlugAvailabilityUseCase))),
 		fx.Annotate(store.NewGetStoreBySlugUseCase, fx.As(new(ports.GetStoreBySlugUseCase))),
 		fx.Annotate(store.NewGetStoreCategoriesUseCase, fx.As(new(ports.GetStoreCategoriesUseCase))),
 		fx.Annotate(store.NewGetStoreProductsUseCase, fx.As(new(ports.GetStoreProductsUseCase))),
@@ -177,18 +187,19 @@ var Module = fx.Options(
 		fx.Annotate(metricsUC.NewGetTopProductsUseCase, fx.As(new(ports.GetTopProductsUseCase))),
 		fx.Annotate(metricsUC.NewGetTopCustomersUseCase, fx.As(new(ports.GetTopCustomersUseCase))),
 		fx.Annotate(metricsUC.NewGetShippingSummaryUseCase, fx.As(new(ports.GetShippingSummaryUseCase))),
+		fx.Annotate(metricsUC.NewGetVisitsTrendUseCase, fx.As(new(ports.GetVisitsTrendUseCase))),
 		// Handler depends on Use Cases
 		fx.Annotate(http.NewMetricsHandler, fx.As(new(ports.MetricsHandler))),
 
 		// SERVER
 		server.NewServer,
 		fx.Annotate(server.NewRouter, fx.As(new(server.Router))),
-
-		fx.Annotate(postgresql.NewDataBaseConnection, fx.As(new(postgresql.DataBaseConnection))),
 	),
 	fx.Invoke(
 		RegisterHooks,
 		InitializeLogger,
+		// Register Go runtime, process, and DB pool metric collectors
+		appMetrics.RegisterRuntimeCollectors,
 	),
 )
 
@@ -213,37 +224,3 @@ func RegisterHooks(lc fx.Lifecycle, server *server.Server, hub *websocketAdapter
 		},
 	})
 }
-
-// func NewServerHooks(router *mux.Router) fx.Hook {
-//	return fx.Hook{
-//		OnStart: func(context.Context) error {
-//			handler := cors.AllowAll().Handler(router)
-//			log.Fatal(http.ListenAndServe(":"+"8080", handler))
-//			/*if err != nil {
-//				return fmt.Errorf("failed to initialize server: %w", err)
-//			}*/
-//			return nil
-//		},
-//		OnStop: func(context.Context) error {
-//			// return server.Stop()
-//			return nil
-//		},
-//	}
-//}
-
-// var totalRequests = prometheus.NewCounterVec(
-//	prometheus.CounterOpts{
-//		Name: "http_requests_total",
-//		Help: "Number of get requests.",
-//	},
-//	[]string{"path"},
-//)
-
-// func prometheusMiddleware(next http.Handler) http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		rw := NewResponseWriter(w)
-//		next.ServeHTTP(rw, r)
-//
-//		totalRequests.WithLabelValues(path).Inc()
-//	})
-//}

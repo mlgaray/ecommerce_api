@@ -5,61 +5,68 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/metrics"
 )
 
 type DataBaseConnection interface {
 	Connect() *sql.DB
 }
 
-type dataBaseConnection struct{}
+type dataBaseConnection struct {
+	once sync.Once
+	db   *sql.DB
+}
 
 func (c *dataBaseConnection) Connect() *sql.DB {
-	// c.envService.LoadEnv()
+	c.once.Do(func() {
+		dbUser := os.Getenv("DB_USER")
+		dbPassword := os.Getenv("DB_PASSWORD")
+		dbHost := os.Getenv("DB_HOST")
+		dbPort := os.Getenv("DB_PORT")
+		dbName := os.Getenv("DB_NAME")
+		sslMode := os.Getenv("DB_SSLMODE")
+		if sslMode == "" {
+			sslMode = "require"
+		}
+		// Use URL format — required for Supabase pooler where username contains a dot
+		dataSourceName := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbName := os.Getenv("DB_NAME")
-	dataSourceName := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+		// Register the instrumented driver wrapping lib/pq for query-level metrics
+		driverName := metrics.RegisterInstrumentedDriver()
 
-	// Fixed: first parameter should be "postgres", not dbName
-	db, err := sql.Open("postgres", dataSourceName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// defer db.Close()
+		db, err := sql.Open(driverName, dataSourceName)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	// CONNECTION POOL OPTIMIZATION
-	// MaxOpenConns: Hard ceiling on total connections (in-use + idle)
-	// Recommended: Based on DB capacity and number of app replicas
-	db.SetMaxOpenConns(25)
+		// CONNECTION POOL OPTIMIZATION
+		// MaxOpenConns: Hard ceiling on total connections (in-use + idle)
+		db.SetMaxOpenConns(25)
 
-	// MaxIdleConns: Should equal MaxOpenConns to avoid frequent reconnections
-	// When smaller than MaxOpenConns, connections open/close more frequently
-	db.SetMaxIdleConns(25)
+		// MaxIdleConns: Should equal MaxOpenConns to avoid frequent reconnections
+		db.SetMaxIdleConns(25)
 
-	// ConnMaxLifetime: Recycle connections periodically for reliability
-	// Helps with load balancers and prevents stale connections
-	db.SetConnMaxLifetime(5 * time.Minute)
+		// ConnMaxLifetime: Recycle connections periodically for reliability
+		db.SetConnMaxLifetime(5 * time.Minute)
 
-	// ConnMaxIdleTime: Close idle connections after period of inactivity
-	// Allows pool to scale down after high load periods
-	db.SetConnMaxIdleTime(5 * time.Minute)
+		// ConnMaxIdleTime: Close idle connections after period of inactivity
+		db.SetConnMaxIdleTime(5 * time.Minute)
 
-	// Verifica la conexión
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+		err = db.Ping()
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	fmt.Println("Conexión exitosa a la base de datos!")
-	fmt.Printf("Connection pool configured: MaxOpen=%d, MaxIdle=%d\n", 25, 25)
+		fmt.Println("Conexión exitosa a la base de datos!")
+		fmt.Printf("Connection pool configured: MaxOpen=%d, MaxIdle=%d\n", 25, 25)
 
-	return db
+		c.db = db
+	})
+
+	return c.db
 }
 
 func NewDataBaseConnection() *dataBaseConnection {

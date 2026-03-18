@@ -180,7 +180,7 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID
 	var shopID int
 	err = tx.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
-		return nil, err
+		return nil, s.handleInsertShopError(err, shop.Slug)
 	}
 	shop.ID = shopID
 
@@ -224,7 +224,7 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *
 	var shopID int
 	err = s.db.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
-		return nil, err
+		return nil, s.handleInsertShopError(err, shop.Slug)
 	}
 	shop.ID = shopID
 
@@ -249,6 +249,28 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *
 	}
 
 	return shop, nil
+}
+
+// handleInsertShopError translates PostgreSQL errors from shop INSERT to domain errors.
+func (s *ShopSQLRepository) handleInsertShopError(err error, slug string) error {
+	if pqErr, ok := err.(*pq.Error); ok {
+		if pqErr.Code == PqErrCodeUniqueViolation && pqErr.Constraint == ConstraintShopSlugUnique {
+			logs.WithFields(map[string]interface{}{
+				"file":       ShopRepositoryField,
+				"function":   "create",
+				"constraint": pqErr.Constraint,
+				"slug":       slug,
+			}).Warn("Shop with slug already exists")
+			return &errors.DuplicateRecordError{Message: errors.SlugAlreadyExists}
+		}
+	}
+	logs.WithFields(map[string]interface{}{
+		"file":     ShopRepositoryField,
+		"function": "create",
+		"slug":     slug,
+		"error":    err.Error(),
+	}).Error("Failed to create shop")
+	return fmt.Errorf("database operation failed")
 }
 
 // GetByID returns a shop with all its related entities loaded using an optimized query.
@@ -358,6 +380,27 @@ func (s *ShopSQLRepository) unmarshalNullableTimezone(shop *models.Shop, timezon
 		}
 	}
 	return nil
+}
+
+// SlugExists checks if a shop with the given slug exists (case-insensitive).
+// Uses lower() to match the unique index idx_shops_slug_unique on lower(slug).
+// Lightweight query with no JOINs — used for slug availability checks.
+func (s *ShopSQLRepository) SlugExists(ctx context.Context, slug string) (bool, error) {
+	const query = `SELECT EXISTS(SELECT 1 FROM shops WHERE lower(slug) = lower($1))`
+
+	var exists bool
+	err := s.db.QueryRowContext(ctx, query, slug).Scan(&exists)
+	if err != nil {
+		logs.WithFields(map[string]interface{}{
+			"file":     ShopRepositoryField,
+			"function": "slug_exists",
+			"slug":     slug,
+			"error":    err.Error(),
+		}).Error("Failed to check slug existence")
+		return false, fmt.Errorf("database operation failed")
+	}
+
+	return exists, nil
 }
 
 // GetBySlug returns a shop with all its related entities loaded using an optimized query.

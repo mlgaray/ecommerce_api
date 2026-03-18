@@ -37,6 +37,52 @@ func (_m *StoreHandler) EXPECT() *StoreHandler_Expecter {
 	return &StoreHandler_Expecter{mock: &_m.Mock}
 }
 
+// CheckSlugAvailability provides a mock function for the type StoreHandler
+func (_mock *StoreHandler) CheckSlugAvailability(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// StoreHandler_CheckSlugAvailability_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckSlugAvailability'
+type StoreHandler_CheckSlugAvailability_Call struct {
+	*mock.Call
+}
+
+// CheckSlugAvailability is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *StoreHandler_Expecter) CheckSlugAvailability(responseWriter interface{}, request interface{}) *StoreHandler_CheckSlugAvailability_Call {
+	return &StoreHandler_CheckSlugAvailability_Call{Call: _e.mock.On("CheckSlugAvailability", responseWriter, request)}
+}
+
+func (_c *StoreHandler_CheckSlugAvailability_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_CheckSlugAvailability_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StoreHandler_CheckSlugAvailability_Call) Return() *StoreHandler_CheckSlugAvailability_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *StoreHandler_CheckSlugAvailability_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *StoreHandler_CheckSlugAvailability_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetBySlug provides a mock function for the type StoreHandler
 func (_mock *StoreHandler) GetBySlug(responseWriter http.ResponseWriter, request *http.Request) {
 	_mock.Called(responseWriter, request)
