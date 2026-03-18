@@ -93,14 +93,14 @@ migrate-up-seeds:
 .PHONY: migrate-up-seeds
 
 migrate-down-seeds:
-	@echo "Running seeds migrations..."
+	@echo "R unning seeds migrations..."
 	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose down
 
 .PHONY: migrate-down-seeds
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 10
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 20
 
 .PHONY: migrate-force-seeds
 

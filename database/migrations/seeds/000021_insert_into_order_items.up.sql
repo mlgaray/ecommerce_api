@@ -11,7 +11,7 @@ BEGIN
     SELECT o.id INTO v_order_id
     FROM orders o
     JOIN shops s ON s.id = o.store_id
-    WHERE s.email = 'mcdonalds@mc.com' AND o.order_number = '0001'
+    WHERE s.email = 'mcdonalds@mc.com' AND o.order_number = 'ORD-260101-0000001'
     LIMIT 1;
 
     -- Get the product (Big Mac)

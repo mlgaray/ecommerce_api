@@ -9,4 +9,5 @@ type MetricsHandler interface {
 	GetTopProducts(http.ResponseWriter, *http.Request)
 	GetTopCustomers(http.ResponseWriter, *http.Request)
 	GetShippingSummary(http.ResponseWriter, *http.Request)
+	GetVisitsTrend(http.ResponseWriter, *http.Request)
 }

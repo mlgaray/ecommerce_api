@@ -10,6 +10,32 @@ type DashboardResponse struct {
 	PaymentDistribution  []MethodDistResponse     `json:"payment_distribution"`
 	DeliveryDistribution []MethodDistResponse     `json:"delivery_distribution"`
 	Customers            CustomerOverviewResponse `json:"customers"`
+	Visits               VisitsSummaryResponse    `json:"visits"`
+}
+
+// VisitsSummaryResponse represents visit comparisons for the dashboard.
+type VisitsSummaryResponse struct {
+	Today     VisitsPeriodResponse `json:"today"`
+	ThisWeek  VisitsPeriodResponse `json:"this_week"`
+	ThisMonth VisitsPeriodResponse `json:"this_month"`
+}
+
+// VisitsPeriodResponse represents a visit period comparison.
+type VisitsPeriodResponse struct {
+	Current  int     `json:"current"`
+	Previous int     `json:"previous"`
+	Change   float64 `json:"change"`
+}
+
+// VisitsTrendPointResponse represents a single data point in the visits trend.
+type VisitsTrendPointResponse struct {
+	Date       string `json:"date"`
+	VisitCount int    `json:"visit_count"`
+}
+
+// VisitsTrendResponse is the HTTP response for the visits trend endpoint.
+type VisitsTrendResponse struct {
+	Trend []VisitsTrendPointResponse `json:"trend"`
 }
 
 // RevenueMetricsResponse represents revenue comparisons.
@@ -182,7 +208,22 @@ func NewDashboardResponse(d *models.DashboardMetrics) *DashboardResponse {
 		}
 	}
 
+	// Visits
+	response.Visits = VisitsSummaryResponse{
+		Today:     newVisitsPeriodResponse(d.Visits.Today),
+		ThisWeek:  newVisitsPeriodResponse(d.Visits.ThisWeek),
+		ThisMonth: newVisitsPeriodResponse(d.Visits.ThisMonth),
+	}
+
 	return response
+}
+
+func newVisitsPeriodResponse(p models.VisitsPeriodComparison) VisitsPeriodResponse {
+	return VisitsPeriodResponse{
+		Current:  p.Current,
+		Previous: p.Previous,
+		Change:   p.Change,
+	}
 }
 
 func newRevenuePeriodResponse(p models.RevenuePeriodComparison) RevenuePeriodResponse {
@@ -229,6 +270,18 @@ func NewTopProductsResponse(products []models.TopProduct) *TopProductsResponse {
 		}
 	}
 	return &TopProductsResponse{Products: resp}
+}
+
+// NewVisitsTrendResponse converts domain visits trend points to an HTTP response.
+func NewVisitsTrendResponse(points []models.VisitsTrendPoint) *VisitsTrendResponse {
+	trend := make([]VisitsTrendPointResponse, len(points))
+	for i, p := range points {
+		trend[i] = VisitsTrendPointResponse{
+			Date:       p.Date,
+			VisitCount: p.VisitCount,
+		}
+	}
+	return &VisitsTrendResponse{Trend: trend}
 }
 
 // NewTopCustomersResponse converts domain top customers to an HTTP response.

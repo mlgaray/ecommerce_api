@@ -20,6 +20,7 @@ The project documentation is organized into specialized guides:
 
 - **[Validations](./docs/ai/VALIDATIONS.md)** - HTTP vs Business validations, Separation of concerns, Validation flow
 - **[Logging](./docs/ai/LOGGING.md)** - Structured logging patterns, Field naming, Log levels
+- **[Observability](./docs/ai/OBSERVABILITY.md)** - Prometheus metrics, Grafana dashboards, Health checks, SRE Golden Signals
 - **[Testing](./docs/ai/TESTING.md)** - Unit tests, Integration tests (BDD), Mock generation
 - **[Database](./docs/ai/DATABASE.md)** - Migrations, Transactions, Repository patterns, Query patterns
 

@@ -20,6 +20,26 @@ func Init() {
 	globalLogger.SetLevel(resolveLogLevel())
 	globalLogger.SetOutput(io.MultiWriter(os.Stdout))
 
+	// JSON formatter for all environments except development (human-readable text in local dev)
+	// test + production emit JSON so Promtail/Loki can parse structured fields
+	env := os.Getenv("ENVIRONMENT")
+	if env != "development" && env != "" {
+		globalLogger.SetFormatter(&logrus.JSONFormatter{
+			FieldMap: logrus.FieldMap{
+				logrus.FieldKeyTime: "timestamp",
+				logrus.FieldKeyMsg:  "message",
+			},
+		})
+	}
+
+	// Add default fields to every log entry via a hook
+	globalLogger.AddHook(&defaultFieldsHook{
+		fields: logrus.Fields{
+			"service":     "ecommerce-api",
+			"environment": env,
+		},
+	})
+
 	fmt.Printf("Successfully initialized global logger! Level: %s\n", globalLogger.GetLevel())
 }
 
@@ -42,6 +62,24 @@ func resolveLogLevel() logrus.Level {
 	default: // develop, development, o vacío
 		return logrus.DebugLevel
 	}
+}
+
+// defaultFieldsHook injects base fields into every log entry.
+type defaultFieldsHook struct {
+	fields logrus.Fields
+}
+
+func (h *defaultFieldsHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (h *defaultFieldsHook) Fire(entry *logrus.Entry) error {
+	for k, v := range h.fields {
+		if _, exists := entry.Data[k]; !exists {
+			entry.Data[k] = v
+		}
+	}
+	return nil
 }
 
 func WithFields(fields map[string]interface{}) *logrus.Entry {

@@ -58,7 +58,7 @@ BEGIN
         'Efectivo',
         v_delivery_method_id,
         'pickup',
-        'Retiro en local',
+        'Retiro en tienda',
         26400,
         0,
         26400

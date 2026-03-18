@@ -453,6 +453,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return([]models.MethodDistribution{{Name: "Cash", OrderCount: 10}}, nil)
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return([]models.MethodDistribution{{Name: "Delivery", OrderCount: 5}}, nil)
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{TotalUnique: 50}, nil)
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.AnythingOfType("[]models.RevenuePeriod")).Return([]int{10, 8, 50, 40, 200, 180}, nil)
 
 		service := NewMetricsService(repoMock)
 
@@ -468,6 +469,8 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		assert.Len(t, dashboard.PaymentDistribution, 1)
 		assert.Len(t, dashboard.DeliveryDistribution, 1)
 		assert.Equal(t, 50, dashboard.Customers.TotalUnique)
+		assert.Equal(t, 10, dashboard.Visits.Today.Current)
+		assert.Equal(t, 8, dashboard.Visits.Today.Previous)
 	})
 
 	t.Run("when revenueBatch errors then propagates error", func(t *testing.T) {
@@ -485,6 +488,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil).Maybe()
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.Anything).Return(nil, nil).Maybe()
 
 		service := NewMetricsService(repoMock)
 
@@ -512,6 +516,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil).Maybe()
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.Anything).Return(nil, nil).Maybe()
 
 		service := NewMetricsService(repoMock)
 
@@ -537,6 +542,7 @@ func TestMetricsService_GetDashboard(t *testing.T) {
 		repoMock.EXPECT().GetPaymentMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
 		repoMock.EXPECT().GetDeliveryMethodDistribution(ctx, shopID, mock.Anything, mock.Anything).Return(nil, nil)
 		repoMock.EXPECT().GetCustomerOverview(ctx, shopID, mock.Anything, mock.Anything).Return(models.CustomerOverview{}, nil)
+		repoMock.EXPECT().GetVisitsSummaryBatch(ctx, shopID, mock.AnythingOfType("[]models.RevenuePeriod")).Return([]int{0, 0, 0, 0, 0, 0}, nil)
 
 		service := NewMetricsService(repoMock)
 

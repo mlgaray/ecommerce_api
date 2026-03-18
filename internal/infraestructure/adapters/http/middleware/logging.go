@@ -31,6 +31,7 @@ func Logging(next http.Handler) http.Handler {
 
 		loggerEntry := logs.WithFields(map[string]interface{}{
 			"request_id":  requestID,
+			"trace_id":    requestID, // same value as request_id for distributed tracing compat
 			"method":      r.Method,
 			"path":        r.URL.Path,
 			"remote_addr": r.RemoteAddr,
@@ -40,7 +41,7 @@ func Logging(next http.Handler) http.Handler {
 		ctx := logs.SetLogger(r.Context(), loggerEntry)
 		r = r.WithContext(ctx)
 
-		loggerEntry.WithField("event", "request_started").Info("HTTP request started")
+		loggerEntry.WithField("event", "http_request_started").Info("HTTP request started")
 
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
@@ -50,7 +51,7 @@ func Logging(next http.Handler) http.Handler {
 		loggerEntry.WithFields(logrus.Fields{
 			"status_code": wrapped.statusCode,
 			"duration_ms": duration.Milliseconds(),
-			"event":       "request_completed",
+			"event":       "http_request_completed",
 		}).Info("HTTP request completed")
 	})
 }

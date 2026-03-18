@@ -12,15 +12,22 @@ import (
 // Maps Shop data to Store model for customer-facing endpoints.
 // Used by CreateOrderUseCase for order validation and creation.
 type StoreService struct {
-	shopRepository    ports.ShopRepository
-	productRepository ports.ProductRepository
+	shopRepository       ports.ShopRepository
+	productRepository    ports.ProductRepository
+	storeVisitRepository ports.StoreVisitRepository
 }
 
-func NewStoreService(shopRepository ports.ShopRepository, productRepository ports.ProductRepository) *StoreService {
+func NewStoreService(shopRepository ports.ShopRepository, productRepository ports.ProductRepository, storeVisitRepository ports.StoreVisitRepository) *StoreService {
 	return &StoreService{
-		shopRepository:    shopRepository,
-		productRepository: productRepository,
+		shopRepository:       shopRepository,
+		productRepository:    productRepository,
+		storeVisitRepository: storeVisitRepository,
 	}
+}
+
+// RecordVisit records a store visit by delegating to the repository.
+func (s *StoreService) RecordVisit(ctx context.Context, shopID int) error {
+	return s.storeVisitRepository.RecordVisit(ctx, shopID)
 }
 
 // CheckSlugAvailability checks if a slug is available for use.

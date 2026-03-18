@@ -60,6 +60,8 @@ components:
     in: infraestructure/adapters/assets
   logs:
     in: infraestructure/adapters/logs
+  metrics:
+    in: infraestructure/adapters/metrics
   websocket:
     in: infraestructure/adapters/websocket
 
@@ -173,6 +175,7 @@ deps:
   repositories:
     mayDependOn:
       - ports
+      - metrics
     canUse:
       - lib_pq
       - json_iterator
@@ -194,6 +197,11 @@ deps:
     canUse:
       - logrus
       - lumberjack
+
+  metrics:
+    canUse:
+      - prometheus
+      - lib_pq
 
   websocket:
     mayDependOn:

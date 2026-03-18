@@ -1,25 +1,10 @@
 version: '3.8'
 
 services:
-  debug:
-    image: alpine:latest
-    command: |
-      sh -c "
-        echo '=== DEBUG VARIABLES ==='
-        echo 'GRAFANA_PORT=${GRAFANA_PORT}'
-        echo 'PROMETHEUS_PORT=${PROMETHEUS_PORT}'  
-        echo 'LOKI_PORT=${LOKI_PORT}'
-        echo 'NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}'
-        echo 'APP_PORT=${APP_PORT}'
-        echo '======================='
-        sleep 30
-      "
   loki:
     image: grafana/loki:2.9.2
-    ports: 
-      - "${LOKI_PORT:-3100}"
-    environment:
-      - LOKI_PORT=${LOKI_PORT:-3100}
+    ports:
+      - "3100:3100"
     container_name: loki
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
@@ -50,9 +35,7 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     ports:
-      - "${NODE_EXPORTER_PORT:-9100}"
-    environment:
-      - NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT:-9100}
+      - "9100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -68,9 +51,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}"
-    environment:
-      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+      - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -86,13 +67,15 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    ports: 
-      - "${GRAFANA_PORT:-3000}"
+    ports:
+      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GRAFANA_PORT=${GRAFANA_PORT:-3000}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
     depends_on:
       loki:
@@ -101,6 +84,8 @@ services:
   app:
     build: .
     container_name: ecommerce_api
+    ports:
+      - "8080:8080"
     environment:
       - CLOUDINARY_CLOUD=${CLOUDINARY_CLOUD}
       - CLOUDINARY_KEY=${CLOUDINARY_KEY}
@@ -113,14 +98,10 @@ services:
       - ENVIRONMENT=${ENVIRONMENT}
       - HOST=0.0.0.0
       - PORT=8080
-      - GRAFANA_PORT=${GRAFANA_PORT}
-      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
-      - LOKI_PORT=${LOKI_PORT}
-      - NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}
     restart: unless-stopped
     labels:
       - "logging=promtail"
-      - "logging_jobname=pps-api"
+      - "logging_jobname=ecommerce-api"
     depends_on:
       loki:
         condition: service_healthy
@@ -131,6 +112,6 @@ volumes:
   grafana-storage:
     driver: local
   loki-data:
-    driver: local 
-
-
+    driver: local
+  prometheus-data:
+    driver: local
