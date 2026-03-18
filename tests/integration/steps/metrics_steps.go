@@ -289,6 +289,23 @@ func (m *MetricsSteps) setupDashboardSQLExpectations(ctx *TestContext, shopID in
 	ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM (.+)customer_orders").
 		WithArgs(shopID, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(customerRows)
+
+	// Visits batch query (returns 6 columns: 1 count per period x 6 periods)
+	visitsCols := make([]string, 6)
+	for i := 0; i < 6; i++ {
+		visitsCols[i] = fmt.Sprintf("col%d", i)
+	}
+	visitsRows := sqlmock.NewRows(visitsCols).AddRow(
+		15, 12, // today, yesterday
+		85, 70, // this week, prev week
+		340, 280, // this month, prev month
+	)
+	ctx.mockSQLMock.ExpectQuery("SELECT (.+) FROM store_visits WHERE shop_id").
+		WithArgs(shopID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(visitsRows)
 }
 
 func (m *MetricsSteps) setupRevenueTrendSQLExpectations(ctx *TestContext, shopID int) {
