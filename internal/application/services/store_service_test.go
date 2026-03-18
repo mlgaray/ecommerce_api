@@ -1345,3 +1345,49 @@ func TestStoreService_ValidateDeliveryMethod(t *testing.T) {
 		assert.Equal(t, errors.DeliveryMethodNotFound, validationErr.Message)
 	})
 }
+
+// =============================================================================
+// RecordVisit Tests
+// =============================================================================
+
+func TestStoreService_RecordVisit(t *testing.T) {
+	t.Run("when repository succeeds then returns nil", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		storeVisitRepoMock := mocks.NewStoreVisitRepository(t)
+		storeVisitRepoMock.EXPECT().RecordVisit(ctx, shopID).Return(nil)
+
+		service := NewStoreService(shopRepoMock, productRepoMock, storeVisitRepoMock)
+
+		// Act
+		err := service.RecordVisit(ctx, shopID)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("when repository errors then propagates error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		shopID := 1
+		expectedError := stdErrors.New("database error")
+
+		shopRepoMock := mocks.NewShopRepository(t)
+		productRepoMock := mocks.NewProductRepository(t)
+		storeVisitRepoMock := mocks.NewStoreVisitRepository(t)
+		storeVisitRepoMock.EXPECT().RecordVisit(ctx, shopID).Return(expectedError)
+
+		service := NewStoreService(shopRepoMock, productRepoMock, storeVisitRepoMock)
+
+		// Act
+		err := service.RecordVisit(ctx, shopID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+	})
+}
