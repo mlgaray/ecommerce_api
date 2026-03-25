@@ -216,6 +216,29 @@ func TestPermissionService_StartRefreshLoop(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Defensive type assertion (zero-value PermissionServiceImpl)
+// ---------------------------------------------------------------------------
+
+func TestPermissionService_HasPermission_ZeroValue(t *testing.T) {
+	t.Run("returns false when atomic.Value holds nil (zero-value struct)", func(t *testing.T) {
+		// A zero-value PermissionServiceImpl has an atomic.Value that stores nil,
+		// so the type assertion to map[string]map[string]struct{} returns ok=false.
+		svc := &PermissionServiceImpl{}
+
+		assert.False(t, svc.HasPermission("admin", "create_product"))
+	})
+}
+
+func TestPermissionService_GetPermissions_ZeroValue(t *testing.T) {
+	t.Run("returns nil when atomic.Value holds nil (zero-value struct)", func(t *testing.T) {
+		svc := &PermissionServiceImpl{}
+
+		perms := svc.GetPermissions("admin")
+		assert.Nil(t, perms)
+	})
+}
+
+// ---------------------------------------------------------------------------
 // Concurrent access safety
 // ---------------------------------------------------------------------------
 

@@ -72,4 +72,32 @@ func TestSignupService_SignUp(t *testing.T) {
 		assert.Equal(t, expectedError, err)
 		assert.Nil(t, user)
 	})
+
+	t.Run("when HashPassword fails then returns error", func(t *testing.T) {
+		// Arrange
+		ctx := context.Background()
+		inputUser := &models.User{
+			Email:    "newuser@example.com",
+			Password: "password123",
+		}
+		inputShop := &models.Shop{
+			Name: "Test Shop",
+		}
+		expectedError := stdErrors.New("hashing failed")
+
+		signupRepoMock := mocks.NewSignupRepository(t)
+		authServiceMock := new(mocks.AuthService)
+
+		authServiceMock.EXPECT().HashPassword(ctx, "password123").Return("", expectedError)
+
+		service := NewSignupService(signupRepoMock, authServiceMock)
+
+		// Act
+		user, err := service.SignUp(ctx, inputUser, inputShop)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+		assert.Nil(t, user)
+	})
 }
