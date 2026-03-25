@@ -151,6 +151,12 @@ func (ctx *TestContext) SetupTestApp() error {
 	// Allow queries to be executed in any order
 	sqlMock.MatchExpectationsInOrder(false)
 
+	// PermissionService loads permissions on init — provide mock data
+	sqlMock.ExpectQuery("FROM role_permissions").
+		WillReturnRows(sqlmock.NewRows([]string{"role", "permission"}).
+			AddRow("owner", "create_staff").
+			AddRow("owner", "view_orders"))
+
 	// Create FX app with real services but mocked DB
 	ctx.app = fx.New(
 		fx.Provide(
