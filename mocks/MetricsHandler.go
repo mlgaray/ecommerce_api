@@ -266,3 +266,49 @@ func (_c *MetricsHandler_GetTopProducts_Call) RunAndReturn(run func(responseWrit
 	_c.Run(run)
 	return _c
 }
+
+// GetVisitsTrend provides a mock function for the type MetricsHandler
+func (_mock *MetricsHandler) GetVisitsTrend(responseWriter http.ResponseWriter, request *http.Request) {
+	_mock.Called(responseWriter, request)
+	return
+}
+
+// MetricsHandler_GetVisitsTrend_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVisitsTrend'
+type MetricsHandler_GetVisitsTrend_Call struct {
+	*mock.Call
+}
+
+// GetVisitsTrend is a helper method to define mock.On call
+//   - responseWriter http.ResponseWriter
+//   - request *http.Request
+func (_e *MetricsHandler_Expecter) GetVisitsTrend(responseWriter interface{}, request interface{}) *MetricsHandler_GetVisitsTrend_Call {
+	return &MetricsHandler_GetVisitsTrend_Call{Call: _e.mock.On("GetVisitsTrend", responseWriter, request)}
+}
+
+func (_c *MetricsHandler_GetVisitsTrend_Call) Run(run func(responseWriter http.ResponseWriter, request *http.Request)) *MetricsHandler_GetVisitsTrend_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MetricsHandler_GetVisitsTrend_Call) Return() *MetricsHandler_GetVisitsTrend_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MetricsHandler_GetVisitsTrend_Call) RunAndReturn(run func(responseWriter http.ResponseWriter, request *http.Request)) *MetricsHandler_GetVisitsTrend_Call {
+	_c.Run(run)
+	return _c
+}

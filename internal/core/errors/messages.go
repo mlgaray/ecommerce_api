@@ -157,4 +157,17 @@ const (
 	CouponAlreadyExists            = "coupon_already_exists_in_shop"
 	CouponInvalidCursor            = "invalid_cursor_format"
 	OrderAlreadyHasCoupon          = "order_already_has_coupon"
+
+	// Staff related error messages
+	StaffNotFound           = "staff_not_found"
+	StaffAlreadyExists      = "staff_already_exists"
+	OwnerRoleNotAllowed     = "owner_role_cannot_be_assigned_via_staff_management"
+	OwnerCannotBeModified   = "owner_cannot_be_modified_via_staff_management"
+	OwnerCannotBeDeleted    = "owner_cannot_be_deleted"
+	OwnerStatusCannotChange = "owner_status_cannot_be_changed"
+	RoleNotFound            = "role_not_found"
+	UserIsInactive          = "user_is_inactive"
+
+	// Permission related error messages
+	InsufficientPermissions = "insufficient_permissions"
 )

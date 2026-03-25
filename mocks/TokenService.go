@@ -40,8 +40,8 @@ func (_m *TokenService) EXPECT() *TokenService_Expecter {
 }
 
 // Generate provides a mock function for the type TokenService
-func (_mock *TokenService) Generate(ctx context.Context, user *models.User, shopIDs []int) (string, error) {
-	ret := _mock.Called(ctx, user, shopIDs)
+func (_mock *TokenService) Generate(ctx context.Context, user *models.User, shopRoles []claims.ShopRole) (string, error) {
+	ret := _mock.Called(ctx, user, shopRoles)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Generate")
@@ -49,16 +49,16 @@ func (_mock *TokenService) Generate(ctx context.Context, user *models.User, shop
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []int) (string, error)); ok {
-		return returnFunc(ctx, user, shopIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []claims.ShopRole) (string, error)); ok {
+		return returnFunc(ctx, user, shopRoles)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []int) string); ok {
-		r0 = returnFunc(ctx, user, shopIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.User, []claims.ShopRole) string); ok {
+		r0 = returnFunc(ctx, user, shopRoles)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.User, []int) error); ok {
-		r1 = returnFunc(ctx, user, shopIDs)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.User, []claims.ShopRole) error); ok {
+		r1 = returnFunc(ctx, user, shopRoles)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,12 +73,12 @@ type TokenService_Generate_Call struct {
 // Generate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - user *models.User
-//   - shopIDs []int
-func (_e *TokenService_Expecter) Generate(ctx interface{}, user interface{}, shopIDs interface{}) *TokenService_Generate_Call {
-	return &TokenService_Generate_Call{Call: _e.mock.On("Generate", ctx, user, shopIDs)}
+//   - shopRoles []claims.ShopRole
+func (_e *TokenService_Expecter) Generate(ctx interface{}, user interface{}, shopRoles interface{}) *TokenService_Generate_Call {
+	return &TokenService_Generate_Call{Call: _e.mock.On("Generate", ctx, user, shopRoles)}
 }
 
-func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *models.User, shopIDs []int)) *TokenService_Generate_Call {
+func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *models.User, shopRoles []claims.ShopRole)) *TokenService_Generate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -88,9 +88,9 @@ func (_c *TokenService_Generate_Call) Run(run func(ctx context.Context, user *mo
 		if args[1] != nil {
 			arg1 = args[1].(*models.User)
 		}
-		var arg2 []int
+		var arg2 []claims.ShopRole
 		if args[2] != nil {
-			arg2 = args[2].([]int)
+			arg2 = args[2].([]claims.ShopRole)
 		}
 		run(
 			arg0,
@@ -106,7 +106,7 @@ func (_c *TokenService_Generate_Call) Return(s string, err error) *TokenService_
 	return _c
 }
 
-func (_c *TokenService_Generate_Call) RunAndReturn(run func(ctx context.Context, user *models.User, shopIDs []int) (string, error)) *TokenService_Generate_Call {
+func (_c *TokenService_Generate_Call) RunAndReturn(run func(ctx context.Context, user *models.User, shopRoles []claims.ShopRole) (string, error)) *TokenService_Generate_Call {
 	_c.Call.Return(run)
 	return _c
 }

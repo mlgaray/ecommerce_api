@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
+	"github.com/mlgaray/ecommerce_api/internal/core/claims"
+
 	"github.com/mlgaray/ecommerce_api/internal/application/services"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/auth"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/category"
@@ -22,6 +24,7 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
+	authBcrypt "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/bcrypt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	authhttp "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
@@ -158,7 +161,7 @@ func (ctx *TestContext) SetupTestApp() error {
 
 			// Provide real services with interface annotations
 			fx.Annotate(services.NewUserService, fx.As(new(ports.UserService))),
-			fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),
+			fx.Annotate(authBcrypt.NewAuthService, fx.As(new(ports.AuthService))),
 			fx.Annotate(services.NewSignupService, fx.As(new(ports.SignUpService))),
 			fx.Annotate(jwt.NewTokenService, fx.As(new(ports.TokenService))),
 			fx.Annotate(postgresql.NewUserRepository, fx.As(new(ports.UserRepository))),
@@ -166,6 +169,12 @@ func (ctx *TestContext) SetupTestApp() error {
 			fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),
 			fx.Annotate(postgresql.NewDeliveryMethodRepository, fx.As(new(ports.DeliveryMethodRepository))),
 			fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
+			fx.Annotate(postgresql.NewStaffRepository, fx.As(new(ports.StaffRepository))),
+			fx.Annotate(stubs.NewAssetService, fx.As(new(ports.AssetService))),
+			fx.Annotate(services.NewStaffService, fx.As(new(ports.StaffService))),
+			fx.Annotate(postgresql.NewPermissionRepository, fx.As(new(ports.PermissionRepository))),
+			services.NewPermissionService,
+			func(svc *services.PermissionServiceImpl) ports.PermissionService { return svc },
 			fx.Annotate(postgresql.NewSignupRepository, fx.As(new(ports.SignupRepository))),
 
 			// Provide use cases
@@ -196,9 +205,9 @@ func (ctx *TestContext) GenerateTestToken() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1}
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}}
 
-	token, err := tokenService.Generate(context.Background(), testUser, testShopIDs)
+	token, err := tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}
@@ -233,8 +242,8 @@ func (ctx *TestContext) SetupProductTestApp() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1}
-	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}
@@ -327,8 +336,8 @@ func (ctx *TestContext) SetupCategoryTestApp() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1}
-	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}
@@ -420,8 +429,8 @@ func (ctx *TestContext) SetupShopTestApp() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1, 2, 888}
-	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}, {ShopID: 888, Role: "owner"}}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}
@@ -671,8 +680,8 @@ func (ctx *TestContext) SetupOrderTestApp() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1, 2, 888}
-	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}, {ShopID: 888, Role: "owner"}}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}
@@ -777,8 +786,8 @@ func (ctx *TestContext) SetupMetricsTestApp() error {
 		ID:    1,
 		Email: "test@example.com",
 	}
-	testShopIDs := []int{1, 2, 888}
-	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopIDs)
+	testShopRoles := []claims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}, {ShopID: 888, Role: "owner"}}
+	ctx.authToken, err = tokenService.Generate(context.Background(), testUser, testShopRoles)
 	if err != nil {
 		return err
 	}

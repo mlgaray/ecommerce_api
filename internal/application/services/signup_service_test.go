@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/mocks"
@@ -23,15 +24,17 @@ func TestSignupService_SignUp(t *testing.T) {
 			Name: "Test Shop",
 		}
 		expectedUser := &models.User{
-			ID:       1,
-			Email:    "newuser@example.com",
-			Password: "password123",
+			ID:    1,
+			Email: "newuser@example.com",
 		}
 
 		signupRepoMock := new(mocks.SignupRepository)
-		signupRepoMock.EXPECT().CreateUserWithShop(ctx, inputUser, inputShop).Return(expectedUser, nil)
+		authServiceMock := new(mocks.AuthService)
 
-		service := NewSignupService(signupRepoMock)
+		authServiceMock.EXPECT().HashPassword(ctx, "password123").Return("hashed_password123", nil)
+		signupRepoMock.EXPECT().CreateUserWithShop(ctx, mock.AnythingOfType("*models.User"), inputShop).Return(expectedUser, nil)
+
+		service := NewSignupService(signupRepoMock, authServiceMock)
 
 		// Act
 		user, err := service.SignUp(ctx, inputUser, inputShop)
@@ -54,9 +57,12 @@ func TestSignupService_SignUp(t *testing.T) {
 		expectedError := stdErrors.New("user already exists")
 
 		signupRepoMock := mocks.NewSignupRepository(t)
-		signupRepoMock.EXPECT().CreateUserWithShop(ctx, inputUser, inputShop).Return(nil, expectedError)
+		authServiceMock := new(mocks.AuthService)
 
-		service := NewSignupService(signupRepoMock)
+		authServiceMock.EXPECT().HashPassword(ctx, "password123").Return("hashed_password123", nil)
+		signupRepoMock.EXPECT().CreateUserWithShop(ctx, mock.AnythingOfType("*models.User"), inputShop).Return(nil, expectedError)
+
+		service := NewSignupService(signupRepoMock, authServiceMock)
 
 		// Act
 		user, err := service.SignUp(ctx, inputUser, inputShop)

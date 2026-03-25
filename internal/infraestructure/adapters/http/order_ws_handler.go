@@ -87,7 +87,7 @@ func (h *OrderWSHandler) Connect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Verify the user owns this shop
-	if !containsShopID(claims.ShopIDs, shopID) {
+	if !containsShopID(claims.ShopIDs(), shopID) {
 		logs.WithFields(map[string]interface{}{
 			"file":     OrderWSHandlerField,
 			"function": WSConnectFunctionField,

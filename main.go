@@ -16,10 +16,12 @@ import (
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
+	staffUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/staff"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 	"github.com/mlgaray/ecommerce_api/internal/core/ports"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/assets"
+	authBcrypt "github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/bcrypt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/auth/jwt"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/middleware"
@@ -43,7 +45,7 @@ var Module = fx.Options(
 
 		// AUTH
 		fx.Annotate(http.NewAuthHandler, fx.As(new(ports.AuthHandler))),
-		fx.Annotate(services.NewAuthService, fx.As(new(ports.AuthService))),
+		fx.Annotate(authBcrypt.NewAuthService, fx.As(new(ports.AuthService))),
 
 		// DATABASE — singleton *sql.DB exposed via DataBaseConnection.Connect()
 		fx.Annotate(postgresql.NewDataBaseConnection, fx.As(new(postgresql.DataBaseConnection))),
@@ -68,6 +70,25 @@ var Module = fx.Options(
 		// SHOP (depends on PaymentMethodRepository and DeliveryMethodRepository)
 		fx.Annotate(postgresql.NewShopRepository, fx.As(new(ports.ShopRepository))),
 
+		// PERMISSIONS (in-memory role→permissions map)
+		fx.Annotate(postgresql.NewPermissionRepository, fx.As(new(ports.PermissionRepository))),
+		services.NewPermissionService,
+		func(svc *services.PermissionServiceImpl) ports.PermissionService { return svc },
+
+		// PERMISSION MIDDLEWARE
+		middleware.NewPermissionMiddleware,
+
+		// STAFF
+		fx.Annotate(postgresql.NewStaffRepository, fx.As(new(ports.StaffRepository))),
+		fx.Annotate(services.NewStaffService, fx.As(new(ports.StaffService))),
+		fx.Annotate(staffUC.NewCreateStaffUseCase, fx.As(new(ports.CreateStaffUseCase))),
+		fx.Annotate(staffUC.NewGetAllStaffByShopIDUseCase, fx.As(new(ports.GetAllStaffByShopIDUseCase))),
+		fx.Annotate(staffUC.NewGetStaffByIDUseCase, fx.As(new(ports.GetStaffByIDUseCase))),
+		fx.Annotate(staffUC.NewUpdateStaffUseCase, fx.As(new(ports.UpdateStaffUseCase))),
+		fx.Annotate(staffUC.NewDeleteStaffUseCase, fx.As(new(ports.DeleteStaffUseCase))),
+		fx.Annotate(staffUC.NewToggleStaffStatusUseCase, fx.As(new(ports.ToggleStaffStatusUseCase))),
+		fx.Annotate(http.NewStaffHandler, fx.As(new(ports.StaffHandler))),
+
 		// Sign UP
 		fx.Annotate(services.NewSignupService, fx.As(new(ports.SignUpService))),
 		fx.Annotate(postgresql.NewSignupRepository, fx.As(new(ports.SignupRepository))),
@@ -80,6 +101,7 @@ var Module = fx.Options(
 		fx.Annotate(services.NewPaginationService[*models.Category], fx.As(new(ports.PaginationService[*models.Category]))),
 		fx.Annotate(services.NewPaginationService[*models.Order], fx.As(new(ports.PaginationService[*models.Order]))),
 		fx.Annotate(services.NewPaginationService[*models.Coupon], fx.As(new(ports.PaginationService[*models.Coupon]))),
+		fx.Annotate(services.NewPaginationService[*models.Staff], fx.As(new(ports.PaginationService[*models.Staff]))),
 
 		// PRODUCT
 		// Repository first (no dependencies)
@@ -212,13 +234,24 @@ func InitializeLogger() {
 	logs.Init()
 }
 
-func RegisterHooks(lc fx.Lifecycle, server *server.Server, hub *websocketAdapter.Hub) {
+func RegisterHooks(lc fx.Lifecycle, server *server.Server, hub *websocketAdapter.Hub, permissionService *services.PermissionServiceImpl) {
+	var cancelPermissionRefresh context.CancelFunc
+
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			server.Initialize()
+
+			// Start permission refresh loop (reloads role→permissions every 5 min)
+			refreshCtx, cancel := context.WithCancel(context.Background())
+			cancelPermissionRefresh = cancel
+			go permissionService.StartRefreshLoop(refreshCtx, 5*time.Minute)
+
 			return nil
 		},
 		OnStop: func(context.Context) error {
+			if cancelPermissionRefresh != nil {
+				cancelPermissionRefresh()
+			}
 			hub.CloseAll()
 			return nil
 		},

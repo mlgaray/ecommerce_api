@@ -36,10 +36,12 @@ var couponAllowedSortColumns = map[string]string{
 	"created_at": "c.created_at",
 }
 
+const couponDefaultSortOrder = "DESC"
+
 // couponAllowedSortOrders whitelist for ORDER BY direction.
 var couponAllowedSortOrders = map[string]string{
 	"asc":  "ASC",
-	"desc": "DESC",
+	"desc": couponDefaultSortOrder,
 }
 
 type CouponSQLRepository struct {
@@ -261,7 +263,7 @@ func (r *CouponSQLRepository) GetAllByShopIDWithFilters(ctx context.Context, sho
 	}
 	sortDir, ok := couponAllowedSortOrders[filters.SortOrder]
 	if !ok {
-		sortDir = "DESC"
+		sortDir = couponDefaultSortOrder
 	}
 
 	// Keyset pagination: use (sort_field, id) composite cursor

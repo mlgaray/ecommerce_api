@@ -73,9 +73,9 @@ func TestOrderWSHandler_Connect_Forbidden(t *testing.T) {
 		tokenServiceMock.EXPECT().
 			ValidateAndParseClaims("valid-token").
 			Return(&authclaims.TokenClaims{
-				UserID:  1,
-				Email:   "user@test.com",
-				ShopIDs: []int{2, 3}, // Does NOT include shop 1
+				UserID:    1,
+				Email:     "user@test.com",
+				ShopRoles: []authclaims.ShopRole{{ShopID: 2, Role: "owner"}, {ShopID: 3, Role: "admin"}}, // Does NOT include shop 1
 			}, nil)
 
 		handler := NewOrderWSHandler(hub, tokenServiceMock)
@@ -104,9 +104,9 @@ func TestOrderWSHandler_Connect_InvalidShopID(t *testing.T) {
 		tokenServiceMock.EXPECT().
 			ValidateAndParseClaims("valid-token").
 			Return(&authclaims.TokenClaims{
-				UserID:  1,
-				Email:   "user@test.com",
-				ShopIDs: []int{1},
+				UserID:    1,
+				Email:     "user@test.com",
+				ShopRoles: []authclaims.ShopRole{{ShopID: 1, Role: "owner"}},
 			}, nil)
 
 		handler := NewOrderWSHandler(hub, tokenServiceMock)
@@ -129,9 +129,9 @@ func TestOrderWSHandler_Connect_InvalidShopID(t *testing.T) {
 		tokenServiceMock.EXPECT().
 			ValidateAndParseClaims("valid-token").
 			Return(&authclaims.TokenClaims{
-				UserID:  1,
-				Email:   "user@test.com",
-				ShopIDs: []int{1},
+				UserID:    1,
+				Email:     "user@test.com",
+				ShopRoles: []authclaims.ShopRole{{ShopID: 1, Role: "owner"}},
 			}, nil)
 
 		handler := NewOrderWSHandler(hub, tokenServiceMock)

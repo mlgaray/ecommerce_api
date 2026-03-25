@@ -28,9 +28,9 @@ func TestAuthMiddleware_Authenticate(t *testing.T) {
 		middleware := NewAuthMiddleware(mockTokenService)
 
 		expectedClaims := &claims.TokenClaims{
-			UserID:  1,
-			Email:   "test@example.com",
-			ShopIDs: []int{1, 2},
+			UserID:    1,
+			Email:     "test@example.com",
+			ShopRoles: []claims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}},
 		}
 
 		mockTokenService.EXPECT().
@@ -175,9 +175,9 @@ func TestAuthMiddleware_Authenticate(t *testing.T) {
 		middleware := NewAuthMiddleware(mockTokenService)
 
 		expectedClaims := &claims.TokenClaims{
-			UserID:  1,
-			Email:   "test@example.com",
-			ShopIDs: []int{1},
+			UserID:    1,
+			Email:     "test@example.com",
+			ShopRoles: []claims.ShopRole{{ShopID: 1, Role: "owner"}},
 		}
 
 		mockTokenService.EXPECT().
@@ -205,9 +205,9 @@ func TestAuthMiddleware_Authenticate(t *testing.T) {
 		middleware := NewAuthMiddleware(mockTokenService)
 
 		expectedClaims := &claims.TokenClaims{
-			UserID:  1,
-			Email:   "test@example.com",
-			ShopIDs: []int{},
+			UserID:    1,
+			Email:     "test@example.com",
+			ShopRoles: []claims.ShopRole{},
 		}
 
 		mockTokenService.EXPECT().

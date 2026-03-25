@@ -8,16 +8,23 @@ import (
 )
 
 type SignInUseCase struct {
-	userService    ports.UserService
-	tokenService   ports.TokenService
-	shopRepository ports.ShopRepository
+	userService       ports.UserService
+	tokenService      ports.TokenService
+	staffService      ports.StaffService
+	permissionService ports.PermissionService
 }
 
-func NewSignInUseCase(userService ports.UserService, tokenService ports.TokenService, shopRepository ports.ShopRepository) ports.SignInUseCase {
+func NewSignInUseCase(
+	userService ports.UserService,
+	tokenService ports.TokenService,
+	staffService ports.StaffService,
+	permissionService ports.PermissionService,
+) ports.SignInUseCase {
 	return &SignInUseCase{
-		userService:    userService,
-		tokenService:   tokenService,
-		shopRepository: shopRepository,
+		userService:       userService,
+		tokenService:      tokenService,
+		staffService:      staffService,
+		permissionService: permissionService,
 	}
 }
 
@@ -32,19 +39,18 @@ func (uc *SignInUseCase) Execute(ctx context.Context, user *models.User) (string
 		return "", err
 	}
 
-	// Get user's shops to include in token (use storedUser.ID, not input user)
-	shops, err := uc.shopRepository.GetShopsByUserID(ctx, storedUser.ID)
+	// Get shop roles via staff table
+	shopRoles, err := uc.staffService.GetShopRolesByUserID(ctx, storedUser.ID)
 	if err != nil {
 		return "", err
 	}
 
-	// Extract shop IDs for token payload
-	shopIDs := make([]int, len(shops))
-	for i, shop := range shops {
-		shopIDs[i] = shop.ID
+	// Resolve permissions for each role
+	for i := range shopRoles {
+		shopRoles[i].Permissions = uc.permissionService.GetPermissions(shopRoles[i].Role)
 	}
 
-	token, err := uc.tokenService.Generate(ctx, storedUser, shopIDs)
+	token, err := uc.tokenService.Generate(ctx, storedUser, shopRoles)
 	if err != nil {
 		return "", err
 	}

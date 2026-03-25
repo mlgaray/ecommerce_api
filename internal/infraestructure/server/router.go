@@ -24,10 +24,12 @@ type router struct {
 	storeHandler            ports.StoreHandler
 	orderHandler            ports.OrderHandler
 	couponHandler           ports.CouponHandler
+	staffHandler            ports.StaffHandler
 	metricsHandler          ports.MetricsHandler
 	orderWSHandler          *httpAdapter.OrderWSHandler
 	authMiddleware          *middleware.AuthMiddleware
 	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware
+	permissionMiddleware    *middleware.PermissionMiddleware
 }
 
 func NewRouter(
@@ -39,10 +41,12 @@ func NewRouter(
 	storeHandler ports.StoreHandler,
 	orderHandler ports.OrderHandler,
 	couponHandler ports.CouponHandler,
+	staffHandler ports.StaffHandler,
 	metricsHandler ports.MetricsHandler,
 	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	shopOwnershipMiddleware *middleware.ShopOwnershipMiddleware,
+	permissionMiddleware *middleware.PermissionMiddleware,
 ) *router {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
@@ -57,10 +61,12 @@ func NewRouter(
 		storeHandler:            storeHandler,
 		orderHandler:            orderHandler,
 		couponHandler:           couponHandler,
+		staffHandler:            staffHandler,
 		metricsHandler:          metricsHandler,
 		orderWSHandler:          orderWSHandler,
 		authMiddleware:          authMiddleware,
 		shopOwnershipMiddleware: shopOwnershipMiddleware,
+		permissionMiddleware:    permissionMiddleware,
 	}
 }
 
@@ -72,6 +78,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.metricsRoutes()
 	r.shopMetricsRoutes()
 	r.couponRoutes()
+	r.staffRoutes()
 	r.shopRoutes()
 	r.storeRoutes()
 	r.websocketRoutes()
@@ -89,71 +96,71 @@ func (r *router) authRoutes() {
 }
 
 func (r *router) productRoutes() {
+	perm := r.permissionMiddleware
 	sub := r.router.PathPrefix("/products").Subrouter()
-	// Apply auth middleware to all product mutation routes
 	sub.Use(r.authMiddleware.Authenticate)
-	sub.HandleFunc("", r.productHandler.Create).Methods(http.MethodPost)
+	sub.Handle("", perm.RequirePermission("create_product")(http.HandlerFunc(r.productHandler.Create))).Methods(http.MethodPost)
 	sub.HandleFunc("/{product_id}", r.productHandler.GetByID).Methods(http.MethodGet)
-	sub.HandleFunc("/{product_id}", r.productHandler.Update).Methods(http.MethodPut)
-	sub.HandleFunc("/{product_id}", r.productHandler.Delete).Methods(http.MethodDelete)
+	sub.Handle("/{product_id}", perm.RequirePermission("update_product")(http.HandlerFunc(r.productHandler.Update))).Methods(http.MethodPut)
+	sub.Handle("/{product_id}", perm.RequirePermission("delete_product")(http.HandlerFunc(r.productHandler.Delete))).Methods(http.MethodDelete)
 }
 
 func (r *router) categoryRoutes() {
+	perm := r.permissionMiddleware
 	sub := r.router.PathPrefix("/categories").Subrouter()
-	// Apply auth middleware to all category routes
 	sub.Use(r.authMiddleware.Authenticate)
-	sub.HandleFunc("", r.categoryHandler.Create).Methods(http.MethodPost)
+	sub.Handle("", perm.RequirePermission("create_category")(http.HandlerFunc(r.categoryHandler.Create))).Methods(http.MethodPost)
 	sub.HandleFunc("/{category_id}", r.categoryHandler.GetByID).Methods(http.MethodGet)
-	sub.HandleFunc("/{category_id}", r.categoryHandler.Update).Methods(http.MethodPut)
-	sub.HandleFunc("/{category_id}", r.categoryHandler.Delete).Methods(http.MethodDelete)
+	sub.Handle("/{category_id}", perm.RequirePermission("update_category")(http.HandlerFunc(r.categoryHandler.Update))).Methods(http.MethodPut)
+	sub.Handle("/{category_id}", perm.RequirePermission("delete_category")(http.HandlerFunc(r.categoryHandler.Delete))).Methods(http.MethodDelete)
 }
 
 func (r *router) couponRoutes() {
-	// Protected routes (auth + shop ownership required)
+	perm := r.permissionMiddleware
 	protected := r.router.PathPrefix("/shops").Subrouter()
 	protected.Use(r.authMiddleware.Authenticate)
 	protected.Use(r.shopOwnershipMiddleware.Authorize)
-	// POST /shops/{shop_id}/coupons - Create coupon (owner only)
-	protected.HandleFunc("/{shop_id}/coupons", r.couponHandler.Create).Methods(http.MethodPost)
-	// GET /shops/{shop_id}/coupons - List coupons (owner only)
-	protected.HandleFunc("/{shop_id}/coupons", r.couponHandler.GetAll).Methods(http.MethodGet)
-	// GET /shops/{shop_id}/coupons/{coupon_id} - Get coupon by ID (owner only)
-	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.GetByID).Methods(http.MethodGet)
-	// PUT /shops/{shop_id}/coupons/{coupon_id} - Update coupon (owner only)
-	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.Update).Methods(http.MethodPut)
-	// DELETE /shops/{shop_id}/coupons/{coupon_id} - Delete coupon (owner only)
-	protected.HandleFunc("/{shop_id}/coupons/{coupon_id:[0-9]+}", r.couponHandler.Delete).Methods(http.MethodDelete)
+	protected.Handle("/{shop_id}/coupons", perm.RequirePermission("create_coupon")(http.HandlerFunc(r.couponHandler.Create))).Methods(http.MethodPost)
+	protected.Handle("/{shop_id}/coupons", perm.RequirePermission("view_coupons")(http.HandlerFunc(r.couponHandler.GetAll))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/coupons/{coupon_id:[0-9]+}", perm.RequirePermission("view_coupons")(http.HandlerFunc(r.couponHandler.GetByID))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/coupons/{coupon_id:[0-9]+}", perm.RequirePermission("update_coupon")(http.HandlerFunc(r.couponHandler.Update))).Methods(http.MethodPut)
+	protected.Handle("/{shop_id}/coupons/{coupon_id:[0-9]+}", perm.RequirePermission("delete_coupon")(http.HandlerFunc(r.couponHandler.Delete))).Methods(http.MethodDelete)
+}
+
+func (r *router) staffRoutes() {
+	perm := r.permissionMiddleware
+	protected := r.router.PathPrefix("/shops").Subrouter()
+	protected.Use(r.authMiddleware.Authenticate)
+	protected.Use(r.shopOwnershipMiddleware.Authorize)
+	protected.Handle("/{shop_id}/staff", perm.RequirePermission("create_staff")(http.HandlerFunc(r.staffHandler.Create))).Methods(http.MethodPost)
+	protected.Handle("/{shop_id}/staff", perm.RequirePermission("view_staff")(http.HandlerFunc(r.staffHandler.GetAll))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}", perm.RequirePermission("view_staff")(http.HandlerFunc(r.staffHandler.GetByID))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}", perm.RequirePermission("update_staff")(http.HandlerFunc(r.staffHandler.Update))).Methods(http.MethodPut)
+	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}", perm.RequirePermission("delete_staff")(http.HandlerFunc(r.staffHandler.Delete))).Methods(http.MethodDelete)
+	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}/status", perm.RequirePermission("update_staff")(http.HandlerFunc(r.staffHandler.ToggleStatus))).Methods(http.MethodPatch)
 }
 
 func (r *router) shopRoutes() {
+	perm := r.permissionMiddleware
 	// Public routes (no auth required)
 	sub := r.router.PathPrefix("/shops").Subrouter()
-	// GET /shops/{shop_id}/products?search=laptop&category_id=1&is_active=true&limit=20&cursor=0
-	// Supports both filtered and non-filtered queries (backward compatible)
-	// If no query params provided, returns all products with default pagination
 	sub.HandleFunc("/{shop_id}/products", r.productHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
-	// GET /shops/{shop_id}/categories?search=electronics&sort=name&order=asc&limit=20&cursor=...
 	sub.HandleFunc("/{shop_id}/categories", r.categoryHandler.GetAllByShopIDWithFilters).Methods(http.MethodGet)
 
-	// Protected routes (auth required)
+	// Protected routes (auth + shop ownership + permissions)
 	protected := r.router.PathPrefix("/shops").Subrouter()
 	protected.Use(r.authMiddleware.Authenticate)
 	protected.Use(r.shopOwnershipMiddleware.Authorize)
-	// PATCH /shops/{shop_id}/orders/{order_id}/status - Update order status (owner only)
-	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/status", r.orderHandler.UpdateStatus).Methods(http.MethodPatch)
-	// DELETE /shops/{shop_id}/orders/{order_id}/coupon - Remove coupon from order (owner only)
-	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}/coupon", r.orderHandler.RemoveOrderCoupon).Methods(http.MethodDelete)
-	// PUT /shops/{shop_id}/orders/{order_id} - Update order (owner only)
-	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", r.orderHandler.Update).Methods(http.MethodPut)
-	// GET /shops/{shop_id}/orders/{order_id} - Get order by ID (owner only)
-	// Must be registered before /{shop_id}/orders (more specific first)
-	protected.HandleFunc("/{shop_id}/orders/{order_id:[0-9]+}", r.orderHandler.GetByID).Methods(http.MethodGet)
-	// GET /shops/{shop_id}/orders - Get orders by shop (owner only)
-	protected.HandleFunc("/{shop_id}/orders", r.orderHandler.GetAll).Methods(http.MethodGet)
-	// GET /shops/{shop_id} - Get shop by ID (owner only)
-	protected.HandleFunc("/{shop_id}", r.shopHandler.GetByID).Methods(http.MethodGet)
-	// PUT /shops/{shop_id} - Update shop (owner only)
-	protected.HandleFunc("/{shop_id}", r.shopHandler.Update).Methods(http.MethodPut)
+	// Orders — view
+	protected.Handle("/{shop_id}/orders/{order_id:[0-9]+}", perm.RequirePermission("view_orders")(http.HandlerFunc(r.orderHandler.GetByID))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/orders", perm.RequirePermission("view_orders")(http.HandlerFunc(r.orderHandler.GetAll))).Methods(http.MethodGet)
+	// Orders — manage
+	protected.Handle("/{shop_id}/orders/{order_id:[0-9]+}/status", perm.RequirePermission("manage_orders")(http.HandlerFunc(r.orderHandler.UpdateStatus))).Methods(http.MethodPatch)
+	protected.Handle("/{shop_id}/orders/{order_id:[0-9]+}/coupon", perm.RequirePermission("manage_orders")(http.HandlerFunc(r.orderHandler.RemoveOrderCoupon))).Methods(http.MethodDelete)
+	protected.Handle("/{shop_id}/orders/{order_id:[0-9]+}", perm.RequirePermission("manage_orders")(http.HandlerFunc(r.orderHandler.Update))).Methods(http.MethodPut)
+	// Shop settings
+	protected.Handle("/{shop_id}", perm.RequirePermission("update_shop")(http.HandlerFunc(r.shopHandler.GetByID))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}", perm.RequirePermission("update_shop")(http.HandlerFunc(r.shopHandler.Update))).Methods(http.MethodPut)
 }
 
 func (r *router) metricsRoutes() {
@@ -161,42 +168,31 @@ func (r *router) metricsRoutes() {
 }
 
 func (r *router) shopMetricsRoutes() {
+	perm := r.permissionMiddleware
 	protected := r.router.PathPrefix("/shops").Subrouter()
 	protected.Use(r.authMiddleware.Authenticate)
 	protected.Use(r.shopOwnershipMiddleware.Authorize)
-	protected.HandleFunc("/{shop_id}/metrics/dashboard", r.metricsHandler.GetDashboard).Methods(http.MethodGet)
-	protected.HandleFunc("/{shop_id}/metrics/revenue/trend", r.metricsHandler.GetRevenueTrend).Methods(http.MethodGet)
-	protected.HandleFunc("/{shop_id}/metrics/products/top", r.metricsHandler.GetTopProducts).Methods(http.MethodGet)
-	protected.HandleFunc("/{shop_id}/metrics/customers/top", r.metricsHandler.GetTopCustomers).Methods(http.MethodGet)
-	protected.HandleFunc("/{shop_id}/metrics/shipping/summary", r.metricsHandler.GetShippingSummary).Methods(http.MethodGet)
-	protected.HandleFunc("/{shop_id}/metrics/visits/trend", r.metricsHandler.GetVisitsTrend).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/dashboard", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetDashboard))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/revenue/trend", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetRevenueTrend))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/products/top", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetTopProducts))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/customers/top", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetTopCustomers))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/shipping/summary", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetShippingSummary))).Methods(http.MethodGet)
+	protected.Handle("/{shop_id}/metrics/visits/trend", perm.RequirePermission("view_metrics")(http.HandlerFunc(r.metricsHandler.GetVisitsTrend))).Methods(http.MethodGet)
 }
 
 func (r *router) storeRoutes() {
 	// Public routes (no auth required) - Customer-facing store endpoints
 	sub := r.router.PathPrefix("/stores").Subrouter()
-	// Note: More specific routes must be registered before less specific ones
-	// GET /stores/slugs/{slug}/check-availability - Check slug availability (public)
 	sub.HandleFunc("/slugs/{slug}/check-availability", r.storeHandler.CheckSlugAvailability).Methods(http.MethodGet)
-	// GET /stores/{slug}/products/featured - Get store featured products (public)
 	sub.HandleFunc("/{slug}/products/featured", r.storeHandler.GetFeaturedProducts).Methods(http.MethodGet)
-	// GET /stores/{slug}/products/{productId} - Get store product by ID (public)
 	sub.HandleFunc("/{slug}/products/{productId}", r.storeHandler.GetProductByID).Methods(http.MethodGet)
-	// GET /stores/{slug}/products - Get store products (public)
 	sub.HandleFunc("/{slug}/products", r.storeHandler.GetProducts).Methods(http.MethodGet)
-	// GET /stores/{slug}/categories - Get store categories (public)
 	sub.HandleFunc("/{slug}/categories", r.storeHandler.GetCategories).Methods(http.MethodGet)
-	// POST /stores/{slug}/coupons/validate - Validate coupon (public)
 	sub.HandleFunc("/{slug}/coupons/validate", r.storeHandler.ValidateCoupon).Methods(http.MethodPost)
-	// POST /stores/{slug}/orders - Create order (public)
 	sub.HandleFunc("/{slug}/orders", r.orderHandler.Create).Methods(http.MethodPost)
-	// GET /stores/{slug} - Get store by slug (public)
 	sub.HandleFunc("/{slug}", r.storeHandler.GetBySlug).Methods(http.MethodGet)
 }
 
 func (r *router) websocketRoutes() {
-	// WebSocket endpoint for real-time order notifications.
-	// Authentication is handled inside the handler via token query param.
-	// GET /shops/{shop_id}/orders/ws?token=<jwt>
 	r.router.HandleFunc("/shops/{shop_id}/orders/ws", r.orderWSHandler.Connect).Methods(http.MethodGet)
 }

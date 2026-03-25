@@ -79,7 +79,7 @@ func TestUserService_ValidateCredentials(t *testing.T) {
 		userRepoMock := new(mocks.UserRepository)
 		authServiceMock := new(mocks.AuthService)
 
-		authServiceMock.EXPECT().ComparePassword(ctx, inputUser.Password, hashedPassword).Return(nil)
+		authServiceMock.EXPECT().ComparePassword(ctx, hashedPassword, inputUser.Password).Return(nil)
 
 		service := NewUserService(userRepoMock, authServiceMock)
 
@@ -105,7 +105,7 @@ func TestUserService_ValidateCredentials(t *testing.T) {
 		userRepoMock := new(mocks.UserRepository)
 		authServiceMock := new(mocks.AuthService)
 
-		authServiceMock.EXPECT().ComparePassword(ctx, inputUser.Password, hashedPassword).Return(compareError)
+		authServiceMock.EXPECT().ComparePassword(ctx, hashedPassword, inputUser.Password).Return(compareError)
 
 		service := NewUserService(userRepoMock, authServiceMock)
 
