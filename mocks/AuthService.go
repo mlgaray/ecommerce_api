@@ -99,3 +99,69 @@ func (_c *AuthService_ComparePassword_Call) RunAndReturn(run func(ctx context.Co
 	_c.Call.Return(run)
 	return _c
 }
+
+// HashPassword provides a mock function for the type AuthService
+func (_mock *AuthService) HashPassword(ctx context.Context, password string) (string, error) {
+	ret := _mock.Called(ctx, password)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HashPassword")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return returnFunc(ctx, password)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, password)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, password)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AuthService_HashPassword_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HashPassword'
+type AuthService_HashPassword_Call struct {
+	*mock.Call
+}
+
+// HashPassword is a helper method to define mock.On call
+//   - ctx context.Context
+//   - password string
+func (_e *AuthService_Expecter) HashPassword(ctx interface{}, password interface{}) *AuthService_HashPassword_Call {
+	return &AuthService_HashPassword_Call{Call: _e.mock.On("HashPassword", ctx, password)}
+}
+
+func (_c *AuthService_HashPassword_Call) Run(run func(ctx context.Context, password string)) *AuthService_HashPassword_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AuthService_HashPassword_Call) Return(s string, err error) *AuthService_HashPassword_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *AuthService_HashPassword_Call) RunAndReturn(run func(ctx context.Context, password string) (string, error)) *AuthService_HashPassword_Call {
+	_c.Call.Return(run)
+	return _c
+}

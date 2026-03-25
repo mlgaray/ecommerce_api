@@ -537,8 +537,8 @@ func (_c *MetricsService_GetVisitsTrend_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MetricsService_GetVisitsTrend_Call) Return(trend []models.VisitsTrendPoint, err error) *MetricsService_GetVisitsTrend_Call {
-	_c.Call.Return(trend, err)
+func (_c *MetricsService_GetVisitsTrend_Call) Return(visitsTrendPoints []models.VisitsTrendPoint, err error) *MetricsService_GetVisitsTrend_Call {
+	_c.Call.Return(visitsTrendPoints, err)
 	return _c
 }
 

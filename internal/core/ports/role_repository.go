@@ -7,5 +7,6 @@ import (
 )
 
 type RoleRepository interface {
+	GetByID(ctx context.Context, id int) (*models.Role, error)
 	GetByName(ctx context.Context, name string) (*models.Role, error)
 }

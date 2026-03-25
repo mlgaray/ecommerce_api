@@ -153,17 +153,17 @@ type ShopSQLRepository struct {
 	deliveryMethodRepo ports.DeliveryMethodRepository
 }
 
-func (s *ShopSQLRepository) Create(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) Create(ctx context.Context, shop *models.Shop) (*models.Shop, error) {
 	// Extraer transacción del contexto si existe
 	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {
-		return s.createWithTx(ctx, tx, userID, shop)
+		return s.createWithTx(ctx, tx, shop)
 	}
 
 	// Si no hay transacción, usar conexión directa
-	return s.createWithDB(ctx, userID, shop)
+	return s.createWithDB(ctx, shop)
 }
 
-func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID int, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, shop *models.Shop) (*models.Shop, error) {
 	// Get default timezone ID (America/Buenos_Aires)
 	var defaultTimezoneID *int
 	err := tx.QueryRowContext(ctx, `SELECT id FROM timezones WHERE identifier = 'America/Buenos_Aires' LIMIT 1`).Scan(&defaultTimezoneID)
@@ -172,13 +172,13 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID
 	}
 
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram, timezone_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO shops (name, slug, email, phone, instagram, timezone_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var shopID int
-	err = tx.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
+	err = tx.QueryRowContext(ctx, query, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
 		return nil, s.handleInsertShopError(err, shop.Slug)
 	}
@@ -207,7 +207,7 @@ func (s *ShopSQLRepository) createWithTx(ctx context.Context, tx *sql.Tx, userID
 	return shop, nil
 }
 
-func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error) {
+func (s *ShopSQLRepository) createWithDB(ctx context.Context, shop *models.Shop) (*models.Shop, error) {
 	// Get default timezone ID (America/Buenos_Aires)
 	var defaultTimezoneID *int
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM timezones WHERE identifier = 'America/Buenos_Aires' LIMIT 1`).Scan(&defaultTimezoneID)
@@ -216,13 +216,13 @@ func (s *ShopSQLRepository) createWithDB(ctx context.Context, userID int, shop *
 	}
 
 	const query = `
-		INSERT INTO shops (user_id, name, slug, email, phone, instagram, timezone_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO shops (name, slug, email, phone, instagram, timezone_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	var shopID int
-	err = s.db.QueryRowContext(ctx, query, userID, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
+	err = s.db.QueryRowContext(ctx, query, shop.Name, shop.Slug, shop.Email, shop.Phone, shop.Instagram, defaultTimezoneID).Scan(&shopID)
 	if err != nil {
 		return nil, s.handleInsertShopError(err, shop.Slug)
 	}
@@ -686,46 +686,6 @@ func (s *ShopSQLRepository) GetBySlug(ctx context.Context, slug string) (*models
 //		return products, nil
 //	}
 //
-// GetShopsByUserID returns all shops owned by a user.
-// Used during authentication to include shop IDs in JWT token.
-func (s *ShopSQLRepository) GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error) {
-	const query = `
-		SELECT id, name, slug, email, phone, instagram
-		FROM shops
-		WHERE user_id = $1
-		ORDER BY id
-	`
-
-	rows, err := s.db.QueryContext(ctx, query, userID)
-	if err != nil {
-		return nil, fmt.Errorf("database operation failed")
-	}
-	defer rows.Close()
-
-	shops := make([]*models.Shop, 0)
-	for rows.Next() {
-		shop := &models.Shop{}
-		err := rows.Scan(
-			&shop.ID,
-			&shop.Name,
-			&shop.Slug,
-			&shop.Email,
-			&shop.Phone,
-			&shop.Instagram,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("database operation failed")
-		}
-		shops = append(shops, shop)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("database operation failed")
-	}
-
-	return shops, nil
-}
-
 // ==================== Payment Methods (internal) ====================
 
 func (s *ShopSQLRepository) createPaymentMethodsWithTx(ctx context.Context, tx *sql.Tx, shopID int, methods []*models.PaymentMethod) error {

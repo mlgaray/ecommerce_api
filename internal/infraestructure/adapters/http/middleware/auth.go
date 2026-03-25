@@ -82,14 +82,16 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, claims.KeyUserID, parsedClaims.UserID)
 		ctx = context.WithValue(ctx, claims.KeyEmail, parsedClaims.Email)
-		ctx = context.WithValue(ctx, claims.KeyShopIDs, parsedClaims.ShopIDs)
+		ctx = context.WithValue(ctx, claims.KeyShopRoles, parsedClaims.ShopRoles)
+		// Derive ShopIDs for backward compat (ShopOwnershipMiddleware, handlers)
+		ctx = context.WithValue(ctx, claims.KeyShopIDs, parsedClaims.ShopIDs())
 
 		logs.WithFields(map[string]interface{}{
-			"file":     AuthMiddlewareField,
-			"path":     r.URL.Path,
-			"method":   r.Method,
-			"user_id":  parsedClaims.UserID,
-			"shop_ids": parsedClaims.ShopIDs,
+			"file":       AuthMiddlewareField,
+			"path":       r.URL.Path,
+			"method":     r.Method,
+			"user_id":    parsedClaims.UserID,
+			"shop_roles": parsedClaims.ShopRoles,
 		}).Debug("User authenticated successfully")
 
 		// Continue with the authenticated request

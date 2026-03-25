@@ -18,21 +18,26 @@ var secretKey = "secret"
 
 type TokenService struct{}
 
-func (j *TokenService) Generate(ctx context.Context, user *models.User, shopIDs []int) (string, error) {
+func (j *TokenService) Generate(ctx context.Context, user *models.User, shopRoles []authclaims.ShopRole) (string, error) {
 	if user == nil {
 		return "", &errors.ValidationError{Message: errors.InvalidInput}
 	}
 
-	userJSON, err := json.Marshal(user)
+	type tokenUser struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+	}
+
+	userJSON, err := json.Marshal(tokenUser{ID: user.ID, Email: user.Email})
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal user data: %w", err)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user":     string(userJSON),
-		"shop_ids": shopIDs,
-		"exp":      time.Now().Add(time.Minute * 30).Unix(),
-		"iat":      time.Now().Unix(),
+		"user":  string(userJSON),
+		"shops": shopRoles,
+		"exp":   time.Now().Add(time.Minute * 30).Unix(),
+		"iat":   time.Now().Unix(),
 	})
 
 	signedToken, err := token.SignedString([]byte(secretKey))
@@ -93,8 +98,6 @@ func (j *TokenService) extractMapClaims(token *jwt.Token) (map[string]interface{
 }
 
 // parseTokenClaims converts raw JWT MapClaims into a typed TokenClaims struct.
-// This parsing logic lives in the adapter because it knows the JWT token format
-// (e.g., "user" is a JSON-encoded string, "shop_ids" is []interface{} with float64 values).
 func (j *TokenService) parseTokenClaims(mapClaims map[string]interface{}) (*authclaims.TokenClaims, error) {
 	user, err := j.parseUserFromClaims(mapClaims)
 	if err != nil {
@@ -102,9 +105,9 @@ func (j *TokenService) parseTokenClaims(mapClaims map[string]interface{}) (*auth
 	}
 
 	return &authclaims.TokenClaims{
-		UserID:  user.ID,
-		Email:   user.Email,
-		ShopIDs: j.parseShopIDsFromClaims(mapClaims),
+		UserID:    user.ID,
+		Email:     user.Email,
+		ShopRoles: j.parseShopRolesFromClaims(mapClaims),
 	}, nil
 }
 
@@ -122,16 +125,38 @@ func (j *TokenService) parseUserFromClaims(claims map[string]interface{}) (*mode
 	return &user, nil
 }
 
-func (j *TokenService) parseShopIDsFromClaims(claims map[string]interface{}) []int {
-	var shopIDs []int
-	if rawShopIDs, ok := claims["shop_ids"].([]interface{}); ok {
-		for _, id := range rawShopIDs {
-			if floatID, ok := id.(float64); ok {
-				shopIDs = append(shopIDs, int(floatID))
+func (j *TokenService) parseShopRolesFromClaims(claims map[string]interface{}) []authclaims.ShopRole {
+	rawShops, ok := claims["shops"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	var shopRoles []authclaims.ShopRole
+	for _, raw := range rawShops {
+		shopMap, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		floatID, idOk := shopMap["id"].(float64)
+		role, roleOk := shopMap["role"].(string)
+		if idOk && roleOk {
+			sr := authclaims.ShopRole{
+				ShopID: int(floatID),
+				Role:   role,
 			}
+			// Parse permissions if present
+			if rawPerms, ok := shopMap["permissions"].([]interface{}); ok {
+				for _, rp := range rawPerms {
+					if perm, ok := rp.(string); ok {
+						sr.Permissions = append(sr.Permissions, perm)
+					}
+				}
+			}
+			shopRoles = append(shopRoles, sr)
 		}
 	}
-	return shopIDs
+
+	return shopRoles
 }
 
 func NewTokenService() *TokenService {

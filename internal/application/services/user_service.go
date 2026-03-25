@@ -35,7 +35,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 }
 
 func (s *UserService) ValidateCredentials(ctx context.Context, user *models.User, password string) (*models.User, error) {
-	err := s.authService.ComparePassword(ctx, user.Password, password)
+	err := s.authService.ComparePassword(ctx, password, user.Password)
 	if err != nil {
 		logs.WithFields(map[string]interface{}{
 			"file":     UserServiceField,

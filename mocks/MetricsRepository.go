@@ -995,8 +995,8 @@ func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) Run(run func(ctx context
 	return _c
 }
 
-func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) Return(counts []int, err error) *MetricsRepository_GetVisitsSummaryBatch_Call {
-	_c.Call.Return(counts, err)
+func (_c *MetricsRepository_GetVisitsSummaryBatch_Call) Return(ints []int, err error) *MetricsRepository_GetVisitsSummaryBatch_Call {
+	_c.Call.Return(ints, err)
 	return _c
 }
 
@@ -1081,8 +1081,8 @@ func (_c *MetricsRepository_GetVisitsTrend_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *MetricsRepository_GetVisitsTrend_Call) Return(trend []models.VisitsTrendPoint, err error) *MetricsRepository_GetVisitsTrend_Call {
-	_c.Call.Return(trend, err)
+func (_c *MetricsRepository_GetVisitsTrend_Call) Return(visitsTrendPoints []models.VisitsTrendPoint, err error) *MetricsRepository_GetVisitsTrend_Call {
+	_c.Call.Return(visitsTrendPoints, err)
 	return _c
 }
 
