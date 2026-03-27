@@ -224,9 +224,10 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows,
 
 	var roleID int
 	var roleName string
+	var phone sql.NullString
 
 	err := rows.Scan(
-		&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.IsActive,
+		&user.ID, &user.Name, &user.Email, &phone, &user.Password, &user.IsActive,
 		&roleID, &roleName,
 	)
 	if err != nil {
@@ -238,6 +239,9 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows,
 			"error":    err.Error(),
 		}).Error("Database scan failed")
 		return nil, fmt.Errorf("failed to scan user row")
+	}
+	if phone.Valid {
+		user.Phone = phone.String
 	}
 
 	// Agregar el primer role si existe
@@ -252,7 +256,7 @@ func (s *UserSQLRepository) scanUserWithRoles(_ context.Context, rows *sql.Rows,
 	// Procesar filas adicionales (roles adicionales)
 	for rows.Next() {
 		err := rows.Scan(
-			&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.IsActive,
+			&user.ID, &user.Name, &user.Email, &phone, &user.Password, &user.IsActive,
 			&roleID, &roleName,
 		)
 		if err != nil {

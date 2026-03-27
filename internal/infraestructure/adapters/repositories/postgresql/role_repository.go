@@ -18,6 +18,21 @@ func NewRoleRepository(dataBaseConnection DataBaseConnection) ports.RoleReposito
 	}
 }
 
+func (r *RoleSQLRepository) GetByID(ctx context.Context, id int) (*models.Role, error) {
+	const query = `SELECT id, name, description FROM roles WHERE id = $1`
+
+	var role models.Role
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&role.ID, &role.Name, &role.Description)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, sql.ErrNoRows
+		}
+		return nil, err
+	}
+
+	return &role, nil
+}
+
 func (r *RoleSQLRepository) GetByName(ctx context.Context, name string) (*models.Role, error) {
 	// Extraer transacción del contexto si existe
 	if tx, ok := ctx.Value(TxContextKey).(*sql.Tx); ok {

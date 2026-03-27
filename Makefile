@@ -93,14 +93,14 @@ migrate-up-seeds:
 .PHONY: migrate-up-seeds
 
 migrate-down-seeds:
-	@echo "R unning seeds migrations..."
+	@echo "Running seeds migrations..."
 	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" -verbose down
 
 .PHONY: migrate-down-seeds
 
 migrate-force-seeds:
 	@echo "Forcing seeds migrations to version $(V)..."
-	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 20
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" force 3
 
 .PHONY: migrate-force-seeds
 
@@ -108,7 +108,7 @@ migrate-force-seeds:
 
 migrate-force:
 	@echo "Forcing migrations to version $(V)..."
-	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 15
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" force 3
 
 .PHONY: migrate-force
 

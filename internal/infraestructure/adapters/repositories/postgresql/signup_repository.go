@@ -9,10 +9,11 @@ import (
 )
 
 type SignupSQLRepository struct {
-	db       *sql.DB
-	userRepo ports.UserRepository
-	shopRepo ports.ShopRepository
-	roleRepo ports.RoleRepository
+	db        *sql.DB
+	userRepo  ports.UserRepository
+	shopRepo  ports.ShopRepository
+	roleRepo  ports.RoleRepository
+	staffRepo ports.StaffRepository
 }
 
 func NewSignupRepository(
@@ -20,12 +21,14 @@ func NewSignupRepository(
 	userRepo ports.UserRepository,
 	shopRepo ports.ShopRepository,
 	roleRepo ports.RoleRepository,
+	staffRepo ports.StaffRepository,
 ) ports.SignupRepository {
 	return &SignupSQLRepository{
-		db:       dataBaseConnection.Connect(),
-		userRepo: userRepo,
-		shopRepo: shopRepo,
-		roleRepo: roleRepo,
+		db:        dataBaseConnection.Connect(),
+		userRepo:  userRepo,
+		shopRepo:  shopRepo,
+		roleRepo:  roleRepo,
+		staffRepo: staffRepo,
 	}
 }
 
@@ -37,7 +40,6 @@ func (r *SignupSQLRepository) CreateUserWithShop(ctx context.Context, user *mode
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				// TODO: Log rollback error but don't override original error
 				_ = rollbackErr
 			}
 		}
@@ -52,28 +54,33 @@ func (r *SignupSQLRepository) CreateUserWithShop(ctx context.Context, user *mode
 		return nil, err
 	}
 
-	// 2. Asignar rol admin por defecto
-	adminRole, err := r.roleRepo.GetByName(txCtx, "admin")
+	// 2. Crear shop usando ShopRepository (sin userID)
+	_, err = r.shopRepo.Create(txCtx, shop)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.userRepo.AssignRole(txCtx, createdUser.ID, adminRole.ID)
+	// 3. Crear staff (user ↔ shop) via StaffRepository
+	staff, err := r.staffRepo.Create(txCtx, createdUser.ID, shop.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Asignar rol owner via staff_roles
+	ownerRole, err := r.roleRepo.GetByName(txCtx, "owner")
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.staffRepo.AssignRole(txCtx, staff.ID, ownerRole.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Agregar el rol al usuario en memoria
-	createdUser.Roles = append(createdUser.Roles, adminRole)
+	createdUser.Roles = append(createdUser.Roles, ownerRole)
 
-	// 3. Crear shop usando ShopRepository (userID como parámetro)
-	// ShopRepository.Create() internamente crea los payment/delivery methods
-	_, err = r.shopRepo.Create(txCtx, createdUser.ID, shop)
-	if err != nil {
-		return nil, err
-	}
-
-	// 4. Commit de la transacción
+	// 5. Commit de la transacción
 	err = tx.Commit()
 	if err != nil {
 		return nil, err

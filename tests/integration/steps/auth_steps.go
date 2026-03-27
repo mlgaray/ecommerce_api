@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cucumber/godog"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/requests"
 	"github.com/mlgaray/ecommerce_api/internal/infraestructure/adapters/http/contracts/responses"
@@ -31,20 +32,20 @@ func (a *AuthSteps) setupSQLExpectations() {
 	ctx := GetTestContext()
 	switch ctx.scenario {
 	case validUserScenario:
-		// Mock successful user lookup (using direct DB query, not transaction)
+		// Mock successful user lookup (password is bcrypt-hashed)
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		rows := sqlmock.NewRows([]string{"id", "name", "email", "phone", "password", "is_active", "role_id", "role_name"}).
-			AddRow(1, "Test User", "user@example.com", "+1234567890", "password123", true, 0, "")
+			AddRow(1, "Test User", "user@example.com", "+1234567890", string(hashedPassword), true, 0, "")
 		ctx.mockSQLMock.ExpectQuery("SELECT\\s+u\\.id, u\\.name, u\\.email, u\\.phone, u\\.password, u\\.is_active,\\s+COALESCE\\(r\\.id, 0\\) as role_id,\\s+COALESCE\\(r\\.name, ''\\) as role_name\\s+FROM users u\\s+LEFT JOIN user_roles ur ON u\\.id = ur\\.user_id\\s+LEFT JOIN roles r ON ur\\.role_id = r\\.id\\s+WHERE u\\.email = \\$1\\s+ORDER BY u\\.id, r\\.id").
 			WithArgs("user@example.com").
 			WillReturnRows(rows)
 
-		// Mock GetShopsByUserID - returns user's shops for JWT token
-		// Query: SELECT id, name, slug, email, phone, instagram FROM shops WHERE user_id = $1
-		shopRows := sqlmock.NewRows([]string{"id", "name", "slug", "email", "phone", "instagram"}).
-			AddRow(1, "Test Shop", "test-shop", "shop@example.com", "+1234567890", "@testshop")
-		ctx.mockSQLMock.ExpectQuery("FROM shops").
+		// Mock GetShopRolesByUserID - returns staff roles for JWT token
+		staffRoleRows := sqlmock.NewRows([]string{"shop_id", "role"}).
+			AddRow(1, "owner")
+		ctx.mockSQLMock.ExpectQuery("FROM staff").
 			WithArgs(1).
-			WillReturnRows(shopRows)
+			WillReturnRows(staffRoleRows)
 
 	case nonExistentUserScenario:
 		// Mock user not found (using direct DB query, not transaction)
@@ -55,9 +56,10 @@ func (a *AuthSteps) setupSQLExpectations() {
 			WillReturnRows(emptyRows)
 
 	case wrongPasswordScenario:
-		// Mock user found but with different password (using direct DB query, not transaction)
+		// Mock user found but with different password (bcrypt hash of "correctpassword")
+		wrongHash, _ := bcrypt.GenerateFromPassword([]byte("correctpassword"), bcrypt.DefaultCost)
 		rows := sqlmock.NewRows([]string{"id", "name", "email", "phone", "password", "is_active", "role_id", "role_name"}).
-			AddRow(1, "Test User", "user@example.com", "+1234567890", "correctpassword", true, 0, "")
+			AddRow(1, "Test User", "user@example.com", "+1234567890", string(wrongHash), true, 0, "")
 		ctx.mockSQLMock.ExpectQuery("SELECT\\s+u\\.id, u\\.name, u\\.email, u\\.phone, u\\.password, u\\.is_active,\\s+COALESCE\\(r\\.id, 0\\) as role_id,\\s+COALESCE\\(r\\.name, ''\\) as role_name\\s+FROM users u\\s+LEFT JOIN user_roles ur ON u\\.id = ur\\.user_id\\s+LEFT JOIN roles r ON ur\\.role_id = r\\.id\\s+WHERE u\\.email = \\$1\\s+ORDER BY u\\.id, r\\.id").
 			WithArgs("user@example.com").
 			WillReturnRows(rows)

@@ -54,6 +54,8 @@ components:
     in: infraestructure/adapters/repositories/**
   auth_jwt:
     in: infraestructure/adapters/auth/jwt
+  auth_bcrypt:
+    in: infraestructure/adapters/auth/bcrypt
 
   # Other adapters
   assets:
@@ -97,6 +99,8 @@ vendors:
     in: github.com/google/uuid
   json_iterator:
     in: github.com/json-iterator/go
+  bcrypt:
+    in: golang.org/x/crypto/**
 
 # ============================================================
 # COMMON - Available to all components without explicit rules
@@ -188,6 +192,12 @@ deps:
       - claims
     canUse:
       - jwt
+
+  auth_bcrypt:
+    mayDependOn:
+      - ports
+    canUse:
+      - bcrypt
 
   assets:
     canUse:

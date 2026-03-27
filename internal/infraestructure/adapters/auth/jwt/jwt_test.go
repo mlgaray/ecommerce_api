@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 
+	authclaims "github.com/mlgaray/ecommerce_api/internal/core/claims"
 	"github.com/mlgaray/ecommerce_api/internal/core/errors"
 	"github.com/mlgaray/ecommerce_api/internal/core/models"
 )
@@ -19,10 +21,10 @@ func TestTokenService_Generate(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		user := &models.User{ID: 1, Email: "test@example.com"}
-		shopIDs := []int{1, 2}
+		shopRoles := []authclaims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}}
 
 		// Act
-		token, err := service.Generate(context.Background(), user, shopIDs)
+		token, err := service.Generate(context.Background(), user, shopRoles)
 
 		// Assert
 		assert.NoError(t, err)
@@ -34,7 +36,7 @@ func TestTokenService_Generate(t *testing.T) {
 		service := NewTokenService()
 
 		// Act
-		token, err := service.Generate(context.Background(), nil, []int{1})
+		token, err := service.Generate(context.Background(), nil, []authclaims.ShopRole{{ShopID: 1, Role: "owner"}})
 
 		// Assert
 		assert.Empty(t, token)
@@ -44,20 +46,20 @@ func TestTokenService_Generate(t *testing.T) {
 		assert.Equal(t, errors.InvalidInput, validationErr.Message)
 	})
 
-	t.Run("when shopIDs is empty then generates token", func(t *testing.T) {
+	t.Run("when shopRoles is empty then generates token", func(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		user := &models.User{ID: 1, Email: "test@example.com"}
 
 		// Act
-		token, err := service.Generate(context.Background(), user, []int{})
+		token, err := service.Generate(context.Background(), user, []authclaims.ShopRole{})
 
 		// Assert
 		assert.NoError(t, err)
 		assert.NotEmpty(t, token)
 	})
 
-	t.Run("when shopIDs is nil then generates token", func(t *testing.T) {
+	t.Run("when shopRoles is nil then generates token", func(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		user := &models.User{ID: 1, Email: "test@example.com"}
@@ -69,6 +71,30 @@ func TestTokenService_Generate(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, token)
 	})
+
+	t.Run("when user has password then token payload does not contain password", func(t *testing.T) {
+		// Arrange
+		service := NewTokenService()
+		user := &models.User{ID: 1, Email: "test@example.com", Password: "super-secret-password"}
+		shopRoles := []authclaims.ShopRole{{ShopID: 1, Role: "owner"}}
+
+		// Act
+		token, err := service.Generate(context.Background(), user, shopRoles)
+
+		// Assert
+		assert.NoError(t, err)
+
+		// Decode the JWT payload (second segment) and verify no password field
+		parts := strings.Split(token, ".")
+		assert.Len(t, parts, 3)
+
+		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+		assert.NoError(t, err)
+
+		payloadStr := string(payload)
+		assert.NotContains(t, payloadStr, "password")
+		assert.NotContains(t, payloadStr, "super-secret-password")
+	})
 }
 
 func TestTokenService_ValidateAndParseClaims(t *testing.T) {
@@ -76,18 +102,18 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		user := &models.User{ID: 1, Email: "test@example.com"}
-		shopIDs := []int{1, 2}
-		token, _ := service.Generate(context.Background(), user, shopIDs)
+		shopRoles := []authclaims.ShopRole{{ShopID: 1, Role: "owner"}, {ShopID: 2, Role: "admin"}}
+		token, _ := service.Generate(context.Background(), user, shopRoles)
 
 		// Act
-		claims, err := service.ValidateAndParseClaims(token)
+		parsedClaims, err := service.ValidateAndParseClaims(token)
 
 		// Assert
 		assert.NoError(t, err)
-		assert.NotNil(t, claims)
-		assert.Equal(t, 1, claims.UserID)
-		assert.Equal(t, "test@example.com", claims.Email)
-		assert.Equal(t, []int{1, 2}, claims.ShopIDs)
+		assert.NotNil(t, parsedClaims)
+		assert.Equal(t, 1, parsedClaims.UserID)
+		assert.Equal(t, "test@example.com", parsedClaims.Email)
+		assert.Equal(t, shopRoles, parsedClaims.ShopRoles)
 	})
 
 	t.Run("when token is empty then returns AuthenticationError", func(t *testing.T) {
@@ -125,10 +151,10 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		service := NewTokenService()
 		// Create an expired token manually
 		expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user":     `{"id":1,"email":"test@example.com"}`,
-			"shop_ids": []interface{}{float64(1)},
-			"exp":      time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
-			"iat":      time.Now().Add(-2 * time.Hour).Unix(),
+			"user":  `{"id":1,"email":"test@example.com"}`,
+			"shops": []interface{}{map[string]interface{}{"id": float64(1), "role": "owner"}},
+			"exp":   time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
+			"iat":   time.Now().Add(-2 * time.Hour).Unix(),
 		})
 		tokenString, _ := expiredToken.SignedString([]byte(secretKey))
 
@@ -151,7 +177,7 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		// The keyfunc will reject it because we only accept HMAC
 		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
 		payload := base64.RawURLEncoding.EncodeToString([]byte(
-			fmt.Sprintf(`{"user":"{\"id\":1,\"email\":\"test@example.com\"}","shop_ids":[1],"exp":%d}`,
+			fmt.Sprintf(`{"user":"{\"id\":1,\"email\":\"test@example.com\"}","shops":[{"id":1,"role":"owner"}],"exp":%d}`,
 				time.Now().Add(time.Hour).Unix())))
 		// Add a valid base64 signature (content doesn't matter, just needs to be parseable)
 		signature := base64.RawURLEncoding.EncodeToString([]byte("fake-signature-bytes"))
@@ -175,9 +201,9 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user":     `{"id":1,"email":"test@example.com"}`,
-			"shop_ids": []interface{}{float64(1)},
-			"exp":      time.Now().Add(time.Hour).Unix(),
+			"user":  `{"id":1,"email":"test@example.com"}`,
+			"shops": []interface{}{map[string]interface{}{"id": float64(1), "role": "owner"}},
+			"exp":   time.Now().Add(time.Hour).Unix(),
 		})
 		tokenString, _ := token.SignedString([]byte("wrong-secret-key"))
 
@@ -196,9 +222,9 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		// Arrange
 		service := NewTokenService()
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user":     "invalid-json",
-			"shop_ids": []interface{}{float64(1)},
-			"exp":      time.Now().Add(time.Hour).Unix(),
+			"user":  "invalid-json",
+			"shops": []interface{}{map[string]interface{}{"id": float64(1), "role": "owner"}},
+			"exp":   time.Now().Add(time.Hour).Unix(),
 		})
 		tokenString, _ := token.SignedString([]byte(secretKey))
 
@@ -229,7 +255,7 @@ func TestTokenService_ValidateAndParseClaims(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, claims)
 		assert.Equal(t, 1, claims.UserID)
-		assert.Empty(t, claims.ShopIDs)
+		assert.Empty(t, claims.ShopRoles)
 	})
 }
 

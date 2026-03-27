@@ -10,8 +10,7 @@ import (
 type ShopRepository interface {
 	// Create creates a new shop with all payment and delivery methods initialized (is_active = false).
 	// This ensures a Shop is always created with its required child entities.
-	// userID is the owner of the shop (FK to users table).
-	Create(ctx context.Context, userID int, shop *models.Shop) (*models.Shop, error)
+	Create(ctx context.Context, shop *models.Shop) (*models.Shop, error)
 
 	// GetByID returns a shop with all its related entities (cover_image, address, payment_methods,
 	// delivery_methods, operating_schedules) loaded. Uses a single query with LEFT JOIN LATERAL.
@@ -26,10 +25,6 @@ type ShopRepository interface {
 	// SlugExists checks if a shop with the given slug exists.
 	// Lightweight query with no JOINs — used for slug availability checks.
 	SlugExists(ctx context.Context, slug string) (bool, error)
-
-	// GetShopsByUserID returns all shops owned by a user.
-	// Used during authentication to include shop IDs in JWT token.
-	GetShopsByUserID(ctx context.Context, userID int) ([]*models.Shop, error)
 
 	// Operating Schedules (part of Shop aggregate)
 	// GetOperatingSchedules returns all operating schedules for a shop, ordered by day_of_week and open_time.
