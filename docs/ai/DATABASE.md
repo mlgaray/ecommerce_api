@@ -398,6 +398,68 @@ if err := db.Ping(); err != nil {
 }
 ```
 
+## Structural Data vs Seed Data
+
+### The Problem
+
+Not all data inserted via seeds is "test data". Some data is **structural** — the application cannot function without it. Mixing both in seeds creates a risk: if seeds are not run in production, the app breaks.
+
+### Classification
+
+| Type | Definition | Belongs in | Example |
+|------|-----------|------------|---------|
+| **Structural data** | App doesn't work without it | **Migrations** | Roles, permissions, role_permissions, payment_methods, delivery_methods, timezones |
+| **Seed data** | Fake/sample data for dev/test | **Seeds** | Test users, sample shops, sample products, sample orders |
+
+### Current State (TODO: Migrate)
+
+The following seeds contain **structural data** that should be moved to a migration with `ON CONFLICT DO NOTHING`:
+
+- `seeds/000002_insert_into_roles.up.sql` — roles (owner, admin, encargado, operador, delivery)
+- `seeds/000005_insert_into_payment_methods.up.sql` — payment methods catalog
+- `seeds/000006_insert_into_delivery_methods.up.sql` — delivery methods catalog
+- `seeds/000012_insert_into_timezones.up.sql` — timezone catalog
+- `seeds/000023_insert_permissions.up.sql` — permissions + role_permissions mappings
+
+### Target State
+
+```
+database/migrations/
+├── 000033_insert_structural_data.up.sql   ← roles, permissions, payment/delivery methods, timezones
+├── 000033_insert_structural_data.down.sql ← DELETE of structural data
+└── seeds/
+    ├── 000001_insert_into_users.up.sql    ← fake McDonald's user (dev only)
+    ├── 000004_insert_into_shops.up.sql    ← fake shop + staff (dev only)
+    ├── 000015_insert_into_categories.up.sql ← fake categories
+    └── ...                                 ← all other fake data
+```
+
+### Rules
+
+- **Production deploy**: only runs `migrate up` (tables + structural data). No seeds.
+- **Development setup**: runs `migrate up` + `migrate up seeds` (tables + structural data + fake data).
+- **Adding a new permission/role**: create a new migration, not a seed. This ensures it reaches production automatically.
+- **Structural data inserts must use `ON CONFLICT DO NOTHING`** to be idempotent.
+
+### Advisory Lock Issues (Supabase)
+
+When a migration fails mid-execution (network timeout, connection drop), `golang-migrate` may leave a PostgreSQL advisory lock held by a zombie backend process. Symptoms:
+
+```
+error: try lock failed in line 0: SELECT pg_advisory_lock($1)
+(details: pq: canceling statement due to statement timeout)
+```
+
+**Fix:** Find and terminate the blocking process:
+
+```sql
+-- Find stuck advisory locks
+SELECT pid FROM pg_locks WHERE locktype = 'advisory';
+
+-- Terminate the blocking process
+SELECT pg_terminate_backend(<pid>);
+```
+
 ## Best Practices
 
 ✅ **DO:**

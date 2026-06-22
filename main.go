@@ -15,6 +15,7 @@ import (
 	metricsUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/metrics"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/order"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/product"
+	roleUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/role"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/shop"
 	staffUC "github.com/mlgaray/ecommerce_api/internal/application/usecases/staff"
 	"github.com/mlgaray/ecommerce_api/internal/application/usecases/store"
@@ -60,6 +61,9 @@ var Module = fx.Options(
 
 		// ROLE
 		fx.Annotate(postgresql.NewRoleRepository, fx.As(new(ports.RoleRepository))),
+		fx.Annotate(services.NewRoleService, fx.As(new(ports.RoleService))),
+		fx.Annotate(roleUC.NewGetAssignableRolesUseCase, fx.As(new(ports.GetAssignableRolesUseCase))),
+		fx.Annotate(http.NewRoleHandler, fx.As(new(ports.RoleHandler))),
 
 		// PAYMENT METHODS (needed by ShopRepository)
 		fx.Annotate(postgresql.NewPaymentMethodRepository, fx.As(new(ports.PaymentMethodRepository))),

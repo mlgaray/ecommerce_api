@@ -7,7 +7,7 @@ DO $$
 
         INSERT INTO images (url, storage_ref, shop_id, type)
         VALUES
-            ('https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/McDonald%27s_logo.svg/2560px-McDonald%27s_logo.svg.png', '', v_shop_id, 'logo'),
+            ('https://res.cloudinary.com/dysydflnc/image/upload/v1774413137/3c880c20-c26d-46f6-b84c-78b4385cf158.png', '', v_shop_id, 'logo'),
             ('https://res.cloudinary.com/dysydflnc/image/upload/v1769054698/shop_1/images/oiqp2ggoazsglqhxwdet.png', '', v_shop_id, 'cover');
     END $$;
 
