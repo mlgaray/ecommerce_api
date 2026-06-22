@@ -112,6 +112,12 @@ migrate-force:
 
 .PHONY: migrate-force
 
+migrate-version:
+	@echo "Checking tables migrations version..."
+	migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" version
+
+.PHONY: migrate-version
+
 migrate-seeds-version:
 	@echo "Checking seeds migrations version..."
 	migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" version
@@ -136,6 +142,25 @@ migrate-functions-version:
 	migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" version
 
 .PHONY: migrate-functions-version
+
+# Show the current version of all three migration histories (tables, functions, seeds)
+migrate-version-all:
+	@echo "=========================================="
+	@echo "MIGRATION VERSIONS"
+	@echo "=========================================="
+	@echo ""
+	@echo "Tables (schema_migrations):"
+	@migrate -path database/migrations/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)" version || echo "⚠️  Could not read tables version"
+	@echo ""
+	@echo "Functions (schema_functions):"
+	@migrate -path database/migrations/functions/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_functions" version || echo "⚠️  Could not read functions version"
+	@echo ""
+	@echo "Seeds (schema_seeds):"
+	@migrate -path database/migrations/seeds/ -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(MIGRATE_DB_PORT)/$(DB_NAME)?x-migrations-table=schema_seeds" version || echo "⚠️  Could not read seeds version"
+	@echo ""
+	@echo "=========================================="
+
+.PHONY: migrate-version-all
 
 # Code formatting and linting
 fmt:

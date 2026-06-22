@@ -13,5 +13,5 @@ DO $$
 
         -- Inserta la imagen en la tabla images
         INSERT INTO images (url, storage_ref, category_id)
-        VALUES ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgTOxxZToIChqO4GH5ZeQ7_lXpSngK4HVBUg&s', '', v_category_id);
+        VALUES ('https://res.cloudinary.com/dysydflnc/image/upload/v1773535384/shop_1/categories/kwhqbfm4fxjvej4n9mub.png', '', v_category_id);
     END $$;

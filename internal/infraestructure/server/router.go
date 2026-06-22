@@ -25,6 +25,7 @@ type router struct {
 	orderHandler            ports.OrderHandler
 	couponHandler           ports.CouponHandler
 	staffHandler            ports.StaffHandler
+	roleHandler             ports.RoleHandler
 	metricsHandler          ports.MetricsHandler
 	orderWSHandler          *httpAdapter.OrderWSHandler
 	authMiddleware          *middleware.AuthMiddleware
@@ -42,6 +43,7 @@ func NewRouter(
 	orderHandler ports.OrderHandler,
 	couponHandler ports.CouponHandler,
 	staffHandler ports.StaffHandler,
+	roleHandler ports.RoleHandler,
 	metricsHandler ports.MetricsHandler,
 	orderWSHandler *httpAdapter.OrderWSHandler,
 	authMiddleware *middleware.AuthMiddleware,
@@ -62,6 +64,7 @@ func NewRouter(
 		orderHandler:            orderHandler,
 		couponHandler:           couponHandler,
 		staffHandler:            staffHandler,
+		roleHandler:             roleHandler,
 		metricsHandler:          metricsHandler,
 		orderWSHandler:          orderWSHandler,
 		authMiddleware:          authMiddleware,
@@ -79,6 +82,7 @@ func (r *router) RouteApp() *mux.Router {
 	r.shopMetricsRoutes()
 	r.couponRoutes()
 	r.staffRoutes()
+	r.roleRoutes()
 	r.shopRoutes()
 	r.storeRoutes()
 	r.websocketRoutes()
@@ -138,6 +142,14 @@ func (r *router) staffRoutes() {
 	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}", perm.RequirePermission("update_staff")(http.HandlerFunc(r.staffHandler.Update))).Methods(http.MethodPut)
 	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}", perm.RequirePermission("delete_staff")(http.HandlerFunc(r.staffHandler.Delete))).Methods(http.MethodDelete)
 	protected.Handle("/{shop_id}/staff/{staff_id:[0-9]+}/status", perm.RequirePermission("update_staff")(http.HandlerFunc(r.staffHandler.ToggleStatus))).Methods(http.MethodPatch)
+}
+
+func (r *router) roleRoutes() {
+	perm := r.permissionMiddleware
+	protected := r.router.PathPrefix("/shops").Subrouter()
+	protected.Use(r.authMiddleware.Authenticate)
+	protected.Use(r.shopOwnershipMiddleware.Authorize)
+	protected.Handle("/{shop_id}/roles", perm.RequirePermission("view_staff")(http.HandlerFunc(r.roleHandler.GetAssignable))).Methods(http.MethodGet)
 }
 
 func (r *router) shopRoutes() {
