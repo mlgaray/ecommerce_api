@@ -66,3 +66,28 @@ func (r *RoleSQLRepository) getByNameWithDB(ctx context.Context, name string) (*
 
 	return &role, nil
 }
+
+func (r *RoleSQLRepository) GetAllAssignable(ctx context.Context) ([]*models.Role, error) {
+	const query = `SELECT id, name, description FROM roles WHERE name != 'owner' ORDER BY id`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []*models.Role
+	for rows.Next() {
+		var role models.Role
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description); err != nil {
+			return nil, err
+		}
+		roles = append(roles, &role)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}

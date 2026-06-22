@@ -36,7 +36,7 @@ func (j *TokenService) Generate(ctx context.Context, user *models.User, shopRole
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user":  string(userJSON),
 		"shops": shopRoles,
-		"exp":   time.Now().Add(time.Minute * 30).Unix(),
+		"exp":   time.Now().Add(time.Hour * 6).Unix(),
 		"iat":   time.Now().Unix(),
 	})
 
